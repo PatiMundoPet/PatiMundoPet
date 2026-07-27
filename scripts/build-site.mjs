@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -7,6 +7,9 @@ const contentPath = path.join(root, 'content/site.json');
 const schedulingPath = path.join(root, 'content/scheduling.json');
 const integrationPath = path.join(root, 'content/integration.json');
 const privacyPath = path.join(root, 'content/privacy.json');
+const seoPath = path.join(root, 'content/seo.json');
+const robotsOutputPath = path.join(root, 'robots.txt');
+const sitemapOutputPath = path.join(root, 'sitemap.xml');
 const privacyTemplatePath = path.join(root, 'src/privacy.template.html');
 const privacyOutputPath = path.join(root, 'privacy.html');
 const templatePath = path.join(root, 'src/index.template.html');
@@ -117,6 +120,38 @@ function validatePrivacy(config, site) {
   if (errors.length) throw new Error(`Configuração inválida em content/privacy.json:\n- ${errors.join('\n- ')}`);
 }
 
+function validateSeo(config) {
+  const errors = [];
+  const strings = ['titleTemplate', 'defaultDescription', 'locale', 'language', 'themeColor', 'siteUrl', 'socialImage', 'twitterCard'];
+  strings.forEach((field) => { if (typeof config?.[field] !== 'string') errors.push(`"${field}" deve ser uma string`); });
+  if (!config?.titleTemplate?.includes('%s')) errors.push('"titleTemplate" deve conter %s');
+  if (config?.locale !== 'pt_BR' || config?.language !== 'pt-BR') errors.push('locale e language devem permanecer em português do Brasil');
+  if (!/^#[0-9a-fA-F]{6}$/.test(config?.themeColor || '')) errors.push('"themeColor" deve ser uma cor hexadecimal');
+  if (typeof config?.indexingEnabled !== 'boolean') errors.push('"indexingEnabled" deve ser booleano');
+  if (config?.twitterCard !== 'summary_large_image') errors.push('"twitterCard" inválido');
+  if (config?.siteUrl) {
+    try { const url = new URL(config.siteUrl); if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) errors.push('"siteUrl" deve ser uma URL HTTPS base'); }
+    catch { errors.push('"siteUrl" inválida'); }
+  }
+  if (config?.socialImage) {
+    try { const url = new URL(config.socialImage); if (url.protocol !== 'https:') errors.push('"socialImage" deve ser uma URL HTTPS'); }
+    catch { errors.push('"socialImage" inválida'); }
+  }
+  if (config?.indexingEnabled && !config.siteUrl) errors.push('indexação exige siteUrl explícita');
+  if (errors.length) throw new Error(`Configuração inválida em content/seo.json:\n- ${errors.join('\n- ')}`);
+}
+
+function titleFor(seo, page) { return seo.titleTemplate.replace('%s', page); }
+function optionalSeoTags(seo, pathname) {
+  const tags = [];
+  if (seo.siteUrl) {
+    const url = new URL(pathname, seo.siteUrl.endsWith('/') ? seo.siteUrl : `${seo.siteUrl}/`).href;
+    tags.push(`<link rel="canonical" href="${escapeHtml(url)}">`, `<meta property="og:url" content="${escapeHtml(url)}">`);
+  }
+  if (seo.socialImage) tags.push(`<meta property="og:image" content="${escapeHtml(seo.socialImage)}">`, `<meta name="twitter:image" content="${escapeHtml(seo.socialImage)}">`);
+  return tags.join('\n');
+}
+
 function replaceTokens(template, values, label) {
   const output = template.replace(/\{\{([A-Z0-9_]+)\}\}/g, (token, name) => {
     if (!(name in values)) throw new Error(`Token desconhecido em ${label}: ${token}`);
@@ -145,11 +180,12 @@ function renderFields(fields) {
 }
 
 try {
-  const [rawConfig, rawScheduling, rawIntegration, rawPrivacy, template, privacyTemplate] = await Promise.all([
+  const [rawConfig, rawScheduling, rawIntegration, rawPrivacy, rawSeo, template, privacyTemplate] = await Promise.all([
     readFile(contentPath, 'utf8'),
     readFile(schedulingPath, 'utf8'),
     readFile(integrationPath, 'utf8'),
     readFile(privacyPath, 'utf8'),
+    readFile(seoPath, 'utf8'),
     readFile(templatePath, 'utf8'),
     readFile(privacyTemplatePath, 'utf8'),
   ]);
@@ -157,6 +193,7 @@ try {
   let scheduling;
   let integration;
   let privacy;
+  let seo;
   try {
     config = JSON.parse(rawConfig);
   } catch (error) {
@@ -173,10 +210,12 @@ try {
     throw new Error(`JSON inválido em content/integration.json: ${error.message}`);
   }
   try { privacy = JSON.parse(rawPrivacy); } catch (error) { throw new Error(`JSON inválido em content/privacy.json: ${error.message}`); }
+  try { seo = JSON.parse(rawSeo); } catch (error) { throw new Error(`JSON inválido em content/seo.json: ${error.message}`); }
   validate(config);
   validateScheduling(scheduling);
   validateIntegration(integration);
   validatePrivacy(privacy, config);
+  validateSeo(seo);
 
   if (!config.projectName.startsWith(config.professionalName)) {
     throw new Error('Configuração inválida em content/site.json:\n- \"projectName\" deve começar com \"professionalName\" para preservar a identidade visual');
@@ -212,6 +251,12 @@ try {
     SCHEDULING_DEMO_RESULT: escapeHtml(scheduling.states.demoResult),
     INTEGRATION_CONFIG: JSON.stringify(integration).replaceAll('<', '\\u003c'),
     PRIVACY_POLICY_VERSION: escapeHtml(privacy.version),
+    SEO_LANGUAGE: escapeHtml(seo.language), SEO_LOCALE: escapeHtml(seo.locale),
+    SEO_THEME_COLOR: escapeHtml(seo.themeColor), SEO_ROBOTS: seo.indexingEnabled ? 'index, follow' : 'noindex, nofollow',
+    SEO_TWITTER_CARD: escapeHtml(seo.twitterCard),
+    SEO_INDEX_TITLE: escapeHtml(titleFor(seo, config.projectName)),
+    SEO_INDEX_DESCRIPTION: escapeHtml(seo.defaultDescription),
+    SEO_INDEX_OPTIONAL_TAGS: optionalSeoTags(seo, ''),
   };
 
   const output = replaceTokens(template, values, 'src/index.template.html');
@@ -222,11 +267,23 @@ try {
     PRIVACY_DATA_TYPES: escapeHtml(privacy.requestedData.join(', ')), PRIVACY_PURPOSE: escapeHtml(privacy.purpose),
     PRIVACY_NO_RESERVATION: escapeHtml(privacy.noReservation), PRIVACY_CALENDAR_NOTICE: escapeHtml(privacy.calendarNotice),
     PRIVACY_RETENTION: escapeHtml(privacy.retentionPeriod), PRIVACY_CORRECTION: escapeHtml(privacy.correctionDeletion),
-    PRIVACY_SENSITIVE_WARNING: escapeHtml(privacy.sensitiveDataWarning)
+    PRIVACY_SENSITIVE_WARNING: escapeHtml(privacy.sensitiveDataWarning),
+    SEO_LANGUAGE: escapeHtml(seo.language), SEO_LOCALE: escapeHtml(seo.locale),
+    SEO_THEME_COLOR: escapeHtml(seo.themeColor), SEO_ROBOTS: seo.indexingEnabled ? 'index, follow' : 'noindex, nofollow',
+    SEO_TWITTER_CARD: escapeHtml(seo.twitterCard),
+    SEO_PRIVACY_TITLE: escapeHtml(titleFor(seo, privacy.title)),
+    SEO_PRIVACY_DESCRIPTION: escapeHtml(`Rascunho do aviso de privacidade da ${config.projectName} para solicitações de agendamento.`),
+    SEO_PRIVACY_OPTIONAL_TAGS: optionalSeoTags(seo, 'privacy.html')
   };
   const privacyOutput = replaceTokens(privacyTemplate, privacyValues, 'src/privacy.template.html');
-  await Promise.all([writeFile(outputPath, output, 'utf8'), writeFile(privacyOutputPath, privacyOutput, 'utf8')]);
-  console.log('index.html e privacy.html gerados com sucesso.');
+  const robots = seo.indexingEnabled ? `User-agent: *\nAllow: /\nSitemap: ${new URL('sitemap.xml', seo.siteUrl.endsWith('/') ? seo.siteUrl : `${seo.siteUrl}/`).href}\n` : 'User-agent: *\nDisallow: /\n';
+  const writes = [writeFile(outputPath, output, 'utf8'), writeFile(privacyOutputPath, privacyOutput, 'utf8'), writeFile(robotsOutputPath, robots, 'utf8')];
+  if (seo.indexingEnabled && seo.siteUrl) {
+    const base = seo.siteUrl.endsWith('/') ? seo.siteUrl : `${seo.siteUrl}/`;
+    writes.push(writeFile(sitemapOutputPath, `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${escapeHtml(base)}</loc></url><url><loc>${escapeHtml(new URL('privacy.html', base).href)}</loc></url></urlset>\n`, 'utf8'));
+  } else writes.push(rm(sitemapOutputPath, { force: true }));
+  await Promise.all(writes);
+  console.log('index.html, privacy.html e robots.txt gerados com sucesso.');
 } catch (error) {
   console.error(`Erro ao gerar o site: ${error.message}`);
   process.exitCode = 1;

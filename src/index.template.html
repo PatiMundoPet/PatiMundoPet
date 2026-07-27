@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="{{SEO_LANGUAGE}}">
 <head>
 <!--
   {{PROJECT_NAME}} — Protótipo visual de site institucional (DEMO)
@@ -14,14 +14,21 @@
 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{PROJECT_NAME}} | Dog Walker — Passeios para Cães em {{SERVICE_AREA}}</title>
-<meta name="description" content="Passeios diários para o seu cão em {{SERVICE_AREA}}, com uma equipe treinada e apaixonada por bem-estar animal. Serviço especializado de Dog Walker — fale agora pelo WhatsApp.">
-<meta name="theme-color" content="#1e2b22">
+<title>{{SEO_INDEX_TITLE}}</title>
+<meta name="description" content="{{SEO_INDEX_DESCRIPTION}}">
+<meta name="theme-color" content="{{SEO_THEME_COLOR}}">
+<meta name="robots" content="{{SEO_ROBOTS}}">
 
 <!-- Open Graph -->
-<meta property="og:title" content="{{PROJECT_NAME}} — Dog Walker em {{SERVICE_AREA}}">
-<meta property="og:description" content="Passeios diários para o seu cão, com uma equipe treinada e apaixonada por bem-estar animal.">
+<meta property="og:title" content="{{SEO_INDEX_TITLE}}">
+<meta property="og:description" content="{{SEO_INDEX_DESCRIPTION}}">
 <meta property="og:type" content="website">
+<meta property="og:locale" content="{{SEO_LOCALE}}">
+<meta property="og:site_name" content="{{PROJECT_NAME}}">
+{{SEO_INDEX_OPTIONAL_TAGS}}
+<meta name="twitter:card" content="{{SEO_TWITTER_CARD}}">
+<meta name="twitter:title" content="{{SEO_INDEX_TITLE}}">
+<meta name="twitter:description" content="{{SEO_INDEX_DESCRIPTION}}">
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%BE%3C/text%3E%3C/svg%3E">
 
@@ -36,6 +43,7 @@
 </head>
 
 <body class="bg-stone-50 font-body text-ink-900 antialiased">
+<a class="skip-link" href="#conteudo-principal">Pular para o conteúdo</a>
 
 <!-- ============================================================ LOADER (abertura do site) ============================================================ -->
 <div id="site-loader" role="status" aria-live="polite" aria-label="Carregando {{PROJECT_NAME}}">
@@ -127,7 +135,7 @@
   </div>
 </header>
 
-<main>
+<main id="conteudo-principal" tabindex="-1">
 <!-- ============================================================ HERO ============================================================ -->
 <div id="inicio" class="relative bg-moss-800 pt-32 pb-28 sm:pt-40 sm:pb-36 overflow-hidden">
   <div class="pointer-events-none absolute -top-24 -left-24 w-80 h-80 rounded-full bg-brass-500/10 blur-3xl"></div>
@@ -386,13 +394,6 @@
       </fieldset>
 
       <div class="schedule-review">
-        <label for="schedule-privacy-confirmation">
-          <input id="schedule-privacy-confirmation" name="privacyAccepted" type="checkbox" required aria-required="true" aria-describedby="error-privacidade">
-          <span>Li o <a class="underline" href="privacy.html">aviso de privacidade</a> e autorizo o uso dos dados para analisar esta solicitação.</span>
-        </label>
-        <span class="schedule-error" id="error-privacidade"></span>
-      </div>
-
         <h3>{{SCHEDULING_SUMMARY_TITLE}}</h3>
         <p class="schedule-status">{{SCHEDULING_NOT_SENT}}</p>
         <div id="schedule-summary" aria-live="polite" aria-atomic="true">
@@ -400,8 +401,24 @@
         </div>
       </div>
 
-      <label class="schedule-confirmation">
-        <input id="schedule-review-confirmation" name="revisao" type="checkbox" required aria-required="true">
+      <label class="schedule-confirmation" for="schedule-privacy-confirmation">
+        <input
+          id="schedule-privacy-confirmation"
+          name="privacyAccepted"
+          type="checkbox"
+          required
+          aria-required="true"
+          aria-describedby="error-privacidade"
+        >
+        <span>
+          Li o <a class="underline" href="privacy.html">aviso de privacidade</a>
+          e autorizo o uso dos dados para analisar esta solicitação.
+        </span>
+      </label>
+      <span class="schedule-error" id="error-privacidade"></span>
+
+      <label class="schedule-confirmation" for="schedule-review-confirmation">
+        <input id="schedule-review-confirmation" name="revisao" type="checkbox" required aria-required="true" aria-describedby="error-revisao">
         <span>{{SCHEDULING_REVIEW}}</span>
       </label>
       <span class="schedule-error" id="error-revisao"></span>

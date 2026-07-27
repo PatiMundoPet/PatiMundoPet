@@ -8,6 +8,7 @@
     "build": "npm run build:site && npm run build:css",
     "test:apps-script": "node scripts/test-apps-script.mjs",
     "test:scheduling-api": "node scripts/test-scheduling-api.mjs",
-    "test:security": "node scripts/test-security.mjs"
+    "test:security": "node scripts/test-security.mjs",
+    "test:quality": "node scripts/test-quality.mjs"
   }
 }

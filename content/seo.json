@@ -1,0 +1,11 @@
+{
+  "titleTemplate": "%s | Paty MundoPet",
+  "defaultDescription": "Site demonstrativo de serviços de passeio e cuidado canino da Paty MundoPet.",
+  "locale": "pt_BR",
+  "language": "pt-BR",
+  "themeColor": "#1e2b22",
+  "siteUrl": "",
+  "socialImage": "",
+  "indexingEnabled": false,
+  "twitterCard": "summary_large_image"
+}

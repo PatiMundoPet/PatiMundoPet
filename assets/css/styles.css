@@ -286,3 +286,12 @@
 .js .schedule-final-notice.is-visible { display: block; padding: 1rem; border-radius: .75rem; background: #e7eee8; }
 @media (max-width: 639px) { .schedule-section { padding: 3.5rem 1.25rem; } .schedule-fields { grid-template-columns: 1fr; } .schedule-field:last-child { grid-column: auto; } .schedule-submit { width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .schedule-choice span { transition: none; } }
+
+/* Navegação por teclado sem alteração do layout em repouso. */
+.skip-link { position: fixed; top: .5rem; left: .5rem; z-index: 100; padding: .75rem 1rem; border-radius: .5rem; background: #f8f4ea; color: #172019; font-weight: 700; transform: translateY(-200%); }
+.skip-link:focus { transform: translateY(0); outline: 3px solid #ad8a4e; outline-offset: 2px; }
+:where(a, button, input, select, textarea):focus-visible { outline: 3px solid #ad8a4e; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .reveal, .is-reveal-pending { opacity: 1 !important; transform: none !important; }
+}
