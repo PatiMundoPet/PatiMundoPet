@@ -8,6 +8,21 @@
 
   var CODES = new Set(['HEALTH_OK', 'AVAILABILITY_OK', 'REQUEST_CREATED', 'SLOT_UNAVAILABLE', 'LOCK_TIMEOUT', 'INVALID_REQUEST', 'CONFIGURATION_REQUIRED', 'INTERNAL_ERROR']);
 
+  function formatCalendarDate(date) {
+    if (!(date instanceof Date) || !Number.isFinite(date.getTime())) throw new TypeError('Data inválida.');
+    var year = String(date.getFullYear());
+    var month = String(date.getMonth() + 1).padStart(2, '0');
+    var day = String(date.getDate()).padStart(2, '0');
+    return year + '-' + month + '-' + day;
+  }
+
+  function addCalendarDays(date, days) {
+    if (!(date instanceof Date) || !Number.isFinite(date.getTime()) || !Number.isInteger(days)) throw new TypeError('Data ou intervalo inválido.');
+    var result = new Date(date.getTime());
+    result.setDate(result.getDate() + days);
+    return result;
+  }
+
   function validateWebAppUrl(value) {
     if (typeof value !== 'string' || !value.trim()) return false;
     try {
@@ -122,5 +137,13 @@
     };
   }
 
-  return { createClient: createClient, validateConfig: validateConfig, validateWebAppUrl: validateWebAppUrl, normalizeResponse: normalizeResponse, generateRequestId: generateRequestId };
+  return {
+    createClient: createClient,
+    validateConfig: validateConfig,
+    validateWebAppUrl: validateWebAppUrl,
+    normalizeResponse: normalizeResponse,
+    generateRequestId: generateRequestId,
+    formatCalendarDate: formatCalendarDate,
+    addCalendarDays: addCalendarDays
+  };
 });

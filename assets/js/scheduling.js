@@ -12,7 +12,13 @@
   var availabilityStatus = document.getElementById('schedule-availability-status');
   var liveDate = document.getElementById('schedule-live-date');
   var liveTimes = document.getElementById('schedule-live-times');
-  if (!summary || !validation || !finalNotice || !confirmation || !submit) return;
+  var demoDatePanel = document.getElementById('schedule-demo-date-panel');
+  var demoTimePanel = document.getElementById('schedule-demo-time-panel');
+  var liveDatePanel = document.getElementById('schedule-live-date-panel');
+  var liveTimePanel = document.getElementById('schedule-live-time-panel');
+  if (!summary || !validation || !finalNotice || !confirmation || !submit || !whatsappLink ||
+      !availabilityStatus || !liveDate || !liveTimes || !demoDatePanel || !demoTimePanel ||
+      !liveDatePanel || !liveTimePanel) return;
 
   var integration = { mode: 'demo', webAppUrl: '', messages: {} };
   try {
@@ -95,11 +101,12 @@
   }
 
   if (live) {
-    document.getElementById('schedule-demo-date-panel').hidden = true; document.getElementById('schedule-demo-time-panel').hidden = true;
+    demoDatePanel.hidden = true; demoTimePanel.hidden = true;
     form.querySelectorAll('#schedule-demo-date-panel input, #schedule-demo-time-panel input').forEach(function (input) { input.disabled = true; });
-    document.getElementById('schedule-live-date-panel').hidden = false; document.getElementById('schedule-live-time-panel').hidden = false;
-    var today = new Date(); var max = new Date(today); max.setDate(max.getDate() + integration.maxFutureDays);
-    liveDate.min = today.toISOString().slice(0, 10); liveDate.max = max.toISOString().slice(0, 10); liveDate.required = true;
+    liveDatePanel.hidden = false; liveTimePanel.hidden = false;
+    var today = new Date();
+    var max = api.addCalendarDays(today, integration.maxFutureDays);
+    liveDate.min = api.formatCalendarDate(today); liveDate.max = api.formatCalendarDate(max); liveDate.required = true;
     client.health().then(function (result) { if (!result.configured) availabilityStatus.textContent = integration.messages.unavailable; }).catch(function () { availabilityStatus.textContent = integration.messages.unavailable; });
     liveDate.addEventListener('change', function () {
       liveTimes.replaceChildren();

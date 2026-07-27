@@ -14,6 +14,15 @@ assert.equal(Api.validateWebAppUrl('/relative/exec'), false);
 assert.equal(Api.validateWebAppUrl('https://script.google.com/macros/s/x/dev'), false);
 assert.equal(Api.validateWebAppUrl('https://script.google.com/macros/s/x/exec'), true);
 
+assert.equal(Api.formatCalendarDate(new Date(2026, 0, 5, 23, 30)), '2026-01-05', 'preenche mês e dia com zero');
+assert.equal(Api.formatCalendarDate(Api.addCalendarDays(new Date(2026, 0, 31, 12), 1)), '2026-02-01', 'trata virada de mês');
+assert.equal(Api.formatCalendarDate(Api.addCalendarDays(new Date(2026, 11, 31, 12), 1)), '2027-01-01', 'trata virada de ano');
+const initialDate = new Date(2026, 11, 20, 12);
+const initialTimestamp = initialDate.getTime();
+const maximumDate = Api.addCalendarDays(initialDate, 20);
+assert.equal(Api.formatCalendarDate(maximumDate), '2027-01-09');
+assert.equal(initialDate.getTime(), initialTimestamp, 'o cálculo da data máxima não modifica a data inicial');
+
 calls = [];
 const demo = client(() => { throw new Error('fetch não deveria ocorrer'); }, { ...base, mode: 'demo', webAppUrl: '' });
 assert.equal((await demo.health()).code, 'DEMO_MODE');
