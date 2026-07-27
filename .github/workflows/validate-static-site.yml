@@ -24,8 +24,8 @@ jobs:
       - name: Build static site
         run: npm run build
 
-      - name: Verify generated HTML is synchronized
-        run: git diff --exit-code -- index.html privacy.html
+      - name: Verify generated site is synchronized
+        run: git diff --exit-code -- index.html privacy.html robots.txt assets/css/tailwind.min.css
 
       - name: Upload generated Tailwind CSS
         uses: actions/upload-artifact@v4
@@ -47,6 +47,7 @@ jobs:
           node --check scripts/build-site.mjs
           node --check scripts/test-security.mjs
           node --check scripts/test-apps-script.mjs
+          node --check scripts/test-quality.mjs
           cp apps-script/Code.gs /tmp/paty-mundopet-Code.js
           node --check /tmp/paty-mundopet-Code.js
 
@@ -58,6 +59,9 @@ jobs:
 
       - name: Test static security guarantees
         run: npm run test:security
+
+      - name: Test SEO, accessibility and performance guarantees
+        run: npm run test:quality
 
       - name: Parse index.html
         run: |
@@ -89,6 +93,12 @@ jobs:
           private_key_prefix='BEGIN (RSA |EC |OPENSSH )?PRIVATE'
           private_key_suffix=' KEY'
           ! grep -R -E "${web_app_prefix}${web_app_suffix}|${private_key_prefix}${private_key_suffix}" --exclude-dir=.git .
+
+      - name: Verify placeholders and unpublished SEO state
+        run: |
+          grep -q 'PLACEHOLDERS de demonstração' content/site.json
+          node -e "const s=require('./content/seo.json'); if(s.indexingEnabled!==false||s.siteUrl!==''||s.socialImage!=='') process.exit(1)"
+          test ! -e sitemap.xml
 
       - name: Check whitespace errors
         run: git diff --check

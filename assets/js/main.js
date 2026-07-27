@@ -14,11 +14,15 @@
       iconMenu.classList.toggle('hidden', open);
       iconClose.classList.toggle('hidden', !open);
       toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
     }
 
     toggle.addEventListener('click', function () { setMenu(!open); });
     menu.querySelectorAll('a').forEach(function (link) {
       link.addEventListener('click', function () { setMenu(false); });
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && open) { setMenu(false); toggle.focus(); }
     });
 
     // Mantém os dois formatos coerentes entre si: se a janela crescer e
