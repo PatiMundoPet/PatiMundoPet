@@ -6,7 +6,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var CODES = new Set(['HEALTH_OK', 'AVAILABILITY_OK', 'REQUEST_CREATED', 'SLOT_UNAVAILABLE', 'LOCK_TIMEOUT', 'INVALID_REQUEST', 'CONFIGURATION_REQUIRED', 'INTERNAL_ERROR', 'RATE_LIMITED']);
+  var CODES = new Set(['HEALTH_OK', 'AVAILABILITY_OK', 'REQUEST_CREATED', 'SLOT_UNAVAILABLE', 'LOCK_TIMEOUT', 'INVALID_REQUEST', 'CONFIGURATION_REQUIRED', 'INTERNAL_ERROR', 'RATE_LIMITED', 'INCONSISTENT_STATE', 'PERSISTENCE_FAILED']);
 
   function formatCalendarDate(date) {
     if (!(date instanceof Date) || !Number.isFinite(date.getTime())) throw new TypeError('Data inválida.');

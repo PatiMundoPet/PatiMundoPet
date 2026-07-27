@@ -36,8 +36,10 @@ health = await client(() => response({ ok: true, code: 'HEALTH_OK', message: 'ok
 assert.equal(health.configured, false);
 
 calls = [];
-const availability = await client(() => response({ ok: true, code: 'AVAILABILITY_OK', message: 'ok', data: { date: '2026-08-01', available: ['09:00'], unavailable: ['10:00'] } })).availability('2026-08-01');
+const availability = await client(() => response({ ok: true, code: 'AVAILABILITY_OK', message: 'ok', data: { date: '2026-08-01', available: ['09:00'], unavailable: [] } })).availability('2026-08-01');
 assert.deepEqual(availability.data.available, ['09:00']);
+assert.deepEqual(availability.data.unavailable, [], 'interface não depende da publicação de horários ocupados');
+assert.doesNotThrow(() => availability.data.available.concat(availability.data.unavailable), 'formato compatível não causa TypeError na renderização');
 assert.equal(calls[0][1].cache, 'no-store'); assert.equal(calls[0][1].redirect, 'follow');
 await assert.rejects(client(() => response({ what: 'ever' })).health(), /INVALID_RESPONSE/);
 await assert.rejects(client(() => response('x'.repeat(5000))).health(), /RESPONSE_TOO_LARGE/);
@@ -57,6 +59,12 @@ const rotating = Api.createClient(base, { fetch: async (...args) => { calls.push
 calls = []; assert.equal((await rotating.request(payload)).code, 'LOCK_TIMEOUT');
 await rotating.request({ ...payload, petName: 'Bidu' }); assert.notEqual(calls[0][1].body.get('requestId'), calls[1][1].body.get('requestId'));
 assert.equal((await client(() => response({ ok: false, code: 'SLOT_UNAVAILABLE', message: 'ocupado', requestId: uuid.randomUUID() })).request(payload)).code, 'SLOT_UNAVAILABLE');
+for (const code of ['INCONSISTENT_STATE', 'PERSISTENCE_FAILED']) {
+  const safeMessage = code === 'INCONSISTENT_STATE' ? 'A solicitação requer reconciliação administrativa.' : 'Não foi possível registrar a solicitação.';
+  const safeError = await client(() => response({ ok: false, code, message: safeMessage, requestId: uuid.randomUUID() })).request(payload);
+  assert.equal(safeError.code, code, `${code} é aceito como erro seguro`);
+  assert.equal(safeError.message, safeMessage, `${code} preserva a mensagem segura`);
+}
 
 const source = await readFile(new URL('../assets/js/scheduling.js', import.meta.url), 'utf8');
 assert.doesNotMatch(source, /localStorage|sessionStorage|document\.cookie/);

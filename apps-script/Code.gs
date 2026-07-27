@@ -21,7 +21,8 @@ function availabilityResponse_(dateText){
   var loaded=loadConfig_();if(!loaded.ok)return response_(false,'CONFIGURATION_REQUIRED','A integração ainda não foi configurada.');var c=loaded.config;
   if(!validateDate_(dateText,c.timezone,true).ok)return invalidRequest_();var calendars=getCalendars_(c);if(!calendars.ok)return response_(false,'CONFIGURATION_REQUIRED','As agendas configuradas não estão disponíveis.');
   var slots=calculateAvailableSlots_(dateText,c,calendars.availability,calendars.appointments);
-  return response_(true,'AVAILABILITY_OK','Disponibilidade consultada.',null,{date:dateText,available:slots});
+  // Compatibilidade com o cliente atual: horários ocupados nunca são publicados.
+  return response_(true,'AVAILABILITY_OK','Disponibilidade consultada.',null,{date:dateText,available:slots,unavailable:[]});
 }
 function calculateAvailableSlots_(dateText,c,availabilityCalendar,appointmentsCalendar){
   var day=createDayRange_(dateText,c.timezone),busy=appointmentsCalendar.getEvents(day.start,day.end),unique={};
