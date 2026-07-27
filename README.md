@@ -74,3 +74,9 @@ O backend preparado valida tamanho, tipo e campos do POST, aplica limitação de
 `content/seo.json` centraliza metadados públicos e não sensíveis. O SEO técnico está preparado, porém `indexingEnabled` permanece `false`, `siteUrl` e `socialImage` permanecem vazios, e `robots.txt` bloqueia rastreamento. O build só criará `sitemap.xml` depois que a indexação for explicitamente ativada com uma URL HTTPS real; ele nunca gera URLs fictícias.
 
 Dados estruturados de empresa (`LocalBusiness`, endereço e informações equivalentes) foram adiados porque ainda não há dados reais validados. A Fase 8 acrescentou semântica, navegação por teclado, foco visível, redução de movimento e testes estáticos sem redesenhar a interface: cores, fontes Fraunces e Karla, cards, seções e identidade visual foram preservados. Nenhum deploy, analytics, cookie, conexão com Apps Script ou Calendar foi realizado; o modo continua inativo e a URL do Web App permanece vazia.
+
+## Fase 9B-0A — base Google separada
+
+O backend público agora está preparado para derivar slots de uma agenda exclusiva de disponibilidade, subtrair toda ocupação de uma agenda exclusiva de atendimentos e persistir de forma idempotente nas abas `Solicitações` e `Clientes`, validando também `Pagamentos` sem gravá-la. A configuração usa somente Script Properties e placeholders; `CALENDAR_ID` e a lista estática `ALLOWED_START_TIMES_JSON` foram removidos do contrato.
+
+O futuro painel administrativo está apenas especificado em `docs/arquitetura-painel-privado.md` e `docs/contrato-administrativo.md`: será outro projeto Apps Script, outro deployment e acesso Google privado. Nenhuma ação administrativa foi exposta. Nenhum ID real, deploy ou e-mail foi usado; `content/integration.json` permanece com `mode: "demo"` e `webAppUrl: ""`.
