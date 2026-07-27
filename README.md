@@ -59,7 +59,7 @@ em **Avisar a Paty pelo WhatsApp**, e a Paty ainda revisará a solicitação.
 
 ## Backend preparado — Fase 6A
 
-O diretório [`apps-script/`](apps-script/) contém o backend de agendamento para uma implantação **manual e futura** no Google Apps Script. Ele inclui diagnóstico, consulta segura de disponibilidade e criação de eventos pendentes com trava e idempotência, mas não contém URL, credencial, ID de agenda nem dados reais.
+O diretório [`apps-script/`](apps-script/) contém o backend de agendamento para uma implantação **manual e futura** no Google Apps Script. Ele inclui diagnóstico, consulta segura de disponibilidade e registro de linhas pendentes com trava e idempotência por `requestId`, mas não contém URL, credencial, ID de agenda nem dados reais.
 
 `content/integration.json` controla a integração gerada no HTML. Nesta fase ele permanece em `mode: "demo"`, com `webAppUrl` vazio; portanto, o site não faz consultas nem envia solicitações. Consulte [`apps-script/README.md`](apps-script/README.md) antes de qualquer implantação ou ativação. Os testes locais com mocks podem ser executados com `npm run test:apps-script` e nunca acessam uma conta Google.
 
