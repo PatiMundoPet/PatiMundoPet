@@ -38,7 +38,9 @@ jobs:
         run: git diff --exit-code -- assets/css/tailwind.min.css
 
       - name: Check JavaScript syntax
-        run: node --check assets/js/main.js
+        run: |
+          node --check assets/js/main.js
+          node --check assets/js/scheduling.js
 
       - name: Parse index.html
         run: |

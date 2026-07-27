@@ -87,6 +87,7 @@
       <nav class="hidden lg:flex items-center gap-8 text-[15px] text-ink-700">
         <a href="#diferenciais" class="hover:text-moss-700 transition-colors">Diferenciais</a>
         <a href="#servicos" class="hover:text-moss-700 transition-colors">Serviços</a>
+        <a href="#agendamento" class="hover:text-moss-700 transition-colors">Agendamento</a>
         <a href="#como-funciona" class="hover:text-moss-700 transition-colors">Como funciona</a>
         <a href="#depoimentos" class="hover:text-moss-700 transition-colors">Depoimentos</a>
         <a href="#galeria" class="hover:text-moss-700 transition-colors">Galeria</a>
@@ -116,6 +117,7 @@
     <nav class="flex flex-col px-5 py-4 gap-1 text-ink-700">
       <a href="#diferenciais" class="py-2.5 border-b border-stone-200/70">Diferenciais</a>
       <a href="#servicos" class="py-2.5 border-b border-stone-200/70">Serviços</a>
+      <a href="#agendamento" class="py-2.5 border-b border-stone-200/70">Agendamento</a>
       <a href="#como-funciona" class="py-2.5 border-b border-stone-200/70">Como funciona</a>
       <a href="#depoimentos" class="py-2.5 border-b border-stone-200/70">Depoimentos</a>
       <a href="#galeria" class="py-2.5 border-b border-stone-200/70">Galeria</a>
@@ -335,6 +337,74 @@
         </a>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- ============================================================ AGENDAMENTO DEMONSTRATIVO ============================================================ -->
+<section id="agendamento" class="schedule-section">
+  <div class="schedule-shell">
+    <header class="schedule-heading">
+      <span class="schedule-kicker">Interface demonstrativa</span>
+      <h2>Agendamento</h2>
+      <p>Monte uma solicitação de passeio para revisar antes de conversar com a Paty.</p>
+      <p class="schedule-notice"><strong>Atenção:</strong> Disponibilidade demonstrativa: os dias e horários abaixo não representam a agenda real da Paty.</p>
+    </header>
+
+    <noscript><p class="schedule-noscript">A seleção interativa requer JavaScript. Esta seção demonstrativa continua visível, e você pode usar os contatos do site normalmente.</p></noscript>
+
+    <form id="schedule-form" class="schedule-form" novalidate>
+      <div id="schedule-validation" class="schedule-validation" role="alert" aria-live="assertive"></div>
+
+      <fieldset class="schedule-panel">
+        <legend>1. Selecione o serviço</legend>
+        <div class="schedule-options schedule-services"><label class="schedule-choice" data-available-label="Disponível (demonstração)" data-selected-label="Selecionado"><input type="radio" name="servico" value="Dog Walker" required><span>Dog Walker<small>Disponível (demonstração)</small></span></label>
+<label class="schedule-choice" data-available-label="Disponível (demonstração)" data-selected-label="Selecionado"><input type="radio" name="servico" value="Passeio Individual" required><span>Passeio Individual<small>Disponível (demonstração)</small></span></label>
+<label class="schedule-choice" data-available-label="Disponível (demonstração)" data-selected-label="Selecionado"><input type="radio" name="servico" value="Passeio em Pequeno Grupo" required><span>Passeio em Pequeno Grupo<small>Disponível (demonstração)</small></span></label>
+<label class="schedule-choice" data-available-label="Disponível (demonstração)" data-selected-label="Selecionado"><input type="radio" name="servico" value="Planos Semanais" required><span>Planos Semanais<small>Disponível (demonstração)</small></span></label></div>
+      </fieldset>
+
+      <fieldset class="schedule-panel">
+        <legend>2. Escolha uma data demonstrativa</legend>
+        <div class="schedule-options schedule-days"><label class="schedule-choice" data-available-label="Disponível (demonstração)" data-selected-label="Selecionado"><input type="radio" name="data" value="Dia demonstrativo 1" required><span>Dia demonstrativo 1<small>Disponível (demonstração)</small></span></label>
+<label class="schedule-choice" data-available-label="Disponível (demonstração)" data-selected-label="Selecionado"><input type="radio" name="data" value="Dia demonstrativo 2" required><span>Dia demonstrativo 2<small>Disponível (demonstração)</small></span></label>
+<label class="schedule-choice" data-available-label="Disponível (demonstração)" data-selected-label="Selecionado"><input type="radio" name="data" value="Dia demonstrativo 3" required><span>Dia demonstrativo 3<small>Disponível (demonstração)</small></span></label></div>
+      </fieldset>
+
+      <fieldset class="schedule-panel">
+        <legend>3. Escolha um horário demonstrativo</legend>
+        <div class="schedule-options schedule-times"><label class="schedule-choice" data-available-label="Disponível (demonstração)" data-selected-label="Selecionado"><input type="radio" name="horario" value="09:00 — demonstração" required><span>09:00 — demonstração<small>Disponível (demonstração)</small></span></label>
+<label class="schedule-choice" data-available-label="Disponível (demonstração)" data-selected-label="Selecionado"><input type="radio" name="horario" value="11:00 — demonstração" required><span>11:00 — demonstração<small>Disponível (demonstração)</small></span></label>
+<label class="schedule-choice is-unavailable" data-available-label="Indisponível (demonstração)" data-selected-label="Selecionado"><input type="radio" name="horario" value="14:00 — demonstração" required disabled><span>14:00 — demonstração<small>Indisponível (demonstração)</small></span></label>
+<label class="schedule-choice" data-available-label="Disponível (demonstração)" data-selected-label="Selecionado"><input type="radio" name="horario" value="16:00 — demonstração" required><span>16:00 — demonstração<small>Disponível (demonstração)</small></span></label></div>
+      </fieldset>
+
+      <fieldset class="schedule-panel schedule-contact">
+        <legend>4. Conte quem está solicitando</legend>
+        <p class="required-note">Campos com <span aria-hidden="true">*</span> são obrigatórios.</p>
+        <div class="schedule-fields"><div class="schedule-field"><label for="schedule-responsavel">Nome do responsável <span aria-hidden="true">*</span></label><input id="schedule-responsavel" name="responsavel" autocomplete="name" required aria-required="true" aria-describedby="error-responsavel" type="text"><span class="schedule-error" id="error-responsavel"></span></div>
+<div class="schedule-field"><label for="schedule-whatsapp">WhatsApp <span aria-hidden="true">*</span></label><input id="schedule-whatsapp" name="whatsapp" autocomplete="tel" required aria-required="true" aria-describedby="error-whatsapp" type="tel"><span class="schedule-error" id="error-whatsapp"></span></div>
+<div class="schedule-field"><label for="schedule-pet">Nome do pet <span aria-hidden="true">*</span></label><input id="schedule-pet" name="pet" autocomplete="off" required aria-required="true" aria-describedby="error-pet" type="text"><span class="schedule-error" id="error-pet"></span></div>
+<div class="schedule-field"><label for="schedule-regiao">Bairro ou região <span aria-hidden="true">*</span></label><input id="schedule-regiao" name="regiao" autocomplete="address-level3" required aria-required="true" aria-describedby="error-regiao" type="text"><span class="schedule-error" id="error-regiao"></span></div>
+<div class="schedule-field"><label for="schedule-observacoes">Observações (opcional)</label><textarea id="schedule-observacoes" name="observacoes" autocomplete="off" aria-describedby="error-observacoes" rows="4"></textarea><span class="schedule-error" id="error-observacoes"></span></div></div>
+      </fieldset>
+
+      <div class="schedule-review">
+        <h3>Resumo da solicitação</h3>
+        <p class="schedule-status">Solicitação ainda não enviada</p>
+        <div id="schedule-summary" aria-live="polite" aria-atomic="true">
+          <p>Preencha as escolhas e os campos para preparar o resumo local.</p>
+        </div>
+      </div>
+
+      <label class="schedule-confirmation">
+        <input id="schedule-review-confirmation" name="revisao" type="checkbox" required aria-required="true">
+        <span>Confirmo que esta solicitação ainda será revisada pela Paty e não representa uma reserva.</span>
+      </label>
+      <span class="schedule-error" id="error-revisao"></span>
+
+      <button class="schedule-submit" type="submit">Preparar solicitação</button>
+      <p class="schedule-final-notice" id="schedule-final-notice" tabindex="-1" aria-live="polite">Esta é uma demonstração. Nenhum horário foi reservado.</p>
+    </form>
   </div>
 </section>
 
@@ -627,6 +697,7 @@
         <ul class="space-y-2.5 text-stone-50/75 text-sm">
           <li><a href="#diferenciais" class="hover:text-stone-50 transition-colors">Diferenciais</a></li>
           <li><a href="#servicos" class="hover:text-stone-50 transition-colors">Serviços</a></li>
+          <li><a href="#agendamento" class="hover:text-stone-50 transition-colors">Agendamento</a></li>
           <li><a href="#como-funciona" class="hover:text-stone-50 transition-colors">Como funciona</a></li>
           <li><a href="#depoimentos" class="hover:text-stone-50 transition-colors">Depoimentos</a></li>
           <li><a href="#galeria" class="hover:text-stone-50 transition-colors">Galeria</a></li>
@@ -682,5 +753,6 @@
 </a>
 
 <script src="assets/js/main.js" defer></script>
+<script src="assets/js/scheduling.js" defer></script>
 </body>
 </html>
