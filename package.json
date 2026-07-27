@@ -7,6 +7,7 @@
     "build:css": "npx --yes tailwindcss@3.4.17 -i ./assets/css/tailwind.css -o ./assets/css/tailwind.min.css --minify",
     "build": "npm run build:site && npm run build:css",
     "test:apps-script": "node scripts/test-apps-script.mjs",
-    "test:scheduling-api": "node scripts/test-scheduling-api.mjs"
+    "test:scheduling-api": "node scripts/test-scheduling-api.mjs",
+    "test:security": "node scripts/test-security.mjs"
   }
 }

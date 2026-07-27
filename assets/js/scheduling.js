@@ -7,6 +7,7 @@
   var validation = document.getElementById('schedule-validation');
   var finalNotice = document.getElementById('schedule-final-notice');
   var confirmation = document.getElementById('schedule-review-confirmation');
+  var privacyConfirmation = document.getElementById('schedule-privacy-confirmation');
   var submit = form.querySelector('[type="submit"]');
   var whatsappLink = document.getElementById('schedule-whatsapp-success');
   var availabilityStatus = document.getElementById('schedule-availability-status');
@@ -16,7 +17,7 @@
   var demoTimePanel = document.getElementById('schedule-demo-time-panel');
   var liveDatePanel = document.getElementById('schedule-live-date-panel');
   var liveTimePanel = document.getElementById('schedule-live-time-panel');
-  if (!summary || !validation || !finalNotice || !confirmation || !submit || !whatsappLink ||
+  if (!summary || !validation || !finalNotice || !confirmation || !privacyConfirmation || !submit || !whatsappLink ||
       !availabilityStatus || !liveDate || !liveTimes || !demoDatePanel || !demoTimePanel ||
       !liveDatePanel || !liveTimePanel) return;
 
@@ -55,6 +56,8 @@
     if (phone && phone.replace(/\D/g, '').length < 10) { setFieldError('whatsapp', 'Informe um WhatsApp com pelo menos 10 dígitos.'); missing.push('WhatsApp válido'); }
     setFieldError('revisao', confirmation.checked ? '' : 'Marque a confirmação de revisão.');
     if (!confirmation.checked) missing.push('Confirmação de revisão');
+    setFieldError('privacidade', privacyConfirmation.checked ? '' : 'Leia e aceite o aviso de privacidade.');
+    if (!privacyConfirmation.checked) missing.push('Consentimento de privacidade');
     if (loading) missing.push('Conclusão da consulta de disponibilidade');
     validation.textContent = missing.length ? 'Revise: ' + missing.join(', ') + '.' : '';
     return !missing.length;
@@ -130,7 +133,7 @@
     if (!validate()) { var first = form.querySelector('[aria-invalid="true"], input:invalid'); if (first) first.focus(); return; }
     renderSummary();
     if (!live) { showNotice(integration.mode === 'demo' ? integration.messages.demo : integration.messages.unavailable); return; }
-    var payload = { serviceId: selectedValue('servico'), date: selectedValue('data'), time: selectedValue('horario'), responsibleName: fieldValue('responsavel'), whatsapp: fieldValue('whatsapp'), petName: fieldValue('pet'), region: fieldValue('regiao'), notes: fieldValue('observacoes'), reviewAccepted: confirmation.checked, honeypot: '' };
+    var payload = { serviceId: selectedValue('servico'), date: selectedValue('data'), time: selectedValue('horario'), responsibleName: fieldValue('responsavel'), whatsapp: fieldValue('whatsapp'), petName: fieldValue('pet'), region: fieldValue('regiao'), notes: fieldValue('observacoes'), reviewAccepted: confirmation.checked, privacyAccepted: privacyConfirmation.checked, privacyPolicyVersion: form.dataset.privacyPolicyVersion, honeypot: '' };
     sending = true; submit.disabled = true; submit.textContent = integration.messages.processing;
     try {
       var result = await client.request(payload);
@@ -138,7 +141,9 @@
         showNotice(integration.messages.pendingCreated + ' Identificador: ' + result.requestId + '.');
         var message = ['Solicitação pendente', 'requestId: ' + result.requestId, 'Serviço: ' + selectedLabel('servico'), 'Data: ' + payload.date, 'Horário: ' + payload.time, 'Pet: ' + payload.petName].join('\n');
         whatsappLink.href = 'https://wa.me/' + form.dataset.whatsappNumber + '?text=' + encodeURIComponent(message); whatsappLink.hidden = false;
-        confirmation.checked = false;
+        confirmation.checked = false; privacyConfirmation.checked = false;
+      } else if (result.code === 'RATE_LIMITED') {
+        showNotice('Recebemos muitas tentativas em pouco tempo. Aguarde e tente novamente mais tarde.');
       } else if (result.code === 'SLOT_UNAVAILABLE') {
         var chosen = selectedInput('horario'); if (chosen) chosen.checked = false;
         showNotice('Outra pessoa pode ter solicitado esse horário antes. Consulte e escolha novamente.'); await loadAvailability();

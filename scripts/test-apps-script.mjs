@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
+import { createHash } from 'node:crypto';
 
 const source = await readFile(new URL('../apps-script/Code.gs', import.meta.url), 'utf8');
 let properties = {};
 let events = [];
 let calendarQueries = 0;
+let cacheValues = new Map();
 function parseDate(value) {
   const match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(value);
   if (!match) throw new Error('invalid date');
@@ -18,14 +20,18 @@ const calendar = {
     calendarQueries += 1;
     return events.filter((event) => event.start < end && event.end > start);
   },
-  createEvent(title, start, end, options) { events.push({ title, start, end, description: options.description, getDescription() { return this.description; } }); }
+  createEvent(title, start, end, options) { events.push({ id: 'event-' + (events.length + 1), title, start, end, description: options.description, getDescription() { return this.description; }, getTitle() { return this.title; }, getId() { return this.id; }, deleteEvent() { events = events.filter((item) => item !== this); } }); }
 };
 const context = vm.createContext({
   console: { log() {}, error() {} }, Date, JSON, Math, Number, Set,
+  CacheService: { getScriptCache: () => ({ get: (key) => cacheValues.get(key) || null, put: (key, value) => cacheValues.set(key, value) }) },
   PropertiesService: { getScriptProperties: () => ({ getProperties: () => ({ ...properties }) }) },
   CalendarApp: { getCalendarById: () => calendar },
   LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock() {} }) },
   Utilities: {
+    DigestAlgorithm: { SHA_256: 'SHA_256' }, Charset: { UTF_8: 'UTF_8' },
+    newBlob: (value) => ({ getBytes: () => [...Buffer.from(value)] }),
+    computeDigest: (algorithm, value) => [...createHash('sha256').update(value).digest()],
     getUuid: () => '123e4567-e89b-42d3-a456-426614174000',
     parseDate: (value) => parseDate(value),
     formatDate: (date, timezone, format) => {
@@ -42,13 +48,14 @@ const futureDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 const validProperties = {
   CALENDAR_ID: 'calendar.test', TIMEZONE: 'Etc/UTC', SLOT_DURATION_MINUTES: '60',
   ALLOWED_START_TIMES_JSON: '["09:00","11:00"]', ALLOWED_SERVICE_IDS_JSON: '["dog-walker"]',
-  PENDING_EVENT_PREFIX: '[PENDENTE]', WHATSAPP_NUMBER: '5511999999999'
+  PENDING_EVENT_PREFIX: '[PENDENTE]', WHATSAPP_NUMBER: '5511999999999', PRIVACY_POLICY_VERSION: 'draft-2026-01',
+  MAX_REQUEST_BYTES: '8192', RATE_LIMIT_WINDOW_MINUTES: '15', RATE_LIMIT_MAX_REQUESTS: '3', RATE_LIMIT_SALT: 'fictitious-test-salt', PENDING_RETENTION_DAYS: '30'
 };
 const validRequest = {
   action: 'request', serviceId: 'dog-walker', date: futureDate, time: '09:00', responsibleName: 'Pessoa Teste',
-  whatsapp: '(11) 99999-9999', petName: 'Pet Teste', region: 'Região Teste', notes: 'Texto breve', reviewAccepted: true, honeypot: ''
+  whatsapp: '(11) 99999-9999', petName: 'Pet Teste', region: 'Região Teste', notes: 'Texto breve', reviewAccepted: true, privacyAccepted: true, privacyPolicyVersion: 'draft-2026-01', honeypot: '', requestId: '123e4567-e89b-42d3-a456-426614174000'
 };
-function configure() { properties = { ...validProperties }; events = []; calendarQueries = 0; }
+function configure() { properties = { ...validProperties }; events = []; calendarQueries = 0; cacheValues = new Map(); }
 function validate(overrides = {}) { return context.validateRequest_({ ...validRequest, ...overrides }, context.loadConfig_().config); }
 
 configure();
@@ -99,4 +106,28 @@ const repeatedAtAnotherTime = context.requestResponse_({ ...validRequest, time: 
 assert.equal(repeatedAtAnotherTime.code, 'REQUEST_CREATED');
 assert.equal(events.length, 1, 'localiza o requestId antes de criar em outro intervalo');
 for (const code of ['CONFIGURATION_REQUIRED', 'INVALID_REQUEST', 'SLOT_UNAVAILABLE', 'LOCK_TIMEOUT', 'REQUEST_CREATED', 'INTERNAL_ERROR']) assert.match(code, /^[A-Z_]+$/);
+configure();
+assert.equal(validate({ privacyAccepted: false }).ok, false, 'exige consentimento separado');
+assert.equal(validate({ privacyPolicyVersion: '' }).ok, false, 'exige versão');
+assert.equal(validate({ privacyPolicyVersion: 'outra' }).ok, false, 'rejeita versão diferente');
+assert.equal(validate({ unexpected: 'x' }).ok, false, 'rejeita campo inesperado');
+const postBase = { postData: { contents: 'action=request', type: 'application/x-www-form-urlencoded; charset=UTF-8' }, parameter: { ...validRequest } };
+assert.equal(context.parsePostPayload_(postBase, 8192).ok, true);
+assert.equal(context.parsePostPayload_({ ...postBase, postData: { ...postBase.postData, type: 'application/json' } }, 8192).ok, false, 'rejeita Content-Type');
+assert.equal(context.parsePostPayload_({ ...postBase, postData: { ...postBase.postData, contents: 'x'.repeat(9000) } }, 8192).ok, false, 'rejeita corpo grande');
+const key = context.rateLimitKey_('5511999999999', context.loadConfig_().config);
+assert.equal(key.includes('5511999999999'), false, 'hash não contém telefone bruto');
+assert.equal(context.consumeRateLimit_('5511999999999', context.loadConfig_().config), true);
+context.consumeRateLimit_('5511999999999', context.loadConfig_().config); context.consumeRateLimit_('5511999999999', context.loadConfig_().config);
+assert.equal(context.consumeRateLimit_('5511999999999', context.loadConfig_().config), false, 'limite excedido');
+configure();
+const oldStart = new Date(Date.now() - 60 * 86400000); const oldEnd = new Date(oldStart.getTime() + 3600000);
+function retentionEvent(id, title, description) { return { id, title, description, start: oldStart, end: oldEnd, deleted: false, getId() { return this.id; }, getTitle() { return this.title; }, getDescription() { return this.description; }, deleteEvent() { this.deleted = true; events = events.filter((item) => item !== this); } }; }
+const expiredPending = retentionEvent('technical-pending', '[PENDENTE] Pet', 'private person phone');
+const confirmed = retentionEvent('technical-confirmed', '[CONFIRMADO] Pet', 'private confirmed data'); events = [expiredPending, confirmed];
+const preview = context.previewExpiredPendingEvents();
+assert.deepEqual([...preview.eventIds], ['technical-pending']); assert.equal(JSON.stringify(preview).includes('private'), false, 'preview não retorna dados pessoais');
+assert.equal(context.cleanupExpiredPendingEvents(false).removed, 0); assert.equal(events.length, 2, 'sem true não remove');
+assert.equal(context.cleanupExpiredPendingEvents(true).removed, 1); assert.equal(events.includes(confirmed), true, 'confirmado nunca é removido');
+assert.doesNotMatch(source, /console\.(?:log|error)\([^)]*(?:responsibleName|whatsapp|petName|region|notes)/, 'logs não incluem dados pessoais');
 console.log('Testes locais do Apps Script concluídos com sucesso.');
