@@ -30,19 +30,32 @@ O workflow **Validate static site** executa o build em pull requests para `main`
 confirma que `index.html` e `assets/css/tailwind.min.css` continuam sincronizados
 com seus arquivos-fonte.
 
-## Agenda demonstrativa — Fase 5
+## Cliente de agenda — Fase 6B
 
-A seção **Agendamento** é somente uma interface visual e local. Ela permite montar
-e revisar um resumo no navegador, mas **nenhuma solicitação é enviada, salva ou
-transformada em reserva**. Os dias e horários são placeholders identificados como
-demonstração e não representam a disponibilidade real da Paty. A integração com a
-disponibilidade real e o fluxo de envio ocorrerá em fases futuras.
+A seção **Agendamento** possui dois modos. No modo `demo` atual, ela continua sendo
+somente uma interface visual e local: nenhum `fetch` ocorre e os dias e horários
+demonstrativos não representam disponibilidade real. No modo `live`, que exige
+ativação explícita futura, o cliente consulta horários e registra apenas uma
+**solicitação pendente**; nenhuma confirmação é automática.
 
 Edite títulos, avisos, serviços já existentes, opções demonstrativas, estados e
 campos em `content/scheduling.json`. Depois, execute `npm run build:site` (ou o
 build completo) para atualizar o `index.html` estático. O comportamento local e os
-estilos ficam, respectivamente, em `assets/js/scheduling.js` e
+cliente HTTP, comportamento da interface e estilos ficam, respectivamente, em
+`assets/js/scheduling-api.js`, `assets/js/scheduling.js` e
 `assets/css/styles.css`.
+
+`content/integration.json` permanece obrigatoriamente com `mode: "demo"` e
+`webAppUrl: ""`. Após uma implantação real, somente a URL HTTPS de produção
+terminada em `/exec` poderá ser inserida. URLs `/dev` são restritas a testes de
+usuários autorizados e não devem ser publicadas. O POST usa parâmetros de
+formulário (`URLSearchParams`), não JSON. Depois do deploy, respostas e CORS ainda
+precisarão ser validados manualmente no navegador antes da ativação.
+
+Os IDs estáveis que deverão compor `ALLOWED_SERVICE_IDS_JSON` são
+`dog-walker`, `passeio-individual`, `passeio-grupo` e `planos-semanais`. Após uma
+resposta `REQUEST_CREATED`, o WhatsApp não abre sozinho: o cliente precisa clicar
+em **Avisar a Paty pelo WhatsApp**, e a Paty ainda revisará a solicitação.
 
 ## Backend preparado — Fase 6A
 

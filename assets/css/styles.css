@@ -278,6 +278,10 @@
 .schedule-submit:hover { background: #ad8a4e; }
 .schedule-submit:disabled { cursor: not-allowed; opacity: .55; }
 .schedule-final-notice { color: #425047; font-weight: 700; }
+.schedule-date-label { display: block; margin: .5rem 0; font-weight: 700; }
+.schedule-live-only input[type="date"] { border: 1px solid #a89f91; border-radius: .65rem; background: #fff; padding: .75rem .85rem; }
+.schedule-whatsapp-success { justify-self: start; border-radius: 999px; padding: .8rem 1.25rem; background: #496653; color: #fff; font-weight: 800; }
+.schedule-whatsapp-success[hidden], .schedule-live-only[hidden] { display: none; }
 .js .schedule-final-notice { display: none; }
 .js .schedule-final-notice.is-visible { display: block; padding: 1rem; border-radius: .75rem; background: #e7eee8; }
 @media (max-width: 639px) { .schedule-section { padding: 3.5rem 1.25rem; } .schedule-fields { grid-template-columns: 1fr; } .schedule-field:last-child { grid-column: auto; } .schedule-submit { width: 100%; } }

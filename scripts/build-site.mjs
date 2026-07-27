@@ -89,6 +89,16 @@ function validateIntegration(config) {
   const errors = [];
   if (!config || !['demo', 'live'].includes(config.mode)) errors.push('"mode" deve ser "demo" ou "live"');
   if (!config || typeof config.webAppUrl !== 'string') errors.push('"webAppUrl" deve ser uma string');
+  if (config.mode === 'demo' && config.webAppUrl !== '') errors.push('"webAppUrl" deve permanecer vazio no modo demo');
+  if (!Number.isInteger(config.requestTimeoutMs) || config.requestTimeoutMs < 500 || config.requestTimeoutMs > 30000) errors.push('"requestTimeoutMs" deve estar entre 500 e 30000');
+  if (!Number.isInteger(config.maxResponseBytes) || config.maxResponseBytes < 256 || config.maxResponseBytes > 1000000) errors.push('"maxResponseBytes" inválido');
+  if (!Number.isInteger(config.maxFutureDays) || config.maxFutureDays < 1 || config.maxFutureDays > 365) errors.push('"maxFutureDays" inválido');
+  if (config.mode === 'live') {
+    try {
+      const url = new URL(config.webAppUrl);
+      if (url.protocol !== 'https:' || url.hostname !== 'script.google.com' || !url.pathname.endsWith('/exec') || url.username || url.password || url.hash || url.search) errors.push('"webAppUrl" deve ser uma URL HTTPS script.google.com terminada em /exec');
+    } catch { errors.push('"webAppUrl" inválida'); }
+  }
   ['demo', 'liveWithoutUrl', 'unavailable'].forEach((field) => {
     if (!config?.messages || typeof config.messages[field] !== 'string' || config.messages[field].trim() === '') errors.push(`"messages.${field}" deve ser uma string não vazia`);
   });
@@ -99,7 +109,7 @@ function renderOptions(items, name, states) {
   return items.map((item) => {
     const disabled = item.available === false;
     const state = disabled ? states.unavailable : states.available;
-    return `<label class="schedule-choice${disabled ? ' is-unavailable' : ''}" data-available-label="${escapeHtml(state)}" data-selected-label="${escapeHtml(states.selected)}"><input type="radio" name="${name}" value="${escapeHtml(item.label)}" required${disabled ? ' disabled' : ''}><span>${escapeHtml(item.label)}<small>${escapeHtml(state)}</small></span></label>`;
+    return `<label class="schedule-choice${disabled ? ' is-unavailable' : ''}" data-available-label="${escapeHtml(state)}" data-selected-label="${escapeHtml(states.selected)}"><input type="radio" name="${name}" value="${escapeHtml(item.id)}" data-label="${escapeHtml(item.label)}" required${disabled ? ' disabled' : ''}><span>${escapeHtml(item.label)}<small>${escapeHtml(state)}</small></span></label>`;
   }).join('\n');
 }
 
