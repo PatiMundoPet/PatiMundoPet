@@ -1,0 +1,59 @@
+name: Validate static site
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production CSS
+        run: npm run build:css
+
+      - name: Verify compiled CSS is synchronized
+        run: git diff --exit-code -- assets/css/tailwind.min.css
+
+      - name: Check JavaScript syntax
+        run: node --check assets/js/main.js
+
+      - name: Parse index.html
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          parser = HTMLParser()
+          parser.feed(Path("index.html").read_text(encoding="utf-8"))
+          parser.close()
+          print("index.html parsed successfully")
+          PY
+
+      - name: Verify Tailwind CDN was removed
+        run: '! grep -q "cdn\.tailwindcss\.com" index.html'
+
+      - name: Verify runtime Tailwind configuration was removed
+        run: test ! -e assets/js/tailwind-config.js
+
+      - name: Verify compiled CSS exists
+        run: test -s assets/css/tailwind.min.css
+
+      - name: Check whitespace errors
+        run: git diff --check
