@@ -5,6 +5,7 @@ import path from 'node:path';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const contentPath = path.join(root, 'content/site.json');
 const schedulingPath = path.join(root, 'content/scheduling.json');
+const integrationPath = path.join(root, 'content/integration.json');
 const templatePath = path.join(root, 'src/index.template.html');
 const outputPath = path.join(root, 'index.html');
 
@@ -84,6 +85,16 @@ function validateScheduling(config) {
   if (errors.length) throw new Error(`Configuração inválida em content/scheduling.json:\n- ${errors.join('\n- ')}`);
 }
 
+function validateIntegration(config) {
+  const errors = [];
+  if (!config || !['demo', 'live'].includes(config.mode)) errors.push('"mode" deve ser "demo" ou "live"');
+  if (!config || typeof config.webAppUrl !== 'string') errors.push('"webAppUrl" deve ser uma string');
+  ['demo', 'liveWithoutUrl', 'unavailable'].forEach((field) => {
+    if (!config?.messages || typeof config.messages[field] !== 'string' || config.messages[field].trim() === '') errors.push(`"messages.${field}" deve ser uma string não vazia`);
+  });
+  if (errors.length) throw new Error(`Configuração inválida em content/integration.json:\n- ${errors.join('\n- ')}`);
+}
+
 function renderOptions(items, name, states) {
   return items.map((item) => {
     const disabled = item.available === false;
@@ -102,13 +113,15 @@ function renderFields(fields) {
 }
 
 try {
-  const [rawConfig, rawScheduling, template] = await Promise.all([
+  const [rawConfig, rawScheduling, rawIntegration, template] = await Promise.all([
     readFile(contentPath, 'utf8'),
     readFile(schedulingPath, 'utf8'),
+    readFile(integrationPath, 'utf8'),
     readFile(templatePath, 'utf8'),
   ]);
   let config;
   let scheduling;
+  let integration;
   try {
     config = JSON.parse(rawConfig);
   } catch (error) {
@@ -119,8 +132,14 @@ try {
   } catch (error) {
     throw new Error(`JSON inválido em content/scheduling.json: ${error.message}`);
   }
+  try {
+    integration = JSON.parse(rawIntegration);
+  } catch (error) {
+    throw new Error(`JSON inválido em content/integration.json: ${error.message}`);
+  }
   validate(config);
   validateScheduling(scheduling);
+  validateIntegration(integration);
 
   if (!config.projectName.startsWith(config.professionalName)) {
     throw new Error('Configuração inválida em content/site.json:\n- \"projectName\" deve começar com \"professionalName\" para preservar a identidade visual');
@@ -154,6 +173,7 @@ try {
     SCHEDULING_SUMMARY_TITLE: escapeHtml(scheduling.summaryTitle),
     SCHEDULING_NOT_SENT: escapeHtml(scheduling.states.notSent),
     SCHEDULING_DEMO_RESULT: escapeHtml(scheduling.states.demoResult),
+    INTEGRATION_CONFIG: JSON.stringify(integration).replaceAll('<', '\\u003c'),
   };
 
   const output = template.replace(/\{\{([A-Z0-9_]+)\}\}/g, (token, name) => {
