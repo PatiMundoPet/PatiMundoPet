@@ -5,6 +5,7 @@ import vm from 'node:vm';
 const source = await readFile(new URL('../apps-script/Code.gs', import.meta.url), 'utf8');
 let properties = {};
 let events = [];
+let calendarQueries = 0;
 function parseDate(value) {
   const match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(value);
   if (!match) throw new Error('invalid date');
@@ -13,7 +14,10 @@ function parseDate(value) {
   return date;
 }
 const calendar = {
-  getEvents(start, end) { return events.filter((event) => event.start < end && event.end > start); },
+  getEvents(start, end) {
+    calendarQueries += 1;
+    return events.filter((event) => event.start < end && event.end > start);
+  },
   createEvent(title, start, end, options) { events.push({ title, start, end, description: options.description, getDescription() { return this.description; } }); }
 };
 const context = vm.createContext({
@@ -44,7 +48,7 @@ const validRequest = {
   action: 'request', serviceId: 'dog-walker', date: futureDate, time: '09:00', responsibleName: 'Pessoa Teste',
   whatsapp: '(11) 99999-9999', petName: 'Pet Teste', region: 'Região Teste', notes: 'Texto breve', reviewAccepted: true, honeypot: ''
 };
-function configure() { properties = { ...validProperties }; events = []; }
+function configure() { properties = { ...validProperties }; events = []; calendarQueries = 0; }
 function validate(overrides = {}) { return context.validateRequest_({ ...validRequest, ...overrides }, context.loadConfig_().config); }
 
 configure();
@@ -67,6 +71,22 @@ events.push({ start, end: new Date(start.getTime() + 30 * 60000), description: '
 const availability = context.availabilityResponse_(futureDate);
 assert.deepEqual([...availability.data.unavailable], ['09:00'], 'detecta colisão de intervalos');
 assert.equal(JSON.stringify(availability).includes('privado'), false, 'não retorna dados privados de eventos');
+
+configure();
+const today = new Date().toISOString().slice(0, 10);
+context.now_ = () => parseDate(`${today} 10:00`);
+const todayAvailability = context.availabilityResponse_(today);
+assert.deepEqual([...todayAvailability.data.available], ['11:00'], 'mantém horário futuro do dia disponível');
+assert.deepEqual([...todayAvailability.data.unavailable], ['09:00'], 'não apresenta horário passado como disponível');
+assert.equal(calendarQueries, 1, 'não consulta o calendário para horário que já passou');
+const pastRequest = context.requestResponse_({ ...validRequest, date: today, time: '09:00' });
+assert.equal(pastRequest.code, 'SLOT_UNAVAILABLE', 'rejeita solicitação para horário que já passou');
+assert.equal(events.length, 0, 'não cria evento para horário que já passou');
+const futureRequest = context.requestResponse_({ ...validRequest, date: today, time: '11:00' });
+assert.equal(futureRequest.code, 'REQUEST_CREATED', 'aceita normalmente horário futuro do mesmo dia');
+assert.equal(events.length, 1, 'cria evento somente para o horário futuro');
+context.now_ = () => new Date();
+
 configure();
 const created = context.requestResponse_(validRequest);
 assert.equal(created.code, 'REQUEST_CREATED');

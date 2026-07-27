@@ -72,6 +72,10 @@ function availabilityResponse_(dateText) {
   var unavailable = [];
   config.allowedStartTimes.forEach(function (time) {
     var interval = createInterval_(dateText, time, config);
+    if (intervalHasStarted_(interval)) {
+      unavailable.push(time);
+      return;
+    }
     var hasConflict = calendar.getEvents(interval.start, interval.end).length > 0;
     (hasConflict ? unavailable : available).push(time);
   });
@@ -91,6 +95,9 @@ function requestResponse_(payload) {
   var clean = validation.value;
   var requestId = clean.requestId || Utilities.getUuid();
   var interval = createInterval_(clean.date, clean.time, config);
+  if (intervalHasStarted_(interval)) {
+    return response_(false, 'SLOT_UNAVAILABLE', 'O horário selecionado já passou.', requestId);
+  }
   var calendar = CalendarApp.getCalendarById(config.calendarId);
   if (!calendar) return response_(false, 'CONFIGURATION_REQUIRED', 'A agenda configurada não está disponível.');
 
@@ -225,6 +232,14 @@ function hasControlCharacters_(value) {
 function createInterval_(dateText, time, config) {
   var start = Utilities.parseDate(dateText + ' ' + time, config.timezone, 'yyyy-MM-dd HH:mm');
   return { start: start, end: new Date(start.getTime() + config.slotDurationMinutes * 60000) };
+}
+
+function now_() {
+  return new Date();
+}
+
+function intervalHasStarted_(interval) {
+  return interval.start.getTime() <= now_().getTime();
 }
 
 function hasRequestId_(events, requestId) {
