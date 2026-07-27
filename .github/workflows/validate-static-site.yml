@@ -21,8 +21,11 @@ jobs:
         with:
           node-version: 20
 
-      - name: Build production CSS
-        run: npm run build:css
+      - name: Build static site
+        run: npm run build
+
+      - name: Verify generated HTML is synchronized
+        run: git diff --exit-code -- index.html
 
       - name: Upload generated Tailwind CSS
         uses: actions/upload-artifact@v4
