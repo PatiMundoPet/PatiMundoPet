@@ -44,7 +44,7 @@ await assert.rejects(client(() => response('x'.repeat(5000))).health(), /RESPONS
 await assert.rejects(client(() => { throw new Error('offline'); }).health(), /NETWORK_ERROR/);
 await assert.rejects(client(() => new Promise(() => {})).health(), /TIMEOUT/);
 
-const payload = { serviceId: 'dog-walker', date: '2026-08-01', time: '09:00', responsibleName: 'Ana', whatsapp: '5511999999999', petName: 'Rex', region: 'Centro', notes: '', reviewAccepted: true, privacyAccepted: true, privacyPolicyVersion: 'draft-2026-01', honeypot: '' };
+const payload = { serviceId: 'dog-walker', date: '2026-08-01', time: '09:00', responsibleName: 'Ana', whatsapp: '5511999999999', email: '', submissionChannel: 'whatsapp', petName: 'Rex', region: 'Centro', notes: '', reviewAccepted: true, privacyAccepted: true, privacyPolicyVersion: 'draft-2026-01', honeypot: '' };
 calls = [];
 const createdClient = client(() => response({ ok: true, code: 'REQUEST_CREATED', message: 'pendente', requestId: uuid.randomUUID() }));
 assert.equal((await createdClient.request(payload)).code, 'REQUEST_CREATED');
@@ -60,8 +60,9 @@ assert.equal((await client(() => response({ ok: false, code: 'SLOT_UNAVAILABLE',
 
 const source = await readFile(new URL('../assets/js/scheduling.js', import.meta.url), 'utf8');
 assert.doesNotMatch(source, /localStorage|sessionStorage|document\.cookie/);
-assert.match(source, /whatsappLink\.hidden = false/);
-assert.match(source, /integration\.mode === 'demo'/);
-assert.match(source, /RATE_LIMITED/);
+assert.match(source, /encodeURIComponent\(message\)/);
+assert.match(source, /schedule-copy-button/);
+assert.match(source, /result\.code!=='REQUEST_CREATED'/);
+assert.match(source, /integration\.mode === 'live'/);
 assert.match(source, /privacyAccepted/);
 console.log('Scheduling API: todos os testes locais passaram.');

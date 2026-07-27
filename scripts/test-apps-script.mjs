@@ -20,7 +20,7 @@ const calendar = {
     calendarQueries += 1;
     return events.filter((event) => event.start < end && event.end > start);
   },
-  createEvent(title, start, end, options) { events.push({ id: 'event-' + (events.length + 1), title, start, end, description: options.description, getDescription() { return this.description; }, getTitle() { return this.title; }, getId() { return this.id; }, deleteEvent() { events = events.filter((item) => item !== this); } }); }
+  createEvent(title, start, end, options) { const created = { id: 'event-' + (events.length + 1), title, start, end, description: options.description, getDescription() { return this.description; }, getTitle() { return this.title; }, getId() { return this.id; }, deleteEvent() { events = events.filter((item) => item !== this); }, setDescription(value) { this.description = value; } }; events.push(created); return created; }
 };
 const context = vm.createContext({
   console: { log() {}, error() {} }, Date, JSON, Math, Number, Set,
@@ -40,6 +40,7 @@ const context = vm.createContext({
       return date.toISOString().slice(0, 10);
     }
   },
+  MailApp: { sendEmail() { throw new Error('e-mail não habilitado em teste'); } },
   ContentService: { MimeType: { JSON: 'application/json' }, createTextOutput(value) { return { value, setMimeType() { return this; } }; } }
 });
 vm.runInContext(source, context, { filename: 'Code.gs' });
@@ -53,7 +54,7 @@ const validProperties = {
 };
 const validRequest = {
   action: 'request', serviceId: 'dog-walker', date: futureDate, time: '09:00', responsibleName: 'Pessoa Teste',
-  whatsapp: '(11) 99999-9999', petName: 'Pet Teste', region: 'Região Teste', notes: 'Texto breve', reviewAccepted: true, privacyAccepted: true, privacyPolicyVersion: 'draft-2026-01', honeypot: '', requestId: '123e4567-e89b-42d3-a456-426614174000'
+  whatsapp: '(11) 99999-9999', email: '', submissionChannel: 'whatsapp', petName: 'Pet Teste', region: 'Região Teste', notes: 'Texto breve', reviewAccepted: true, privacyAccepted: true, privacyPolicyVersion: 'draft-2026-01', honeypot: '', requestId: '123e4567-e89b-42d3-a456-426614174000'
 };
 function configure() { properties = { ...validProperties }; events = []; calendarQueries = 0; cacheValues = new Map(); }
 function validate(overrides = {}) { return context.validateRequest_({ ...validRequest, ...overrides }, context.loadConfig_().config); }
@@ -94,11 +95,19 @@ assert.equal(futureRequest.code, 'REQUEST_CREATED', 'aceita normalmente horário
 assert.equal(events.length, 1, 'cria evento somente para o horário futuro');
 context.now_ = () => new Date();
 
+
+configure();
+assert.equal(validate({ whatsapp: '', email: 'cliente@outlook.com', submissionChannel: 'email' }).ok, true, 'aceita e-mail válido de qualquer provedor');
+assert.equal(validate({ whatsapp: '', email: 'cliente@empresa.com.br', submissionChannel: 'email' }).ok, true, 'aceita e-mail empresarial');
+assert.equal(validate({ whatsapp: '', email: 'invalido', submissionChannel: 'email' }).ok, false, 'rejeita e-mail inválido');
+assert.equal(validate({ email: '', submissionChannel: 'email' }).ok, false, 'exige e-mail no canal e-mail');
+assert.equal(validate({ whatsapp: '', email: 'cliente@yahoo.com', submissionChannel: 'whatsapp' }).ok, false, 'exige WhatsApp no canal WhatsApp');
+
 configure();
 const created = context.requestResponse_(validRequest);
 assert.equal(created.code, 'REQUEST_CREATED');
 assert.equal(typeof created.requestId, 'string');
-assert.deepEqual(Object.keys(created).sort(), ['code', 'message', 'ok', 'requestId'], 'mantém estrutura segura da resposta');
+assert.deepEqual(Object.keys(created).sort(), ['code', 'message', 'notificationStatus', 'ok', 'requestId'], 'mantém estrutura segura da resposta');
 const repeated = context.requestResponse_({ ...validRequest, requestId: created.requestId });
 assert.equal(repeated.code, 'REQUEST_CREATED');
 assert.equal(events.length, 1, 'não duplica uma solicitação com o mesmo requestId');
@@ -120,6 +129,20 @@ assert.equal(key.includes('5511999999999'), false, 'hash não contém telefone b
 assert.equal(context.consumeRateLimit_('5511999999999', context.loadConfig_().config), true);
 context.consumeRateLimit_('5511999999999', context.loadConfig_().config); context.consumeRateLimit_('5511999999999', context.loadConfig_().config);
 assert.equal(context.consumeRateLimit_('5511999999999', context.loadConfig_().config), false, 'limite excedido');
+configure();
+let sentEmails = [];
+context.MailApp.sendEmail = (message) => { sentEmails.push(message); };
+properties.EMAIL_NOTIFICATIONS_ENABLED = 'true'; properties.NOTIFICATION_EMAIL = 'admin@example.test';
+const emailRequest = { ...validRequest, whatsapp: '', email: 'cliente@hotmail.com', submissionChannel: 'email', requestId: '223e4567-e89b-42d3-a456-426614174000' };
+const emailed = context.requestResponse_(emailRequest);
+assert.equal(emailed.notificationStatus, 'SENT'); assert.equal(sentEmails.length, 1, 'envia somente com configuração habilitada');
+assert.equal(sentEmails[0].to, properties.NOTIFICATION_EMAIL); assert.equal(sentEmails[0].replyTo, emailRequest.email); assert.match(sentEmails[0].subject, /PENDENTE/);
+const emailedAgain = context.requestResponse_(emailRequest); assert.equal(emailedAgain.notificationStatus, 'SENT'); assert.equal(sentEmails.length, 1, 'não reenvia notificação SENT'); assert.equal(events.length, 1, 'não duplica requestId por e-mail');
+assert.equal(JSON.stringify(emailed).includes(properties.NOTIFICATION_EMAIL), false, 'não expõe e-mail administrativo');
+configure(); properties.EMAIL_NOTIFICATIONS_ENABLED = 'true'; properties.NOTIFICATION_EMAIL = 'admin@example.test'; context.MailApp.sendEmail = () => { throw new Error('falha simulada'); };
+const failedEmail = context.requestResponse_({ ...emailRequest, requestId: '323e4567-e89b-42d3-a456-426614174000' }); assert.equal(failedEmail.code, 'REQUEST_CREATED'); assert.equal(failedEmail.notificationStatus, 'FAILED'); assert.equal(events.length, 1, 'preserva solicitação quando MailApp falha');
+context.MailApp.sendEmail = () => { throw new Error('teste não envia e-mail real'); };
+
 configure();
 const oldStart = new Date(Date.now() - 60 * 86400000); const oldEnd = new Date(oldStart.getTime() + 3600000);
 function retentionEvent(id, title, description) { return { id, title, description, start: oldStart, end: oldEnd, deleted: false, getId() { return this.id; }, getTitle() { return this.title; }, getDescription() { return this.description; }, deleteEvent() { this.deleted = true; events = events.filter((item) => item !== this); } }; }

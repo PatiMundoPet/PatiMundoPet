@@ -36,10 +36,11 @@ function validate(config) {
       errors.push(`"${field}" deve ser uma string não vazia`);
     }
   }
-  if (typeof config.whatsappNumber === 'string' && !/^\d{10,15}$/.test(config.whatsappNumber)) {
+  if (typeof config.contactsConfigured !== 'boolean') errors.push('\"contactsConfigured\" deve ser booleano');
+  if (config.contactsConfigured && typeof config.whatsappNumber === 'string' && !/^\d{10,15}$/.test(config.whatsappNumber)) {
     errors.push('"whatsappNumber" deve conter somente 10 a 15 dígitos, incluindo o código do país');
   }
-  if (typeof config.email === 'string' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.email)) {
+  if (config.contactsConfigured && typeof config.email === 'string' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.email)) {
     errors.push('"email" deve ser um endereço de e-mail válido');
   }
   if (typeof config.footerYear === 'string' && !/^\d{4}$/.test(config.footerYear)) {
@@ -48,20 +49,20 @@ function validate(config) {
   if (errors.length) throw new Error(`Configuração inválida em content/site.json:\n- ${errors.join('\n- ')}`);
 }
 
-const schedulingStrings = ['title', 'description', 'availabilityNotice', 'noScriptMessage', 'reviewConfirmation', 'submitLabel', 'summaryTitle'];
+const schedulingStrings = ['title', 'description', 'availabilityNotice', 'inactiveMessage', 'noScriptMessage', 'reviewConfirmation', 'summaryTitle', 'commercialNotice', 'whatsappSubmitLabel', 'emailSubmitLabel'];
 const allowedServices = new Set(['Dog Walker', 'Passeio Individual', 'Passeio em Pequeno Grupo', 'Planos Semanais']);
-const allowedFieldTypes = new Set(['text', 'tel', 'textarea']);
+const allowedFieldTypes = new Set(['text', 'tel', 'email', 'textarea']);
 
 function validateScheduling(config) {
   const errors = [];
   schedulingStrings.forEach((field) => {
     if (typeof config[field] !== 'string' || config[field].trim() === '') errors.push(`"${field}" deve ser uma string não vazia`);
   });
-  ['available', 'selected', 'unavailable', 'notSent', 'demoResult'].forEach((field) => {
+  ['available', 'selected', 'unavailable', 'notSent'].forEach((field) => {
     if (!config.states || typeof config.states[field] !== 'string' || config.states[field].trim() === '') errors.push(`"states.${field}" deve ser uma string não vazia`);
   });
   ['services', 'days', 'times', 'fields'].forEach((field) => {
-    if (!Array.isArray(config[field]) || config[field].length === 0) errors.push(`"${field}" deve ser uma lista não vazia`);
+    if (!Array.isArray(config[field]) || ((field === 'services' || field === 'fields') && config[field].length === 0)) errors.push(`"${field}" deve ser uma lista${field === 'services' || field === 'fields' ? ' não vazia' : ''}`);
   });
   const ids = new Set();
   ['services', 'days', 'times', 'fields'].forEach((collection) => {
@@ -84,7 +85,7 @@ function validateScheduling(config) {
     if (typeof item.required !== 'boolean') errors.push(`"fields[${index}].required" deve ser booleano`);
     if (typeof item.autocomplete !== 'string') errors.push(`"fields[${index}].autocomplete" deve ser uma string`);
   });
-  const requiredIds = ['responsavel', 'whatsapp', 'pet', 'regiao'];
+  const requiredIds = ['responsavel', 'pet', 'regiao'];
   requiredIds.forEach((id) => {
     if (!Array.isArray(config.fields) || !config.fields.some((field) => field.id === id && field.required)) errors.push(`o campo obrigatório "${id}" está ausente`);
   });
@@ -105,7 +106,7 @@ function validateIntegration(config) {
       if (url.protocol !== 'https:' || url.hostname !== 'script.google.com' || !url.pathname.endsWith('/exec') || url.username || url.password || url.hash || url.search) errors.push('"webAppUrl" deve ser uma URL HTTPS script.google.com terminada em /exec');
     } catch { errors.push('"webAppUrl" inválida'); }
   }
-  ['demo', 'liveWithoutUrl', 'unavailable'].forEach((field) => {
+  ['inactive', 'liveWithoutUrl', 'unavailable'].forEach((field) => {
     if (!config?.messages || typeof config.messages[field] !== 'string' || config.messages[field].trim() === '') errors.push(`"messages.${field}" deve ser uma string não vazia`);
   });
   if (errors.length) throw new Error(`Configuração inválida em content/integration.json:\n- ${errors.join('\n- ')}`);
@@ -228,27 +229,31 @@ try {
     PROJECT_NAME: htmlValues.projectName,
     PROFESSIONAL_NAME: htmlValues.professionalName,
     PROJECT_NAME_REMAINDER: escapeHtml(config.projectName.slice(config.professionalName.length)),
-    WHATSAPP_NUMBER: config.whatsappNumber,
+    WHATSAPP_NUMBER: config.contactsConfigured ? config.whatsappNumber : '',
     DISPLAY_PHONE: htmlValues.displayPhone,
     EMAIL: htmlValues.email,
     INSTAGRAM_URL: escapeHtml(config.instagram),
     SERVICE_AREA: htmlValues.serviceArea,
     FOOTER_YEAR: htmlValues.footerYear,
     PROJECT_NAME_URL: encodeURIComponent(config.projectName),
-    WHATSAPP_URL: `https://wa.me/${config.whatsappNumber}?text=${encodeURIComponent(config.whatsappMessage)}`.replaceAll('&', '&amp;'),
+    WHATSAPP_ATTRIBUTES: config.contactsConfigured ? `href=\"https://wa.me/${config.whatsappNumber}?text=${encodeURIComponent(config.whatsappMessage)}\"`.replaceAll('&', '&amp;') : 'aria-disabled=\"true\" tabindex=\"-1\"',
+    CONTACT_PHONE_DISPLAY: config.contactsConfigured ? htmlValues.displayPhone : 'Contato em configuração',
+    CONTACT_EMAIL_DISPLAY: config.contactsConfigured ? htmlValues.email : 'Contato em configuração',
     SCHEDULING_TITLE: escapeHtml(scheduling.title),
     SCHEDULING_DESCRIPTION: escapeHtml(scheduling.description),
     SCHEDULING_NOTICE: escapeHtml(scheduling.availabilityNotice),
+    SCHEDULING_INACTIVE: escapeHtml(scheduling.inactiveMessage.replaceAll('Pati', config.professionalName)),
     SCHEDULING_NOSCRIPT: escapeHtml(scheduling.noScriptMessage),
     SCHEDULING_SERVICES: renderOptions(scheduling.services, 'servico', scheduling.states),
-    SCHEDULING_DAYS: renderOptions(scheduling.days, 'data', scheduling.states),
-    SCHEDULING_TIMES: renderOptions(scheduling.times, 'horario', scheduling.states),
+    SCHEDULING_DAYS: '',
+    SCHEDULING_TIMES: '',
     SCHEDULING_FIELDS: renderFields(scheduling.fields),
     SCHEDULING_REVIEW: escapeHtml(scheduling.reviewConfirmation),
-    SCHEDULING_SUBMIT: escapeHtml(scheduling.submitLabel),
+    SCHEDULING_WHATSAPP_SUBMIT: escapeHtml(scheduling.whatsappSubmitLabel),
+    SCHEDULING_EMAIL_SUBMIT: escapeHtml(scheduling.emailSubmitLabel),
+    SCHEDULING_COMMERCIAL_NOTICE: escapeHtml(scheduling.commercialNotice.replaceAll('Pati', config.professionalName)),
     SCHEDULING_SUMMARY_TITLE: escapeHtml(scheduling.summaryTitle),
     SCHEDULING_NOT_SENT: escapeHtml(scheduling.states.notSent),
-    SCHEDULING_DEMO_RESULT: escapeHtml(scheduling.states.demoResult),
     INTEGRATION_CONFIG: JSON.stringify(integration).replaceAll('<', '\\u003c'),
     PRIVACY_POLICY_VERSION: escapeHtml(privacy.version),
     SEO_LANGUAGE: escapeHtml(seo.language), SEO_LOCALE: escapeHtml(seo.locale),
@@ -261,7 +266,7 @@ try {
 
   const output = replaceTokens(template, values, 'src/index.template.html');
   const privacyValues = {
-    PROJECT_NAME: htmlValues.projectName, EMAIL: htmlValues.email,
+    PROJECT_NAME: htmlValues.projectName, EMAIL: config.contactsConfigured ? htmlValues.email : 'Contato em configuração',
     PRIVACY_TITLE: escapeHtml(privacy.title), PRIVACY_VERSION: escapeHtml(privacy.version),
     PRIVACY_UPDATED_AT: escapeHtml(privacy.updatedAt), PRIVACY_CONTROLLER: escapeHtml(privacy.dataController),
     PRIVACY_DATA_TYPES: escapeHtml(privacy.requestedData.join(', ')), PRIVACY_PURPOSE: escapeHtml(privacy.purpose),

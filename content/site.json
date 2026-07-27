@@ -1,12 +1,13 @@
 {
-  "_notice": "PLACEHOLDERS de demonstração: substitua todos os dados abaixo antes da publicação oficial.",
-  "projectName": "Paty MundoPet",
-  "professionalName": "Paty",
+  "_notice": "Contatos ainda não configurados. Não publicar links até contactsConfigured ser true.",
+  "projectName": "Pati MundoPet",
+  "professionalName": "Pati",
   "whatsappNumber": "5511999999999",
   "displayPhone": "(11) 99999-9999",
-  "whatsappMessage": "Olá! Quero saber mais sobre os serviços da Paty MundoPet.",
+  "whatsappMessage": "Olá! Quero saber mais sobre os serviços da Pati MundoPet.",
   "email": "contato@patymundopet.com.br",
   "instagram": "#",
   "serviceArea": "São Paulo",
-  "footerYear": "2026"
+  "footerYear": "2026",
+  "contactsConfigured": false
 }

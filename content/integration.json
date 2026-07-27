@@ -1,18 +1,19 @@
 {
-  "_notice": "Nenhuma URL real está configurada. A integração permanece desativada até uma ativação manual futura.",
+  "_notice": "Trava interna de segurança: integração inativa até configuração manual futura.",
   "mode": "demo",
   "webAppUrl": "",
   "requestTimeoutMs": 8000,
   "maxResponseBytes": 32768,
   "maxFutureDays": 90,
   "messages": {
-    "demo": "Esta é uma demonstração. Nenhum horário será consultado ou reservado.",
     "liveWithoutUrl": "A integração de agendamento está indisponível porque nenhuma URL do Web App foi configurada.",
     "unavailable": "A integração com a agenda ainda não está disponível. Use os canais de contato do site.",
     "loading": "Consultando disponibilidade…",
     "processing": "Enviando solicitação pendente…",
     "noAvailability": "Não há horários disponíveis nesta data.",
     "invalidResponse": "A agenda retornou uma resposta inválida. Tente novamente mais tarde.",
-    "pendingCreated": "Solicitação registrada como pendente. A Paty ainda precisará revisar."
+    "pendingCreated": "Pré-solicitação registrada com sucesso. A Pati analisará as informações e entrará em contato para confirmar, pedir mais informações ou informar que não poderá atender.",
+    "inactive": "Agenda online em configuração. Para consultar horários agora, fale diretamente com a Pati.",
+    "emailFailed": "A pré-solicitação foi registrada, mas a notificação por e-mail falhou. Você pode usar o WhatsApp como alternativa sem criar outra solicitação."
   }
 }
