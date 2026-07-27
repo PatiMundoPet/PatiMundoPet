@@ -41,6 +41,12 @@ jobs:
         run: |
           node --check assets/js/main.js
           node --check assets/js/scheduling.js
+          node --check scripts/test-apps-script.mjs
+          cp apps-script/Code.gs /tmp/paty-mundopet-Code.js
+          node --check /tmp/paty-mundopet-Code.js
+
+      - name: Test Apps Script backend with local mocks
+        run: npm run test:apps-script
 
       - name: Parse index.html
         run: |

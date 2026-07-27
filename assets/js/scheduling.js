@@ -10,6 +10,18 @@
   var confirmation = document.getElementById('schedule-review-confirmation');
   if (!summary || !validation || !finalNotice || !confirmation) return;
 
+  var integration = { mode: 'demo', webAppUrl: '', messages: {} };
+  var integrationElement = document.getElementById('scheduling-integration-config');
+  if (integrationElement) {
+    try {
+      var configuredIntegration = JSON.parse(integrationElement.textContent);
+      if (configuredIntegration && typeof configuredIntegration === 'object') integration = configuredIntegration;
+    } catch (error) {
+      integration = { mode: 'demo', webAppUrl: '', messages: {} };
+    }
+  }
+  var liveWithoutUrl = integration.mode === 'live' && !String(integration.webAppUrl || '').trim();
+
   var labels = {
     servico: 'Serviço',
     data: 'Data demonstrativa',
@@ -110,6 +122,9 @@
       return;
     }
     renderSummary();
+    if (liveWithoutUrl) {
+      finalNotice.textContent = integration.messages.liveWithoutUrl || 'A integração está indisponível porque nenhuma URL foi configurada.';
+    }
     finalNotice.classList.add('is-visible');
     finalNotice.focus();
   });
