@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build:css": "npx --yes tailwindcss@3.4.17 -i ./assets/css/tailwind.css -o ./assets/css/tailwind.min.css --minify"
+    "build:site": "node scripts/build-site.mjs",
+    "build:css": "npx --yes tailwindcss@3.4.17 -i ./assets/css/tailwind.css -o ./assets/css/tailwind.min.css --minify",
+    "build": "npm run build:site && npm run build:css"
   }
 }
