@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="is-loading">
+<html lang="pt-BR">
 <head>
 <!--
   Paty MundoPet — Protótipo visual de site institucional (DEMO)
@@ -31,8 +31,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Karla:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Karla:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 
-<script src="https://cdn.tailwindcss.com" defer></script>
-<script defer>
+<script>
+  // Sinaliza melhorias opcionais antes da renderização; o conteúdo permanece visível sem JS.
+  document.documentElement.classList.add('js');
+
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // O CDN precisa ser executado antes de receber a configuração customizada.
   tailwind.config = {
     theme: {
       extend: {
@@ -84,6 +90,13 @@
   html { scroll-behavior: smooth; }
   body { font-feature-settings: "ss01"; }
   section[id], div#inicio { scroll-margin-top: 5.25rem; }
+
+  /* Sem JS, a navegação móvel fica expandida e o botão inerte não aparece. */
+  .js #menu-toggle { display: inline-flex; }
+  .js #mobile-menu:not(.is-open) { display: none; }
+  @media (min-width: 1024px) {
+    .js #menu-toggle, #mobile-menu { display: none; }
+  }
 
   /* ---------- Tag / grommet chip (assinatura visual: etiqueta de coleira) ---------- */
   .tag-chip { position: relative; }
@@ -139,20 +152,16 @@
     }
   }
 
-  /* ---------- FAQ accordion (CSS grid-rows trick, sem JS de altura) ---------- */
-  .faq-panel {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows .35s ease;
-  }
-  .faq-panel > div { overflow: hidden; }
-  .faq-item.is-open .faq-panel { grid-template-rows: 1fr; }
+  /* ---------- FAQ nativo: utilizável sem JavaScript ---------- */
+  .faq-item summary { list-style: none; cursor: pointer; }
+  .faq-item summary::-webkit-details-marker { display: none; }
   .faq-chevron { transition: transform .3s ease; }
-  .faq-item.is-open .faq-chevron { transform: rotate(180deg); }
+  .faq-item[open] .faq-chevron { transform: rotate(180deg); }
 
-  /* ---------- Scroll reveal ---------- */
-  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease; }
-  .reveal.is-visible { opacity: 1; transform: translateY(0); }
+  /* ---------- Scroll reveal (somente como melhoria progressiva) ---------- */
+  .reveal { opacity: 1; transform: none; }
+  .reveal.is-reveal-pending { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.is-reveal-pending.is-visible { opacity: 1; transform: translateY(0); }
 
   /* ---------- Botão flutuante do WhatsApp ---------- */
   @keyframes ping-slow {
@@ -163,9 +172,9 @@
 
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .reveal { opacity: 1; transform: none; transition: none; }
+    .reveal.is-reveal-pending { opacity: 1; transform: none; transition: none; }
     .animate-ping-slow { animation: none; }
-    .faq-panel, .faq-chevron { transition: none; }
+    .faq-chevron { transition: none; }
   }
 
   /* === MOBILE (< 640px) — apenas adaptação de tamanhos === */
@@ -195,18 +204,23 @@
   /* ================================================================
      LOADER — tela de abertura (Dog Walker / passeio)
      ================================================================ */
-  html.is-loading, html.is-loading body { overflow: hidden; height: 100%; }
-
   #site-loader {
     position: fixed;
     inset: 0;
     z-index: 9999;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     background: radial-gradient(120% 140% at 50% 20%, #24352a 0%, #1e2b22 45%, #161f1a 100%);
     opacity: 1;
     visibility: visible;
+  }
+  .js #site-loader {
+    display: flex;
+    animation: loader-dismiss .3s ease 1.7s forwards;
+  }
+  @keyframes loader-dismiss {
+    to { opacity: 0; visibility: hidden; pointer-events: none; }
   }
   #site-loader.loader-hide {
     display: none !important;
@@ -308,6 +322,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .loader-glow, .loader-path .paw, .loader-bar-fill { animation: none; }
+    .js #site-loader { animation-delay: .15s; }
     .loader-bar-fill { width: 100%; }
   }
 </style>
@@ -375,7 +390,7 @@
       </a>
 
       <button id="menu-toggle" aria-expanded="false" aria-controls="mobile-menu" aria-label="Abrir menu"
-        class="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg text-ink-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-moss-700">
+        class="hidden lg:hidden items-center justify-center w-10 h-10 rounded-lg text-ink-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-moss-700">
         <svg id="icon-menu" viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
           <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
         </svg>
@@ -386,7 +401,7 @@
     </div>
   </div>
 
-  <div id="mobile-menu" class="hidden lg:hidden border-t border-stone-200 bg-stone-50">
+  <div id="mobile-menu" class="lg:hidden border-t border-stone-200 bg-stone-50">
     <nav class="flex flex-col px-5 py-4 gap-1 text-ink-700">
       <a href="#diferenciais" class="py-2.5 border-b border-stone-200/70">Diferenciais</a>
       <a href="#servicos" class="py-2.5 border-b border-stone-200/70">Serviços</a>
@@ -803,65 +818,53 @@
     </div>
 
     <div class="mt-12 space-y-3">
-      <div class="faq-item reveal bg-white/60 border border-stone-200 rounded-2xl px-6">
-        <h3>
-          <button class="faq-trigger w-full flex items-center justify-between gap-4 py-5 text-left font-semibold" aria-expanded="false">
-            Quais regiões vocês atendem?
-            <svg class="faq-chevron w-5 h-5 shrink-0 text-brass-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-        </h3>
-        <div class="faq-panel"><div><p class="text-ink-700 text-[15px] leading-relaxed pb-5">Atendemos toda a região metropolitana de São Paulo. Envie sua localização pelo WhatsApp para confirmarmos a disponibilidade na sua área.</p></div></div>
-      </div>
+      <details class="faq-item reveal bg-white/60 border border-stone-200 rounded-2xl px-6">
+        <summary class="w-full flex items-center justify-between gap-4 py-5 text-left font-semibold">
+          Quais regiões vocês atendem?
+          <svg class="faq-chevron w-5 h-5 shrink-0 text-brass-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <p class="text-ink-700 text-[15px] leading-relaxed pb-5">Atendemos toda a região metropolitana de São Paulo. Envie sua localização pelo WhatsApp para confirmarmos a disponibilidade na sua área.</p>
+      </details>
 
-      <div class="faq-item reveal bg-white/60 border border-stone-200 rounded-2xl px-6">
-        <h3>
-          <button class="faq-trigger w-full flex items-center justify-between gap-4 py-5 text-left font-semibold" aria-expanded="false">
-            Como funciona o pagamento?
-            <svg class="faq-chevron w-5 h-5 shrink-0 text-brass-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-        </h3>
-        <div class="faq-panel"><div><p class="text-ink-700 text-[15px] leading-relaxed pb-5">Os planos podem ser mensais ou avulsos, com pagamento por Pix, cartão ou boleto. Os detalhes são combinados na conversa inicial.</p></div></div>
-      </div>
+      <details class="faq-item reveal bg-white/60 border border-stone-200 rounded-2xl px-6">
+        <summary class="w-full flex items-center justify-between gap-4 py-5 text-left font-semibold">
+          Como funciona o pagamento?
+          <svg class="faq-chevron w-5 h-5 shrink-0 text-brass-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <p class="text-ink-700 text-[15px] leading-relaxed pb-5">Os planos podem ser mensais ou avulsos, com pagamento por Pix, cartão ou boleto. Os detalhes são combinados na conversa inicial.</p>
+      </details>
 
-      <div class="faq-item reveal bg-white/60 border border-stone-200 rounded-2xl px-6">
-        <h3>
-          <button class="faq-trigger w-full flex items-center justify-between gap-4 py-5 text-left font-semibold" aria-expanded="false">
-            Meu cão é agitado ou tem restrições, vocês atendem?
-            <svg class="faq-chevron w-5 h-5 shrink-0 text-brass-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-        </h3>
-        <div class="faq-panel"><div><p class="text-ink-700 text-[15px] leading-relaxed pb-5">Sim. Cada plano é montado depois de conhecermos o temperamento e as necessidades específicas do seu cão.</p></div></div>
-      </div>
+      <details class="faq-item reveal bg-white/60 border border-stone-200 rounded-2xl px-6">
+        <summary class="w-full flex items-center justify-between gap-4 py-5 text-left font-semibold">
+          Meu cão é agitado ou tem restrições, vocês atendem?
+          <svg class="faq-chevron w-5 h-5 shrink-0 text-brass-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <p class="text-ink-700 text-[15px] leading-relaxed pb-5">Sim. Cada plano é montado depois de conhecermos o temperamento e as necessidades específicas do seu cão.</p>
+      </details>
 
-      <div class="faq-item reveal bg-white/60 border border-stone-200 rounded-2xl px-6">
-        <h3>
-          <button class="faq-trigger w-full flex items-center justify-between gap-4 py-5 text-left font-semibold" aria-expanded="false">
-            Preciso fornecer guia, coleira ou ração?
-            <svg class="faq-chevron w-5 h-5 shrink-0 text-brass-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-        </h3>
-        <div class="faq-panel"><div><p class="text-ink-700 text-[15px] leading-relaxed pb-5">A guia e a coleira do seu cão são sempre utilizadas nos passeios. Alimentação e itens específicos são combinados conforme o serviço contratado.</p></div></div>
-      </div>
+      <details class="faq-item reveal bg-white/60 border border-stone-200 rounded-2xl px-6">
+        <summary class="w-full flex items-center justify-between gap-4 py-5 text-left font-semibold">
+          Preciso fornecer guia, coleira ou ração?
+          <svg class="faq-chevron w-5 h-5 shrink-0 text-brass-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <p class="text-ink-700 text-[15px] leading-relaxed pb-5">A guia e a coleira do seu cão são sempre utilizadas nos passeios. Alimentação e itens específicos são combinados conforme o serviço contratado.</p>
+      </details>
 
-      <div class="faq-item reveal bg-white/60 border border-stone-200 rounded-2xl px-6">
-        <h3>
-          <button class="faq-trigger w-full flex items-center justify-between gap-4 py-5 text-left font-semibold" aria-expanded="false">
-            Existe fidelidade ou contrato de longo prazo?
-            <svg class="faq-chevron w-5 h-5 shrink-0 text-brass-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-        </h3>
-        <div class="faq-panel"><div><p class="text-ink-700 text-[15px] leading-relaxed pb-5">Não. Você pode contratar por período determinado ou de forma avulsa, sem taxas de cancelamento.</p></div></div>
-      </div>
+      <details class="faq-item reveal bg-white/60 border border-stone-200 rounded-2xl px-6">
+        <summary class="w-full flex items-center justify-between gap-4 py-5 text-left font-semibold">
+          Existe fidelidade ou contrato de longo prazo?
+          <svg class="faq-chevron w-5 h-5 shrink-0 text-brass-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <p class="text-ink-700 text-[15px] leading-relaxed pb-5">Não. Você pode contratar por período determinado ou de forma avulsa, sem taxas de cancelamento.</p>
+      </details>
 
-      <div class="faq-item reveal bg-white/60 border border-stone-200 rounded-2xl px-6">
-        <h3>
-          <button class="faq-trigger w-full flex items-center justify-between gap-4 py-5 text-left font-semibold" aria-expanded="false">
-            Como funciona em caso de imprevistos durante um passeio?
-            <svg class="faq-chevron w-5 h-5 shrink-0 text-brass-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-        </h3>
-        <div class="faq-panel"><div><p class="text-ink-700 text-[15px] leading-relaxed pb-5">Nossa equipe segue protocolos de segurança e mantém contato direto com o tutor durante todo o atendimento.</p></div></div>
-      </div>
+      <details class="faq-item reveal bg-white/60 border border-stone-200 rounded-2xl px-6">
+        <summary class="w-full flex items-center justify-between gap-4 py-5 text-left font-semibold">
+          Como funciona em caso de imprevistos durante um passeio?
+          <svg class="faq-chevron w-5 h-5 shrink-0 text-brass-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <p class="text-ink-700 text-[15px] leading-relaxed pb-5">Nossa equipe segue protocolos de segurança e mantém contato direto com o tutor durante todo o atendimento.</p>
+      </details>
     </div>
   </div>
 </section>
@@ -974,11 +977,13 @@
     var menu = document.getElementById('mobile-menu');
     var iconMenu = document.getElementById('icon-menu');
     var iconClose = document.getElementById('icon-close');
+    if (!toggle || !menu || !iconMenu || !iconClose) return;
+
     var open = false;
 
     function setMenu(next) {
       open = next;
-      menu.classList.toggle('hidden', !open);
+      menu.classList.toggle('is-open', open);
       iconMenu.classList.toggle('hidden', open);
       iconClose.classList.toggle('hidden', !open);
       toggle.setAttribute('aria-expanded', String(open));
@@ -1004,41 +1009,34 @@
     }
   })();
 
-  // ---------- FAQ accordion ----------
-  (function () {
-    var items = document.querySelectorAll('.faq-item');
-    items.forEach(function (item) {
-      var trigger = item.querySelector('.faq-trigger');
-      trigger.addEventListener('click', function () {
-        var isOpen = item.classList.contains('is-open');
-        items.forEach(function (i) {
-          i.classList.remove('is-open');
-          i.querySelector('.faq-trigger').setAttribute('aria-expanded', 'false');
-        });
-        if (!isOpen) {
-          item.classList.add('is-open');
-          trigger.setAttribute('aria-expanded', 'true');
-        }
-      });
-    });
-  })();
 
   // ---------- Scroll reveal ----------
   (function () {
     var els = document.querySelectorAll('.reveal');
-    if (!('IntersectionObserver' in window)) {
-      els.forEach(function (el) { el.classList.add('is-visible'); });
+    if (!('IntersectionObserver' in window)) return;
+
+    var io;
+    try {
+      io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+    } catch (error) {
       return;
     }
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible');
-          io.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.12 });
-    els.forEach(function (el) { io.observe(el); });
+
+    els.forEach(function (el) {
+      try {
+        io.observe(el);
+        el.classList.add('is-reveal-pending');
+      } catch (error) {
+        // Se o registro falhar, o estado visível padrão é preservado.
+      }
+    });
   })();
 
   // ---------- Loader (tela de abertura) ----------
@@ -1053,7 +1051,6 @@
       done = true;
       // Remove via style inline — funciona em QUALQUER browser/WebView/celular
       loader.style.cssText = 'display:none!important';
-      htmlEl.classList.remove('is-loading');
       htmlEl.style.overflow = '';
       document.body && (document.body.style.overflow = '');
       try { loader.parentNode && loader.parentNode.removeChild(loader); } catch(e) {}
