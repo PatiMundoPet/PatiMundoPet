@@ -1,0 +1,41 @@
+{
+  "_notice": "Configuração exclusivamente demonstrativa da Fase 5. Não representa disponibilidade real.",
+  "title": "Agendamento",
+  "description": "Monte uma solicitação de passeio para revisar antes de conversar com a Paty.",
+  "availabilityNotice": "Disponibilidade demonstrativa: os dias e horários abaixo não representam a agenda real da Paty.",
+  "noScriptMessage": "A seleção interativa requer JavaScript. Esta seção demonstrativa continua visível, e você pode usar os contatos do site normalmente.",
+  "services": [
+    { "id": "dog-walker", "label": "Dog Walker" },
+    { "id": "passeio-individual", "label": "Passeio Individual" },
+    { "id": "passeio-grupo", "label": "Passeio em Pequeno Grupo" },
+    { "id": "planos-semanais", "label": "Planos Semanais" }
+  ],
+  "days": [
+    { "id": "dia-demo-1", "label": "Dia demonstrativo 1" },
+    { "id": "dia-demo-2", "label": "Dia demonstrativo 2" },
+    { "id": "dia-demo-3", "label": "Dia demonstrativo 3" }
+  ],
+  "times": [
+    { "id": "horario-demo-a", "label": "09:00 — demonstração", "available": true },
+    { "id": "horario-demo-b", "label": "11:00 — demonstração", "available": true },
+    { "id": "horario-demo-c", "label": "14:00 — demonstração", "available": false },
+    { "id": "horario-demo-d", "label": "16:00 — demonstração", "available": true }
+  ],
+  "states": {
+    "available": "Disponível (demonstração)",
+    "selected": "Selecionado",
+    "unavailable": "Indisponível (demonstração)",
+    "notSent": "Solicitação ainda não enviada",
+    "demoResult": "Esta é uma demonstração. Nenhum horário foi reservado."
+  },
+  "fields": [
+    { "id": "responsavel", "label": "Nome do responsável", "type": "text", "required": true, "autocomplete": "name" },
+    { "id": "whatsapp", "label": "WhatsApp", "type": "tel", "required": true, "autocomplete": "tel" },
+    { "id": "pet", "label": "Nome do pet", "type": "text", "required": true, "autocomplete": "off" },
+    { "id": "regiao", "label": "Bairro ou região", "type": "text", "required": true, "autocomplete": "address-level3" },
+    { "id": "observacoes", "label": "Observações (opcional)", "type": "textarea", "required": false, "autocomplete": "off" }
+  ],
+  "reviewConfirmation": "Confirmo que esta solicitação ainda será revisada pela Paty e não representa uma reserva.",
+  "submitLabel": "Preparar solicitação",
+  "summaryTitle": "Resumo da solicitação"
+}

@@ -87,6 +87,7 @@
       <nav class="hidden lg:flex items-center gap-8 text-[15px] text-ink-700">
         <a href="#diferenciais" class="hover:text-moss-700 transition-colors">Diferenciais</a>
         <a href="#servicos" class="hover:text-moss-700 transition-colors">Serviços</a>
+        <a href="#agendamento" class="hover:text-moss-700 transition-colors">Agendamento</a>
         <a href="#como-funciona" class="hover:text-moss-700 transition-colors">Como funciona</a>
         <a href="#depoimentos" class="hover:text-moss-700 transition-colors">Depoimentos</a>
         <a href="#galeria" class="hover:text-moss-700 transition-colors">Galeria</a>
@@ -116,6 +117,7 @@
     <nav class="flex flex-col px-5 py-4 gap-1 text-ink-700">
       <a href="#diferenciais" class="py-2.5 border-b border-stone-200/70">Diferenciais</a>
       <a href="#servicos" class="py-2.5 border-b border-stone-200/70">Serviços</a>
+      <a href="#agendamento" class="py-2.5 border-b border-stone-200/70">Agendamento</a>
       <a href="#como-funciona" class="py-2.5 border-b border-stone-200/70">Como funciona</a>
       <a href="#depoimentos" class="py-2.5 border-b border-stone-200/70">Depoimentos</a>
       <a href="#galeria" class="py-2.5 border-b border-stone-200/70">Galeria</a>
@@ -335,6 +337,62 @@
         </a>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- ============================================================ AGENDAMENTO DEMONSTRATIVO ============================================================ -->
+<section id="agendamento" class="schedule-section">
+  <div class="schedule-shell">
+    <header class="schedule-heading">
+      <span class="schedule-kicker">Interface demonstrativa</span>
+      <h2>{{SCHEDULING_TITLE}}</h2>
+      <p>{{SCHEDULING_DESCRIPTION}}</p>
+      <p class="schedule-notice"><strong>Atenção:</strong> {{SCHEDULING_NOTICE}}</p>
+    </header>
+
+    <noscript><p class="schedule-noscript">{{SCHEDULING_NOSCRIPT}}</p></noscript>
+
+    <form id="schedule-form" class="schedule-form" novalidate>
+      <div id="schedule-validation" class="schedule-validation" role="alert" aria-live="assertive"></div>
+
+      <fieldset class="schedule-panel">
+        <legend>1. Selecione o serviço</legend>
+        <div class="schedule-options schedule-services">{{SCHEDULING_SERVICES}}</div>
+      </fieldset>
+
+      <fieldset class="schedule-panel">
+        <legend>2. Escolha uma data demonstrativa</legend>
+        <div class="schedule-options schedule-days">{{SCHEDULING_DAYS}}</div>
+      </fieldset>
+
+      <fieldset class="schedule-panel">
+        <legend>3. Escolha um horário demonstrativo</legend>
+        <div class="schedule-options schedule-times">{{SCHEDULING_TIMES}}</div>
+      </fieldset>
+
+      <fieldset class="schedule-panel schedule-contact">
+        <legend>4. Conte quem está solicitando</legend>
+        <p class="required-note">Campos com <span aria-hidden="true">*</span> são obrigatórios.</p>
+        <div class="schedule-fields">{{SCHEDULING_FIELDS}}</div>
+      </fieldset>
+
+      <div class="schedule-review">
+        <h3>{{SCHEDULING_SUMMARY_TITLE}}</h3>
+        <p class="schedule-status">{{SCHEDULING_NOT_SENT}}</p>
+        <div id="schedule-summary" aria-live="polite" aria-atomic="true">
+          <p>Preencha as escolhas e os campos para preparar o resumo local.</p>
+        </div>
+      </div>
+
+      <label class="schedule-confirmation">
+        <input id="schedule-review-confirmation" name="revisao" type="checkbox" required aria-required="true">
+        <span>{{SCHEDULING_REVIEW}}</span>
+      </label>
+      <span class="schedule-error" id="error-revisao"></span>
+
+      <button class="schedule-submit" type="submit">{{SCHEDULING_SUBMIT}}</button>
+      <p class="schedule-final-notice" id="schedule-final-notice" tabindex="-1" aria-live="polite">{{SCHEDULING_DEMO_RESULT}}</p>
+    </form>
   </div>
 </section>
 
@@ -627,6 +685,7 @@
         <ul class="space-y-2.5 text-stone-50/75 text-sm">
           <li><a href="#diferenciais" class="hover:text-stone-50 transition-colors">Diferenciais</a></li>
           <li><a href="#servicos" class="hover:text-stone-50 transition-colors">Serviços</a></li>
+          <li><a href="#agendamento" class="hover:text-stone-50 transition-colors">Agendamento</a></li>
           <li><a href="#como-funciona" class="hover:text-stone-50 transition-colors">Como funciona</a></li>
           <li><a href="#depoimentos" class="hover:text-stone-50 transition-colors">Depoimentos</a></li>
           <li><a href="#galeria" class="hover:text-stone-50 transition-colors">Galeria</a></li>
@@ -682,5 +741,6 @@
 </a>
 
 <script src="assets/js/main.js" defer></script>
+<script src="assets/js/scheduling.js" defer></script>
 </body>
 </html>

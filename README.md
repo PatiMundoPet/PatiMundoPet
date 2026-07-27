@@ -29,3 +29,17 @@ baixa e executa temporariamente a versão exata `3.4.17` do Tailwind por meio do
 O workflow **Validate static site** executa o build em pull requests para `main` e
 confirma que `index.html` e `assets/css/tailwind.min.css` continuam sincronizados
 com seus arquivos-fonte.
+
+## Agenda demonstrativa — Fase 5
+
+A seção **Agendamento** é somente uma interface visual e local. Ela permite montar
+e revisar um resumo no navegador, mas **nenhuma solicitação é enviada, salva ou
+transformada em reserva**. Os dias e horários são placeholders identificados como
+demonstração e não representam a disponibilidade real da Paty. A integração com a
+disponibilidade real e o fluxo de envio ocorrerá em fases futuras.
+
+Edite títulos, avisos, serviços já existentes, opções demonstrativas, estados e
+campos em `content/scheduling.json`. Depois, execute `npm run build:site` (ou o
+build completo) para atualizar o `index.html` estático. O comportamento local e os
+estilos ficam, respectivamente, em `assets/js/scheduling.js` e
+`assets/css/styles.css`.
