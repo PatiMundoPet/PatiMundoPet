@@ -62,3 +62,9 @@ em **Avisar a Paty pelo WhatsApp**, e a Paty ainda revisará a solicitação.
 O diretório [`apps-script/`](apps-script/) contém o backend de agendamento para uma implantação **manual e futura** no Google Apps Script. Ele inclui diagnóstico, consulta segura de disponibilidade e criação de eventos pendentes com trava e idempotência, mas não contém URL, credencial, ID de agenda nem dados reais.
 
 `content/integration.json` controla a integração gerada no HTML. Nesta fase ele permanece em `mode: "demo"`, com `webAppUrl` vazio; portanto, o site não faz consultas nem envia solicitações. Consulte [`apps-script/README.md`](apps-script/README.md) antes de qualquer implantação ou ativação. Os testes locais com mocks podem ser executados com `npm run test:apps-script` e nunca acessam uma conta Google.
+
+## Fase 7 — segurança e privacidade
+
+O aviso em `privacy.html` é um **rascunho** gerado de `content/privacy.json`, com versão centralizada e `requiresLegalReview: true`. A Paty precisa revisar textos, responsável e período de retenção antes de qualquer publicação; este projeto não alega conformidade jurídica completa. O formulário possui consentimento de privacidade separado da confirmação de revisão, e nenhum deles confirma automaticamente uma reserva.
+
+O backend preparado valida tamanho, tipo e campos do POST, aplica limitação de frequência por hash com sal e mantém idempotência por `requestId`. Eventos pendentes expirados podem ser apenas inspecionados com `previewExpiredPendingEvents()` e removidos manualmente com `cleanupExpiredPendingEvents(true)`, sempre após revisão; nenhum gatilho automático foi criado. Não houve deploy, conexão com Calendar ou ativação: `content/integration.json` continua em `demo`, sem URL. Veja `docs/security-headers.md` antes de escolher uma hospedagem HTTPS.

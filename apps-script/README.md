@@ -49,3 +49,13 @@ Não invente uma URL de Web App, um ID de agenda ou qualquer dado da Paty. A URL
 - `POST` com parâmetros de formulário (`URLSearchParams`) e `action=request`: valida, trava a seção crítica, verifica novamente conflitos e cria um evento pendente. Em uma repetição, o cliente reenvia o mesmo `requestId` para evitar outro evento.
 
 Erros são respostas JSON seguras. Logs não incluem payloads, IDs, descrições de eventos ou stack traces. Nenhuma confirmação é automática e o botão de WhatsApp somente abre após clique explícito do cliente.
+
+## Segurança, consentimento e retenção (Fase 7)
+
+Além das propriedades anteriores, uma ativação futura exige `PRIVACY_POLICY_VERSION`, `MAX_REQUEST_BYTES`, `RATE_LIMIT_WINDOW_MINUTES`, `RATE_LIMIT_MAX_REQUESTS`, `RATE_LIMIT_SALT` e `PENDING_RETENTION_DAYS`. Valores e o sal devem ser definidos manualmente; nenhum segredo verdadeiro pertence ao repositório. `setupExampleProperties()` apenas **retorna** exemplos fictícios e não salva nem registra valores.
+
+O POST exige consentimento de privacidade separado, a versão vigente e formulário `application/x-www-form-urlencoded`. A limitação usa `CacheService` e uma chave SHA-256 do sal com o WhatsApp normalizado, nunca o telefone bruto. Repetições do mesmo `requestId` são verificadas antes da contagem e não criam duplicidade. `RATE_LIMITED` não revela limite, janela ou chave.
+
+A retenção é exclusivamente manual: execute `previewExpiredPendingEvents()` para revisar totais e IDs técnicos e, somente depois, `cleanupExpiredPendingEvents(true)`. Sem `true`, nada é removido. Apenas eventos expirados cujo título começa com o prefixo pendente são elegíveis; eventos confirmados não são removidos. Não crie gatilho automático nesta fase.
+
+O aviso de privacidade permanece em rascunho. A Paty deve revisar textos, versão, responsável e prazos antes da publicação. Nenhum envio confirma horário, nenhum deploy foi realizado e nenhuma agenda foi conectada.

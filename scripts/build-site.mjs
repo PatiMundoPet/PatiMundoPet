@@ -6,6 +6,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const contentPath = path.join(root, 'content/site.json');
 const schedulingPath = path.join(root, 'content/scheduling.json');
 const integrationPath = path.join(root, 'content/integration.json');
+const privacyPath = path.join(root, 'content/privacy.json');
+const privacyTemplatePath = path.join(root, 'src/privacy.template.html');
+const privacyOutputPath = path.join(root, 'privacy.html');
 const templatePath = path.join(root, 'src/index.template.html');
 const outputPath = path.join(root, 'index.html');
 
@@ -105,6 +108,25 @@ function validateIntegration(config) {
   if (errors.length) throw new Error(`Configuração inválida em content/integration.json:\n- ${errors.join('\n- ')}`);
 }
 
+function validatePrivacy(config, site) {
+  const required = ['title', 'version', 'updatedAt', 'dataController', 'contactEmail', 'purpose', 'noReservation', 'calendarNotice', 'retentionPeriod', 'correctionDeletion', 'sensitiveDataWarning'];
+  const errors = required.filter((field) => typeof config?.[field] !== 'string' || !config[field].trim()).map((field) => `"${field}" deve ser uma string não vazia`);
+  if (!Array.isArray(config?.requestedData) || !config.requestedData.length || config.requestedData.some((item) => typeof item !== 'string' || !item.trim())) errors.push('"requestedData" deve ser uma lista de strings não vazias');
+  if (config?.requiresLegalReview !== true) errors.push('"requiresLegalReview" deve permanecer true');
+  if (config?.contactEmail !== site.email) errors.push('"contactEmail" deve usar o e-mail centralizado em site.json');
+  if (errors.length) throw new Error(`Configuração inválida em content/privacy.json:\n- ${errors.join('\n- ')}`);
+}
+
+function replaceTokens(template, values, label) {
+  const output = template.replace(/\{\{([A-Z0-9_]+)\}\}/g, (token, name) => {
+    if (!(name in values)) throw new Error(`Token desconhecido em ${label}: ${token}`);
+    return values[name];
+  });
+  const unresolved = output.match(/\{\{[^{}]+\}\}/g);
+  if (unresolved) throw new Error(`Tokens não processados em ${label}: ${[...new Set(unresolved)].join(', ')}`);
+  return output;
+}
+
 function renderOptions(items, name, states) {
   return items.map((item) => {
     const disabled = item.available === false;
@@ -123,15 +145,18 @@ function renderFields(fields) {
 }
 
 try {
-  const [rawConfig, rawScheduling, rawIntegration, template] = await Promise.all([
+  const [rawConfig, rawScheduling, rawIntegration, rawPrivacy, template, privacyTemplate] = await Promise.all([
     readFile(contentPath, 'utf8'),
     readFile(schedulingPath, 'utf8'),
     readFile(integrationPath, 'utf8'),
+    readFile(privacyPath, 'utf8'),
     readFile(templatePath, 'utf8'),
+    readFile(privacyTemplatePath, 'utf8'),
   ]);
   let config;
   let scheduling;
   let integration;
+  let privacy;
   try {
     config = JSON.parse(rawConfig);
   } catch (error) {
@@ -147,9 +172,11 @@ try {
   } catch (error) {
     throw new Error(`JSON inválido em content/integration.json: ${error.message}`);
   }
+  try { privacy = JSON.parse(rawPrivacy); } catch (error) { throw new Error(`JSON inválido em content/privacy.json: ${error.message}`); }
   validate(config);
   validateScheduling(scheduling);
   validateIntegration(integration);
+  validatePrivacy(privacy, config);
 
   if (!config.projectName.startsWith(config.professionalName)) {
     throw new Error('Configuração inválida em content/site.json:\n- \"projectName\" deve começar com \"professionalName\" para preservar a identidade visual');
@@ -184,17 +211,22 @@ try {
     SCHEDULING_NOT_SENT: escapeHtml(scheduling.states.notSent),
     SCHEDULING_DEMO_RESULT: escapeHtml(scheduling.states.demoResult),
     INTEGRATION_CONFIG: JSON.stringify(integration).replaceAll('<', '\\u003c'),
+    PRIVACY_POLICY_VERSION: escapeHtml(privacy.version),
   };
 
-  const output = template.replace(/\{\{([A-Z0-9_]+)\}\}/g, (token, name) => {
-    if (!(name in values)) throw new Error(`Token desconhecido no template: ${token}`);
-    return values[name];
-  });
-  const unresolved = output.match(/\{\{[^{}]+\}\}/g);
-  if (unresolved) throw new Error(`Tokens não processados: ${[...new Set(unresolved)].join(', ')}`);
-
-  await writeFile(outputPath, output, 'utf8');
-  console.log('index.html gerado com sucesso.');
+  const output = replaceTokens(template, values, 'src/index.template.html');
+  const privacyValues = {
+    PROJECT_NAME: htmlValues.projectName, EMAIL: htmlValues.email,
+    PRIVACY_TITLE: escapeHtml(privacy.title), PRIVACY_VERSION: escapeHtml(privacy.version),
+    PRIVACY_UPDATED_AT: escapeHtml(privacy.updatedAt), PRIVACY_CONTROLLER: escapeHtml(privacy.dataController),
+    PRIVACY_DATA_TYPES: escapeHtml(privacy.requestedData.join(', ')), PRIVACY_PURPOSE: escapeHtml(privacy.purpose),
+    PRIVACY_NO_RESERVATION: escapeHtml(privacy.noReservation), PRIVACY_CALENDAR_NOTICE: escapeHtml(privacy.calendarNotice),
+    PRIVACY_RETENTION: escapeHtml(privacy.retentionPeriod), PRIVACY_CORRECTION: escapeHtml(privacy.correctionDeletion),
+    PRIVACY_SENSITIVE_WARNING: escapeHtml(privacy.sensitiveDataWarning)
+  };
+  const privacyOutput = replaceTokens(privacyTemplate, privacyValues, 'src/privacy.template.html');
+  await Promise.all([writeFile(outputPath, output, 'utf8'), writeFile(privacyOutputPath, privacyOutput, 'utf8')]);
+  console.log('index.html e privacy.html gerados com sucesso.');
 } catch (error) {
   console.error(`Erro ao gerar o site: ${error.message}`);
   process.exitCode = 1;

@@ -6,7 +6,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var CODES = new Set(['HEALTH_OK', 'AVAILABILITY_OK', 'REQUEST_CREATED', 'SLOT_UNAVAILABLE', 'LOCK_TIMEOUT', 'INVALID_REQUEST', 'CONFIGURATION_REQUIRED', 'INTERNAL_ERROR']);
+  var CODES = new Set(['HEALTH_OK', 'AVAILABILITY_OK', 'REQUEST_CREATED', 'SLOT_UNAVAILABLE', 'LOCK_TIMEOUT', 'INVALID_REQUEST', 'CONFIGURATION_REQUIRED', 'INTERNAL_ERROR', 'RATE_LIMITED']);
 
   function formatCalendarDate(date) {
     if (!(date instanceof Date) || !Number.isFinite(date.getTime())) throw new TypeError('Data inválida.');
@@ -109,7 +109,7 @@
     }
 
     function fingerprint(payload) {
-      return ['serviceId', 'date', 'time', 'responsibleName', 'whatsapp', 'petName', 'region', 'notes', 'reviewAccepted', 'honeypot']
+      return ['serviceId', 'date', 'time', 'responsibleName', 'whatsapp', 'petName', 'region', 'notes', 'reviewAccepted', 'privacyAccepted', 'privacyPolicyVersion', 'honeypot']
         .map(function (key) { return key + '=' + String(payload[key] == null ? '' : payload[key]); }).join('&');
     }
 

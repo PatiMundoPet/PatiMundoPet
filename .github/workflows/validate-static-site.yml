@@ -25,7 +25,7 @@ jobs:
         run: npm run build
 
       - name: Verify generated HTML is synchronized
-        run: git diff --exit-code -- index.html
+        run: git diff --exit-code -- index.html privacy.html
 
       - name: Upload generated Tailwind CSS
         uses: actions/upload-artifact@v4
@@ -39,10 +39,13 @@ jobs:
 
       - name: Check JavaScript syntax
         run: |
+          node --check assets/js/boot.js
           node --check assets/js/main.js
           node --check assets/js/scheduling-api.js
           node --check assets/js/scheduling.js
           node --check scripts/test-scheduling-api.mjs
+          node --check scripts/build-site.mjs
+          node --check scripts/test-security.mjs
           node --check scripts/test-apps-script.mjs
           cp apps-script/Code.gs /tmp/paty-mundopet-Code.js
           node --check /tmp/paty-mundopet-Code.js
@@ -53,16 +56,20 @@ jobs:
       - name: Test scheduling client with local mocks
         run: npm run test:scheduling-api
 
+      - name: Test static security guarantees
+        run: npm run test:security
+
       - name: Parse index.html
         run: |
           python3 - <<'PY'
           from html.parser import HTMLParser
           from pathlib import Path
 
-          parser = HTMLParser()
-          parser.feed(Path("index.html").read_text(encoding="utf-8"))
-          parser.close()
-          print("index.html parsed successfully")
+          for path in ("index.html", "privacy.html"):
+              parser = HTMLParser()
+              parser.feed(Path(path).read_text(encoding="utf-8"))
+              parser.close()
+              print(f"{path} parsed successfully")
           PY
 
       - name: Verify Tailwind CDN was removed
@@ -73,6 +80,15 @@ jobs:
 
       - name: Verify compiled CSS exists
         run: test -s assets/css/tailwind.min.css
+
+      - name: Verify demo mode and absence of real integration values
+        run: |
+          node -e "const c=require('./content/integration.json'); if(c.mode!=='demo'||c.webAppUrl!=='') process.exit(1)"
+          web_app_prefix='script\.google\.com/macros/s/'
+          web_app_suffix='[A-Za-z0-9_-]{20,}/exec'
+          private_key_prefix='BEGIN (RSA |EC |OPENSSH )?PRIVATE'
+          private_key_suffix=' KEY'
+          ! grep -R -E "${web_app_prefix}${web_app_suffix}|${private_key_prefix}${private_key_suffix}" --exclude-dir=.git .
 
       - name: Check whitespace errors
         run: git diff --check
