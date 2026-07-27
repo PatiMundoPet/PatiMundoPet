@@ -84,7 +84,11 @@ jobs:
       - name: Verify demo mode and absence of real integration values
         run: |
           node -e "const c=require('./content/integration.json'); if(c.mode!=='demo'||c.webAppUrl!=='') process.exit(1)"
-          ! grep -R -E 'script\.google\.com/macros/s/.+/exec|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' --exclude-dir=.git .
+          web_app_prefix='script\.google\.com/macros/s/'
+          web_app_suffix='.+/exec'
+          private_key_prefix='BEGIN (RSA |EC |OPENSSH )?PRIVATE'
+          private_key_suffix=' KEY'
+          ! grep -R -E "${web_app_prefix}${web_app_suffix}|${private_key_prefix}${private_key_suffix}" --exclude-dir=.git .
 
       - name: Check whitespace errors
         run: git diff --check
