@@ -14,6 +14,6 @@ As propriedades obrigatórias são `AVAILABILITY_CALENDAR_ID`, `APPOINTMENTS_CAL
 - `GET action=availability&date=YYYY-MM-DD`: somente data e horários livres.
 - `POST action=request`: grava uma linha `PENDENTE`, atualiza `Clientes` e, quando habilitado, notifica por e-mail.
 
-O `requestId` da linha controla a idempotência. Solicitações distintas podem compartilhar data e horário. Linhas `PENDENTE` não criam eventos e não participam da disponibilidade; somente eventos reais da agenda de atendimentos são subtraídos dos períodos oferecidos. O POST mantém lock, rate limit, validação e respostas compatíveis e nunca toca em `Pagamentos`.
+O `requestId` da linha controla a idempotência. Em um replay, o payload recebido é ignorado: nenhuma informação original ou de cliente é alterada e uma eventual recuperação de notificação usa exclusivamente os dados persistidos em `Solicitações`. Solicitações distintas podem compartilhar data e horário. Linhas `PENDENTE` não criam eventos e não participam da disponibilidade; somente eventos reais da agenda de atendimentos são subtraídos dos períodos oferecidos. O POST mantém lock, rate limit, validação e respostas compatíveis e nunca toca em `Pagamentos`.
 
 Não há operação administrativa em `doGet` ou `doPost`. Antes de publicar, configure valores fora do Git, revise permissões Calendar/Sheets/Mail e faça testes restritos. Esta fase não criou projeto, gatilho, painel ou deployment.
