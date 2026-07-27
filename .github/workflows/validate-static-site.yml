@@ -24,6 +24,13 @@ jobs:
       - name: Build production CSS
         run: npm run build:css
 
+      - name: Upload generated Tailwind CSS
+        uses: actions/upload-artifact@v4
+        with:
+          name: tailwind-generated-css
+          path: assets/css/tailwind.min.css
+          retention-days: 1
+
       - name: Verify compiled CSS is synchronized
         run: git diff --exit-code -- assets/css/tailwind.min.css
 
