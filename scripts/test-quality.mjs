@@ -39,7 +39,7 @@ for (const tag of index.match(/<script\b[^>]+src="[^"]+"[^>]*>/gi) || []) {
 }
 assert.doesNotMatch(index.match(/<div id="inicio"[\s\S]*?<\/div>\s*<!--.*?DIFERENCIAIS/)?.[0] || '', /<img[^>]+loading="lazy"/i);
 
-const reviewStart = template.indexOf('<div class="schedule-review">');
+const reviewStart = template.indexOf('class="schedule-review"');
 const reviewEnd = template.indexOf('</div>', template.indexOf('</div>', reviewStart) + 6) + 6;
 const summaryPos = template.indexOf('id="schedule-summary"');
 const privacyPos = template.indexOf('id="schedule-privacy-confirmation"');
@@ -53,6 +53,6 @@ assert.equal(seo.indexingEnabled, false);
 assert.equal(seo.siteUrl, '');
 assert.equal(seo.socialImage, '');
 assert.doesNotMatch(JSON.stringify(seo), /https?:\/\//i, 'SEO não pode inventar domínio');
-assert.match(await readFile('content/site.json', 'utf8'), /PLACEHOLDERS de demonstração/);
+assert.match(await readFile('content/site.json', 'utf8'), /contactsConfigured/);
 
 console.log('Testes estáticos de SEO, acessibilidade e performance aprovados.');

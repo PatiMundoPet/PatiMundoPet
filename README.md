@@ -5,7 +5,7 @@
 O arquivo `content/site.json` centraliza o nome do projeto e da profissional, os
 dados de WhatsApp e telefone, a mensagem padrão, o e-mail, o Instagram, a área de
 atendimento e o ano do rodapé. **Os valores atuais são PLACEHOLDERS de
-demonstração e devem ser substituídos antes da publicação oficial.** Não publique
+pré-integração e devem ser substituídos antes da publicação oficial.** Não publique
 o site sem revisar todos esses campos.
 
 `src/index.template.html` é o HTML-fonte e contém tokens preenchidos durante o
@@ -34,11 +34,11 @@ com seus arquivos-fonte.
 
 A seção **Agendamento** possui dois modos. No modo `demo` atual, ela continua sendo
 somente uma interface visual e local: nenhum `fetch` ocorre e os dias e horários
-demonstrativos não representam disponibilidade real. No modo `live`, que exige
+locais não representam disponibilidade real. No modo `live`, que exige
 ativação explícita futura, o cliente consulta horários e registra apenas uma
 **solicitação pendente**; nenhuma confirmação é automática.
 
-Edite títulos, avisos, serviços já existentes, opções demonstrativas, estados e
+Edite títulos, avisos, serviços já existentes, opções locais, estados e
 campos em `content/scheduling.json`. Depois, execute `npm run build:site` (ou o
 build completo) para atualizar o `index.html` estático. O comportamento local e os
 cliente HTTP, comportamento da interface e estilos ficam, respectivamente, em
@@ -73,4 +73,4 @@ O backend preparado valida tamanho, tipo e campos do POST, aplica limitação de
 
 `content/seo.json` centraliza metadados públicos e não sensíveis. O SEO técnico está preparado, porém `indexingEnabled` permanece `false`, `siteUrl` e `socialImage` permanecem vazios, e `robots.txt` bloqueia rastreamento. O build só criará `sitemap.xml` depois que a indexação for explicitamente ativada com uma URL HTTPS real; ele nunca gera URLs fictícias.
 
-Dados estruturados de empresa (`LocalBusiness`, endereço e informações equivalentes) foram adiados porque ainda não há dados reais validados. A Fase 8 acrescentou semântica, navegação por teclado, foco visível, redução de movimento e testes estáticos sem redesenhar a interface: cores, fontes Fraunces e Karla, cards, seções e identidade visual foram preservados. Nenhum deploy, analytics, cookie, conexão com Apps Script ou Calendar foi realizado; o modo continua demonstrativo e a URL do Web App permanece vazia.
+Dados estruturados de empresa (`LocalBusiness`, endereço e informações equivalentes) foram adiados porque ainda não há dados reais validados. A Fase 8 acrescentou semântica, navegação por teclado, foco visível, redução de movimento e testes estáticos sem redesenhar a interface: cores, fontes Fraunces e Karla, cards, seções e identidade visual foram preservados. Nenhum deploy, analytics, cookie, conexão com Apps Script ou Calendar foi realizado; o modo continua inativo e a URL do Web App permanece vazia.

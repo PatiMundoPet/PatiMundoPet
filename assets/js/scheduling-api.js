@@ -46,6 +46,7 @@
   function normalizeResponse(value, kind) {
     if (!value || typeof value !== 'object' || Array.isArray(value) || typeof value.ok !== 'boolean' ||
         typeof value.code !== 'string' || !CODES.has(value.code) || typeof value.message !== 'string' || value.message.length > 500) throw new Error('INVALID_RESPONSE');
+    if (value.notificationStatus !== undefined && ['NOT_REQUESTED','PENDING','SENT','FAILED'].indexOf(value.notificationStatus) === -1) throw new Error('INVALID_RESPONSE');
     if (value.requestId !== undefined && (typeof value.requestId !== 'string' || !/^[0-9a-f-]{36}$/i.test(value.requestId))) throw new Error('INVALID_RESPONSE');
     if (kind === 'health' && (value.code !== 'HEALTH_OK' || typeof value.configured !== 'boolean')) throw new Error('INVALID_RESPONSE');
     if (kind === 'availability' && value.ok) {
@@ -109,7 +110,7 @@
     }
 
     function fingerprint(payload) {
-      return ['serviceId', 'date', 'time', 'responsibleName', 'whatsapp', 'petName', 'region', 'notes', 'reviewAccepted', 'privacyAccepted', 'privacyPolicyVersion', 'honeypot']
+      return ['serviceId', 'date', 'time', 'responsibleName', 'whatsapp', 'email', 'submissionChannel', 'petName', 'region', 'notes', 'reviewAccepted', 'privacyAccepted', 'privacyPolicyVersion', 'honeypot']
         .map(function (key) { return key + '=' + String(payload[key] == null ? '' : payload[key]); }).join('&');
     }
 

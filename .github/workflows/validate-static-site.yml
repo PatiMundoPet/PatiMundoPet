@@ -85,18 +85,18 @@ jobs:
       - name: Verify compiled CSS exists
         run: test -s assets/css/tailwind.min.css
 
-      - name: Verify demo mode and absence of real integration values
+      - name: Verify safe mode and absence of real integration values
         run: |
           node -e "const c=require('./content/integration.json'); if(c.mode!=='demo'||c.webAppUrl!=='') process.exit(1)"
           web_app_prefix='script\.google\.com/macros/s/'
           web_app_suffix='[A-Za-z0-9_-]{20,}/exec'
           private_key_prefix='BEGIN (RSA |EC |OPENSSH )?PRIVATE'
           private_key_suffix=' KEY'
-          ! grep -R -E "${web_app_prefix}${web_app_suffix}|${private_key_prefix}${private_key_suffix}" --exclude-dir=.git .
+          ! rg -g '!/.git/**' -e "${web_app_prefix}${web_app_suffix}|${private_key_prefix}${private_key_suffix}" .
 
       - name: Verify placeholders and unpublished SEO state
         run: |
-          grep -q 'PLACEHOLDERS de demonstração' content/site.json
+          node -e "const s=require('./content/site.json'); if(s.contactsConfigured!==false) process.exit(1)"
           node -e "const s=require('./content/seo.json'); if(s.indexingEnabled!==false||s.siteUrl!==''||s.socialImage!=='') process.exit(1)"
           test ! -e sitemap.xml
 
