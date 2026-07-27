@@ -3,7 +3,7 @@
   "title": "Agendamento",
   "description": "Monte uma solicitação de passeio para revisar antes de conversar com a Paty.",
   "availabilityNotice": "Disponibilidade demonstrativa: os dias e horários abaixo não representam a agenda real da Paty.",
-  "noScriptMessage": "A seleção interativa requer JavaScript. Esta seção demonstrativa continua visível, e você pode usar os contatos do site normalmente.",
+  "noScriptMessage": "A consulta real requer JavaScript. O site e os canais de contato continuam acessíveis normalmente.",
   "services": [
     { "id": "dog-walker", "label": "Dog Walker" },
     { "id": "passeio-individual", "label": "Passeio Individual" },

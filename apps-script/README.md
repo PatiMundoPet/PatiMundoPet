@@ -25,6 +25,9 @@ Todos os valores operacionais devem ser cadastrados em **Configurações do proj
 
 `setupExampleProperties()` somente retorna e registra um modelo **fictício**; ela nunca grava propriedades. Não copie placeholders como se fossem dados reais.
 
+Para o conteúdo atual, configure futuramente `ALLOWED_SERVICE_IDS_JSON` com
+`["dog-walker","passeio-individual","passeio-grupo","planos-semanais"]`.
+
 ## Cópia, configuração e autorização futura
 
 1. Crie manualmente um projeto em script.google.com.
@@ -34,7 +37,8 @@ Todos os valores operacionais devem ser cadastrados em **Configurações do proj
 5. Cadastre todas as outras propriedades na interface do Apps Script.
 6. Execute manualmente uma função que use Calendar e revise a tela de autorização. Autorize somente o acesso solicitado ao Calendar e às propriedades do script.
 7. Em uma etapa posterior, use **Implantar → Nova implantação → App da Web**, defina conscientemente quem executa e quem pode acessar, e revise os riscos.
-8. Somente depois de obter a URL real do deploy, registre-a e altere deliberadamente `content/integration.json` para `mode: "live"`.
+8. Somente depois de obter a URL real de produção terminada em `/exec`, registre-a e altere deliberadamente `content/integration.json` para `mode: "live"`. A URL `/dev` serve apenas a testes restritos no editor e não deve ser publicada.
+9. Valide manualmente no navegador, após o deploy, CORS, diagnóstico, disponibilidade e todas as respostas antes de ativar o site.
 
 Não invente uma URL de Web App, um ID de agenda ou qualquer dado da Paty. A URL depende de uma implantação real. Enquanto `mode` for `demo` — ou a URL estiver vazia — o navegador não consulta nem envia dados. Mesmo com configuração futura, um evento nasce apenas como **pendente**: não há confirmação automática, convite, e-mail, pagamento, WhatsApp automático, planilha ou banco de dados.
 
@@ -42,6 +46,6 @@ Não invente uma URL de Web App, um ID de agenda ou qualquer dado da Paty. A URL
 
 - `GET ?action=health`: diagnóstico sem revelar configuração.
 - `GET ?action=availability&date=YYYY-MM-DD`: listas de horários disponíveis e indisponíveis, sem detalhes de eventos.
-- `POST` JSON com `action: "request"`: valida, trava a seção crítica, verifica novamente conflitos e cria um evento pendente. Em uma repetição, o cliente pode reenviar o `requestId` devolvido para receber a mesma resposta sem outro evento.
+- `POST` com parâmetros de formulário (`URLSearchParams`) e `action=request`: valida, trava a seção crítica, verifica novamente conflitos e cria um evento pendente. Em uma repetição, o cliente reenvia o mesmo `requestId` para evitar outro evento.
 
-Erros são respostas JSON seguras. Logs não incluem payloads, IDs, descrições de eventos ou stack traces.
+Erros são respostas JSON seguras. Logs não incluem payloads, IDs, descrições de eventos ou stack traces. Nenhuma confirmação é automática e o botão de WhatsApp somente abre após clique explícito do cliente.

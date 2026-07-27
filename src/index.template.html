@@ -352,7 +352,7 @@
 
     <noscript><p class="schedule-noscript">{{SCHEDULING_NOSCRIPT}}</p></noscript>
 
-    <form id="schedule-form" class="schedule-form" novalidate>
+    <form id="schedule-form" class="schedule-form" data-whatsapp-number="{{WHATSAPP_NUMBER}}" novalidate>
       <div id="schedule-validation" class="schedule-validation" role="alert" aria-live="assertive"></div>
 
       <fieldset class="schedule-panel">
@@ -360,12 +360,24 @@
         <div class="schedule-options schedule-services">{{SCHEDULING_SERVICES}}</div>
       </fieldset>
 
-      <fieldset class="schedule-panel">
+      <fieldset id="schedule-live-date-panel" class="schedule-panel schedule-live-only" hidden>
+        <legend>2. Escolha uma data</legend>
+        <label class="schedule-date-label" for="schedule-live-date">Data da consulta</label>
+        <input id="schedule-live-date" name="data-live" type="date">
+      </fieldset>
+
+      <fieldset id="schedule-demo-date-panel" class="schedule-panel">
         <legend>2. Escolha uma data demonstrativa</legend>
         <div class="schedule-options schedule-days">{{SCHEDULING_DAYS}}</div>
       </fieldset>
 
-      <fieldset class="schedule-panel">
+      <fieldset id="schedule-live-time-panel" class="schedule-panel schedule-live-only" hidden>
+        <legend>3. Escolha um horário</legend>
+        <p id="schedule-availability-status" aria-live="polite">Escolha uma data para consultar a agenda.</p>
+        <div id="schedule-live-times" class="schedule-options"></div>
+      </fieldset>
+
+      <fieldset id="schedule-demo-time-panel" class="schedule-panel">
         <legend>3. Escolha um horário demonstrativo</legend>
         <div class="schedule-options schedule-times">{{SCHEDULING_TIMES}}</div>
       </fieldset>
@@ -392,6 +404,7 @@
 
       <button class="schedule-submit" type="submit">{{SCHEDULING_SUBMIT}}</button>
       <p class="schedule-final-notice" id="schedule-final-notice" tabindex="-1" aria-live="polite">{{SCHEDULING_DEMO_RESULT}}</p>
+      <a id="schedule-whatsapp-success" class="schedule-whatsapp-success" href="#" target="_blank" rel="noopener noreferrer" hidden>Avisar a Paty pelo WhatsApp</a>
     </form>
   </div>
 </section>
@@ -742,6 +755,7 @@
 
 <script id="scheduling-integration-config" type="application/json">{{INTEGRATION_CONFIG}}</script>
 <script src="assets/js/main.js" defer></script>
+<script src="assets/js/scheduling-api.js" defer></script>
 <script src="assets/js/scheduling.js" defer></script>
 </body>
 </html>
