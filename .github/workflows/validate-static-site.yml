@@ -85,14 +85,27 @@ jobs:
       - name: Verify compiled CSS exists
         run: test -s assets/css/tailwind.min.css
 
-      - name: Verify safe mode and absence of real integration values
+      - name: Verify live integration configuration and absence of private keys
         run: |
-          node -e "const c=require('./content/integration.json'); if(c.mode!=='demo'||c.webAppUrl!=='') process.exit(1)"
-          web_app_prefix='script\.google\.com/macros/s/'
-          web_app_suffix='[A-Za-z0-9_-]{20,}/exec'
+          node <<'NODE'
+          const config = require('./content/integration.json');
+          let webAppUrl;
+          try {
+            webAppUrl = new URL(config.webAppUrl);
+          } catch {
+            process.exit(1);
+          }
+          const valid = config.mode === 'live' &&
+            config.webAppUrl.length > 0 &&
+            webAppUrl.protocol === 'https:' &&
+            webAppUrl.hostname === 'script.google.com' &&
+            /^\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(webAppUrl.pathname) &&
+            webAppUrl.pathname.endsWith('/exec');
+          if (!valid) process.exit(1);
+          NODE
           private_key_prefix='BEGIN (RSA |EC |OPENSSH )?PRIVATE'
           private_key_suffix=' KEY'
-          ! rg -g '!/.git/**' -e "${web_app_prefix}${web_app_suffix}|${private_key_prefix}${private_key_suffix}" .
+          ! rg -g '!/.git/**' -e "${private_key_prefix}${private_key_suffix}" .
 
       - name: Verify placeholders and unpublished SEO state
         run: |
