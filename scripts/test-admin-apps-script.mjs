@@ -32,4 +32,29 @@ if (!app.includes('while (current < end)')) throw new Error('A grade deve exclui
 if (!code.includes('Session.getActiveUser().getEmail()')) throw new Error('Autorização por usuário ausente.');
 if (manifest.runtimeVersion !== 'V8' || manifest.timeZone !== 'America/Sao_Paulo') throw new Error('Manifesto inválido.');
 if (manifest.oauthScopes.some((scope) => !scope.endsWith('.readonly') && !scope.endsWith('userinfo.email'))) throw new Error('Escopo não mínimo encontrado.');
+
+const serverContext = vm.createContext({ console, Date });
+new vm.Script(code).runInContext(serverContext);
+const clientOverlapSource = app.match(/function eventOverlapsPeriod\([^}]+\}/)?.[0];
+if (!clientOverlapSource) throw new Error('Comparação de sobreposição da interface ausente.');
+const clientContext = vm.createContext({});
+new vm.Script(clientOverlapSource).runInContext(clientContext);
+
+const overlapCases = [
+  { name: 'evento normal no mesmo dia', event: { start: '2026-07-28T10:00:00', end: '2026-07-28T11:00:00' }, expectedDays: ['2026-07-28'] },
+  { name: 'evento terminando à meia-noite', event: { start: '2026-07-28T23:00:00', end: '2026-07-29T00:00:00' }, expectedDays: ['2026-07-28'] },
+  { name: 'bloqueio de dia inteiro com término exclusivo', event: { start: '2026-07-28T00:00:00', end: '2026-07-29T00:00:00' }, expectedDays: ['2026-07-28'] },
+  { name: 'evento atravessando dois dias', event: { start: '2026-07-28T23:00:00', end: '2026-07-29T01:00:00' }, expectedDays: ['2026-07-28', '2026-07-29'] }
+];
+const checkedDays = ['2026-07-28', '2026-07-29'];
+for (const testCase of overlapCases) {
+  for (const day of checkedDays) {
+    const expected = testCase.expectedDays.includes(day);
+    const periodStart = `${day}T00:00:00`;
+    const nextDay = day === '2026-07-28' ? '2026-07-29' : '2026-07-30';
+    const periodEnd = `${nextDay}T00:00:00`;
+    if (serverContext.overlapsDay_(testCase.event, day) !== expected) throw new Error(`Servidor falhou: ${testCase.name} em ${day}.`);
+    if (clientContext.eventOverlapsPeriod(testCase.event, periodStart, periodEnd) !== expected) throw new Error(`Semana falhou: ${testCase.name} em ${day}.`);
+  }
+}
 console.log('Admin Apps Script: estrutura, sintaxe, leitura, segurança e agenda validadas.');

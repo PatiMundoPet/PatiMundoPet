@@ -222,4 +222,10 @@ function publicSettings_(config) {
   return { timezone: config.TIMEZONE, slotIntervalMinutes: config.SLOT_INTERVAL_MINUTES, workdayStart: config.WORKDAY_START_TIME, workdayEnd: config.WORKDAY_END_TIME, firstSlot: '08:30', lastSlot: '17:30' };
 }
 function countStatus_(rows, key, statuses) { return rows.filter(function (row) { return statuses.indexOf(row[key]) >= 0; }).length; }
-function overlapsDay_(event, iso) { return event.start.slice(0, 10) <= iso && event.end.slice(0, 10) >= iso; }
+function overlapsPeriod_(event, periodStart, periodEnd) { return event.start < periodEnd && event.end > periodStart; }
+function nextIsoDate_(iso) {
+  var parts = iso.split('-').map(Number);
+  var next = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + 1));
+  return next.getUTCFullYear() + '-' + String(next.getUTCMonth() + 1).padStart(2, '0') + '-' + String(next.getUTCDate()).padStart(2, '0');
+}
+function overlapsDay_(event, iso) { return overlapsPeriod_(event, iso + 'T00:00:00', nextIsoDate_(iso) + 'T00:00:00'); }
