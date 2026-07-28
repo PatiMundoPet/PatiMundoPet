@@ -113,7 +113,7 @@
   }
 
   /* ================================================================
-     LOADER — tela de abertura (Dog Walker / passeio)
+     LOADER — tela de abertura (passeios)
      ================================================================ */
   #site-loader {
     position: fixed;
@@ -257,6 +257,19 @@
 .schedule-choice input:focus-visible + span { outline: 3px solid #ad8a4e; outline-offset: 3px; }
 .schedule-choice.is-unavailable { cursor: not-allowed; }
 .schedule-choice.is-unavailable span { color: #696969; background: #e8e5df; text-decoration: line-through; opacity: .8; }
+.schedule-date-navigation { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.schedule-date-navigation button, #schedule-live-dates button { border: 2px solid #d8d0c1; border-radius: .7rem; background: #fff; color: #1e2b22; font-weight: 700; cursor: pointer; }
+.schedule-date-navigation button { min-width: 2.75rem; min-height: 2.75rem; font-size: 1.4rem; }
+#schedule-live-dates { grid-template-columns: repeat(7, minmax(2.5rem, 1fr)); }
+#schedule-live-dates button { min-height: 3rem; transition: border-color .15s, background-color .15s; }
+#schedule-live-dates button:hover:not(:disabled) { border-color: #496653; background: #f1f5f1; }
+#schedule-live-dates button:focus-visible, .schedule-date-navigation button:focus-visible { outline: 3px solid #ad8a4e; outline-offset: 3px; }
+#schedule-live-dates button[aria-pressed="true"] { border-color: #496653; background: #e7eee8; box-shadow: inset 0 0 0 1px #496653; }
+#schedule-live-dates button.is-loading { color: #425047; background: #eee4ce; }
+#schedule-live-dates button:disabled { cursor: not-allowed; color: #777; background: #e8e5df; opacity: .65; text-decoration: line-through; }
+.schedule-availability-status { margin: .5rem 0; color: #425047; font-weight: 700; }
+.schedule-availability-contact { display: inline-flex; margin-top: 1rem; border-radius: 999px; padding: .8rem 1.25rem; background: #496653; color: #fff; font-weight: 800; }
+.schedule-availability-contact[hidden] { display: none; }
 .required-note { margin-bottom: 1rem; color: #526258; font-size: .875rem; }
 .schedule-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem; }
 .schedule-field { display: flex; flex-direction: column; }

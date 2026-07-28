@@ -54,5 +54,10 @@ assert.equal(seo.siteUrl, '');
 assert.equal(seo.socialImage, '');
 assert.doesNotMatch(JSON.stringify(seo), /https?:\/\//i, 'SEO não pode inventar domínio');
 assert.match(await readFile('content/site.json', 'utf8'), /contactsConfigured/);
+const removedServicePattern = new RegExp(['dog', 'walker'].join('[ -]?'), 'i');
+assert.doesNotMatch(index + template + await readFile('content/scheduling.json', 'utf8'), removedServicePattern, 'catálogo público não deve conter o serviço removido');
+assert.match(index, /Escolha uma data para consultar/);
+assert.match(index, /Selecione uma data para consultar os horários\./);
+assert.match(index, /Não há horários disponíveis nesta data\. Escolha outro dia ou fale com a Pati pelo WhatsApp\./);
 
 console.log('Testes estáticos de SEO, acessibilidade e performance aprovados.');

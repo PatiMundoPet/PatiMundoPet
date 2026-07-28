@@ -6,10 +6,6 @@
   "noScriptMessage": "A agenda online requer JavaScript. Use os canais de contato quando estiverem disponíveis.",
   "services": [
     {
-      "id": "dog-walker",
-      "label": "Dog Walker"
-    },
-    {
       "id": "passeio-individual",
       "label": "Passeio Individual"
     },

@@ -53,7 +53,7 @@ formulário (`URLSearchParams`), não JSON. Depois do deploy, respostas e CORS a
 precisarão ser validados manualmente no navegador antes da ativação.
 
 Os IDs estáveis que deverão compor `ALLOWED_SERVICE_IDS_JSON` são
-`dog-walker`, `passeio-individual`, `passeio-grupo` e `planos-semanais`. Após uma
+`passeio-individual`, `passeio-grupo` e `planos-semanais`. Após uma
 resposta `REQUEST_CREATED`, o WhatsApp não abre sozinho: o cliente precisa clicar
 em **Avisar a Paty pelo WhatsApp**, e a Paty ainda revisará a solicitação.
 
