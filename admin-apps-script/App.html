@@ -1,0 +1,123 @@
+<script>
+(function () {
+  'use strict';
+  var state = { requests: [], clients: [], payments: [], summary: {}, settings: null, today: '', agendaMode: 'dia', modalOpener: null };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function rpc(name, args) {
+    return new Promise(function (resolve, reject) {
+      var runner = google.script.run.withSuccessHandler(function (response) {
+        if (response && response.ok) resolve(response.data); else reject(new Error('READ_ERROR: Resposta inválida.'));
+      }).withFailureHandler(reject);
+      runner[name].apply(runner, args || []);
+    });
+  }
+
+  function text(value, fallback) { return value === null || value === undefined || value === '' ? (fallback || '—') : String(value); }
+  function el(tag, className, content) { var node = document.createElement(tag); if (className) node.className = className; if (content !== undefined) node.textContent = content; return node; }
+  function clear(node) { node.replaceChildren(); }
+  function empty(container, message) { clear(container); container.appendChild(el('div', 'empty', message)); }
+  function formatDate(value) { if (!value) return '—'; var parts = value.slice(0, 10).split('-'); return parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : text(value); }
+  function formatDateTime(value) { return value ? formatDate(value) + (value.length > 10 ? ' · ' + value.slice(11, 16) : '') : '—'; }
+  function badge(status) { var node = el('span', 'badge ' + (status || ''), text(status, 'Não informado').replaceAll('_', ' ')); return node; }
+  function searchable(values, query) { var normalized = values.join(' ').toLocaleLowerCase('pt-BR'); return normalized.indexOf(query.toLocaleLowerCase('pt-BR')) >= 0; }
+  function setNotice(node, message, kind) { node.textContent = message; node.className = 'notice ' + (kind || ''); node.hidden = false; }
+  function hideNotice(node) { node.hidden = true; }
+  function errorKind(error) { var message = String(error && error.message || error || ''); return message.indexOf('ACCESS_DENIED') >= 0 ? 'Acesso negado. Entre com a conta autorizada.' : message.indexOf('CONFIG_ERROR') >= 0 ? 'A configuração privada do painel precisa ser revisada.' : 'Não foi possível ler os dados agora. Tente novamente.'; }
+
+  function loadInitial() {
+    $('app').setAttribute('aria-busy', 'true');
+    setNotice($('globalNotice'), 'Carregando dados reais do painel…', 'loading');
+    return rpc('carregarDadosIniciais').then(function (data) {
+      Object.assign(state, data);
+      $('agendaDate').value = state.today; $('blockStart').value = state.today; $('blockEnd').value = addDays(state.today, 30);
+      renderAll();
+      setNotice($('globalNotice'), 'Dados carregados com segurança. Este painel está em modo somente leitura.', 'success');
+      window.setTimeout(function () { hideNotice($('globalNotice')); }, 4500);
+    }).catch(function (error) {
+      setNotice($('globalNotice'), errorKind(error), 'error');
+      ['dashboardAgenda', 'requestList', 'clientList', 'paymentList', 'blockList', 'agendaGrid'].forEach(function (id) { empty($(id), 'Nenhum dado foi carregado.'); });
+    }).finally(function () { $('app').setAttribute('aria-busy', 'false'); });
+  }
+
+  function renderAll() {
+    var summary = state.summary;
+    $('statRequests').textContent = summary.pendingRequests; $('statToday').textContent = summary.appointmentsToday;
+    $('statNext').textContent = summary.nextAppointments; $('statPayments').textContent = summary.pendingPayments;
+    $('navRequests').textContent = summary.pendingRequests; $('navPayments').textContent = summary.pendingPayments;
+    $('todayText').textContent = 'Atualizado para ' + formatDate(state.today);
+    renderDashboard(); renderRequests(); renderClients(); renderPayments();
+  }
+
+  function eventCard(event, className) {
+    var card = el('article', className || 'item-card'); var main = el('div', 'item-main');
+    main.append(el('strong', '', text(event.title, event.type === 'bloqueio' ? 'Indisponível' : 'Atendimento')),
+      el('span', '', event.allDay ? formatDate(event.start) + ' · dia inteiro' : formatDateTime(event.start) + ' até ' + event.end.slice(11, 16)));
+    card.appendChild(main); return card;
+  }
+  function renderDashboard() { var list = $('dashboardAgenda'); clear(list); if (!state.summary.agenda.length) return empty(list, 'Nenhum atendimento nos próximos 7 dias.'); state.summary.agenda.forEach(function (event) { list.appendChild(eventCard(event)); }); }
+
+  function renderRequests() {
+    var query = $('requestSearch').value.trim(), status = $('requestStatus').value, rows = state.requests.filter(function (row) { return (status === 'TODOS' || row.status === status) && (!query || searchable([row.responsible, row.pet, row.service, row.region, row.requestId], query)); });
+    var list = $('requestList'); clear(list); if (!rows.length) return empty(list, state.requests.length ? 'Nenhuma solicitação corresponde aos filtros.' : 'Nenhuma solicitação encontrada.');
+    rows.forEach(function (row) {
+      var card = el('article', 'item-card clickable'); card.tabIndex = 0; card.setAttribute('role', 'button'); card.setAttribute('aria-label', 'Ver detalhes da solicitação de ' + text(row.responsible));
+      var main = el('div', 'item-main'); main.append(el('strong', '', text(row.responsible)), el('span', '', text(row.pet) + ' · ' + text(row.service)));
+      var meta = el('div', 'meta'); meta.append(el('span', '', formatDate(row.date) + ' · ' + text(row.time)), el('span', '', text(row.region))); card.append(main, meta, badge(row.status));
+      function open() { openRequest(row, card); } card.addEventListener('click', open); card.addEventListener('keydown', function (event) { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } }); list.appendChild(card);
+    });
+  }
+
+  function details(fields) { var dl = el('dl', 'detail'); fields.forEach(function (field) { var box = el('div'); box.append(el('dt', '', field[0]), el('dd', '', text(field[1]))); dl.appendChild(box); }); return dl; }
+  function openRequest(row, opener) {
+    openModal('Detalhes da solicitação', details([['Responsável', row.responsible], ['Pet', row.pet], ['Serviço', row.service], ['Data e horário', formatDate(row.date) + ' · ' + text(row.time)], ['WhatsApp', row.whatsapp], ['E-mail', row.email], ['Região', row.region], ['Recebida em', formatDateTime(row.receivedAt)], ['Status', row.status], ['Observações', row.notes]]), opener);
+    addContactButtons(row.whatsapp, row.email);
+    ['Confirmar', 'Pedir mais informações', 'Recusar', 'Cancelar'].forEach(function (label) { var button = el('button', 'btn btn-outline', label + ' · próxima fase'); button.disabled = true; $('modalFoot').appendChild(button); });
+  }
+
+  function renderClients() {
+    var query = $('clientSearch').value.trim(), rows = state.clients.filter(function (row) { return !query || searchable([row.responsible, row.pets, row.email, row.whatsapp], query); });
+    var list = $('clientList'); clear(list); if (!rows.length) return empty(list, state.clients.length ? 'Nenhum cliente corresponde à busca.' : 'Nenhum cliente encontrado.');
+    rows.forEach(function (row) { var card = el('article', 'item-card clickable'); card.tabIndex = 0; card.setAttribute('role', 'button'); var main = el('div', 'item-main'); main.append(el('strong', '', text(row.responsible)), el('span', '', 'Pets: ' + text(row.pets))); card.append(main, el('span', 'meta', 'Último atendimento: ' + formatDateTime(row.lastAppointment))); function open() { openClient(row, card); } card.onclick = open; card.onkeydown = function (event) { if (event.key === 'Enter') open(); }; list.appendChild(card); });
+  }
+  function openClient(row, opener) { openModal('Cliente', details([['Responsável', row.responsible], ['WhatsApp', row.whatsapp], ['E-mail', row.email], ['Pets', row.pets], ['Observações', row.notes], ['Cadastro', formatDateTime(row.registeredAt)], ['Último atendimento', formatDateTime(row.lastAppointment)]]), opener); addContactButtons(row.whatsapp, row.email); ['Editar', 'Adicionar pet', 'Criar atendimento', 'Criar recorrência'].forEach(function (label) { var button = el('button', 'btn btn-outline', label + ' · próxima fase'); button.disabled = true; $('modalFoot').appendChild(button); }); }
+
+  function renderPayments() {
+    var query = $('paymentSearch').value.trim(), status = $('paymentStatus').value, rows = state.payments.filter(function (row) { return (status === 'TODOS' || row.status === status) && (!query || searchable([row.client, row.requestId, row.service], query)); });
+    var list = $('paymentList'); clear(list); if (!rows.length) return empty(list, state.payments.length ? 'Nenhum pagamento corresponde aos filtros.' : 'Nenhum pagamento encontrado.');
+    rows.forEach(function (row) { var card = el('article', 'item-card'); var main = el('div', 'item-main'); var amount = row.amount === null ? 'Valor não informado' : Number(row.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); main.append(el('strong', '', text(row.client)), el('span', '', text(row.service) + ' · solicitação ' + text(row.requestId))); var meta = el('div', 'meta'); meta.append(el('span', '', amount), el('span', '', text(row.paymentMethod)), el('span', '', 'Vencimento: ' + formatDate(row.dueDate)), el('span', '', 'Pagamento: ' + formatDateTime(row.paidAt)), el('span', '', 'Observações: ' + text(row.notes))); card.append(main, meta, badge(row.status)); list.appendChild(card); });
+  }
+
+  function loadAgenda() {
+    var date = $('agendaDate').value; if (!date) return;
+    setNotice($('agendaNotice'), 'Carregando agenda real…', 'loading'); empty($('agendaGrid'), 'Carregando…');
+    var method = state.agendaMode === 'dia' ? 'consultarAgendaDia' : 'consultarAgendaSemana';
+    rpc(method, [date]).then(function (data) { hideNotice($('agendaNotice')); renderAgenda(data); }).catch(function (error) { setNotice($('agendaNotice'), errorKind(error), 'error'); empty($('agendaGrid'), 'A agenda não pôde ser carregada.'); });
+  }
+  function renderAgenda(data) { if (state.agendaMode === 'semana') return renderWeek(data); var grid = $('agendaGrid'); clear(grid); var events = data.appointments.concat(data.blocks); slotTimes(data.settings).forEach(function (time) { var row = el('div', 'slot-row'); row.appendChild(el('div', 'slot-time', time)); var body = el('div', 'slot-events'); var slotStart = data.range.start + 'T' + time + ':00', slotEnd = addMinutes(slotStart, data.settings.slotIntervalMinutes); var overlapping = events.filter(function (event) { return event.start < slotEnd && event.end > slotStart; }); if (!overlapping.length) body.appendChild(el('span', 'meta', 'Disponível')); overlapping.forEach(function (event) { var item = el('div', 'event ' + (event.type === 'bloqueio' ? 'block' : ''), (event.type === 'bloqueio' ? 'Indisponível: ' : '') + text(event.title, 'Sem título') + (event.allDay ? ' · dia inteiro' : ' · até ' + event.end.slice(11, 16))); body.appendChild(item); }); row.appendChild(body); grid.appendChild(row); }); }
+  function renderWeek(data) { var grid = $('agendaGrid'); clear(grid); grid.className = 'week-grid'; for (var offset = 0; offset < 7; offset += 1) { var date = addDays(data.range.start, offset), day = el('article', 'week-day'); day.appendChild(el('h3', '', formatDate(date))); var events = data.appointments.concat(data.blocks).filter(function (event) { return event.start.slice(0, 10) <= date && event.end.slice(0, 10) >= date; }); if (!events.length) day.appendChild(el('p', 'meta', 'Sem eventos · disponibilidade padrão')); events.forEach(function (event) { day.appendChild(el('div', 'week-event', (event.allDay ? 'Dia inteiro' : event.start.slice(11, 16)) + ' · ' + text(event.title, event.type === 'bloqueio' ? 'Indisponível' : 'Atendimento'))); }); grid.appendChild(day); } }
+  function slotTimes(settings) { var values = [], current = toMinutes(settings.workdayStart), end = toMinutes(settings.workdayEnd); while (current < end) { values.push(pad(Math.floor(current / 60)) + ':' + pad(current % 60)); current += settings.slotIntervalMinutes; } return values; }
+  function toMinutes(value) { var parts = value.split(':'); return Number(parts[0]) * 60 + Number(parts[1]); } function pad(value) { return String(value).padStart(2, '0'); }
+  function addMinutes(dateTime, minutes) { var date = new Date(dateTime); date.setMinutes(date.getMinutes() + minutes); return localIso(date); } function localIso(date) { return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':00'; }
+  function addDays(iso, amount) { var parts = iso.slice(0, 10).split('-').map(Number), date = new Date(parts[0], parts[1] - 1, parts[2] + amount); return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()); }
+
+  function loadBlocks() { var start = $('blockStart').value, end = $('blockEnd').value; if (!start || !end || end < start) return empty($('blockList'), 'Informe um intervalo válido.'); empty($('blockList'), 'Carregando bloqueios reais…'); rpc('listarBloqueios', [start, end]).then(renderBlocks).catch(function (error) { empty($('blockList'), errorKind(error)); }); }
+  function renderBlocks(rows) { var list = $('blockList'); clear(list); if (!rows.length) return empty(list, 'Nenhum bloqueio encontrado no intervalo.'); rows.forEach(function (row) { var card = eventCard(row); var disabled = el('button', 'btn btn-outline', 'Editar · próxima fase'); disabled.disabled = true; card.appendChild(disabled); list.appendChild(card); }); }
+
+  function validWhatsapp(value) { var digits = String(value || '').replace(/\D/g, ''); if (digits.length < 10 || digits.length > 13) return ''; if (digits.length <= 11) digits = '55' + digits; return digits; }
+  function validEmail(value) { var email = String(value || '').trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : ''; }
+  function addContactButtons(phone, email) { var number = validWhatsapp(phone), address = validEmail(email); if (number) { var whats = el('a', 'btn btn-outline', 'Abrir WhatsApp'); whats.href = 'https://wa.me/' + number; whats.target = '_blank'; whats.rel = 'noopener noreferrer'; $('modalFoot').appendChild(whats); } if (address) { var mail = el('a', 'btn btn-outline', 'Escrever e-mail'); mail.href = 'mailto:' + encodeURIComponent(address); $('modalFoot').appendChild(mail); } }
+
+  function openModal(title, body, opener) { state.modalOpener = opener || document.activeElement; $('modalTitle').textContent = title; clear($('modalBody')); $('modalBody').appendChild(body); clear($('modalFoot')); $('modalBackdrop').hidden = false; document.body.style.overflow = 'hidden'; $('modalClose').focus(); }
+  function closeModal() { $('modalBackdrop').hidden = true; document.body.style.overflow = ''; if (state.modalOpener) state.modalOpener.focus(); }
+  function trapModal(event) { if ($('modalBackdrop').hidden) return; if (event.key === 'Escape') return closeModal(); if (event.key !== 'Tab') return; var focusable = Array.from($('modalBackdrop').querySelectorAll('a[href],button:not([disabled]),input,select,[tabindex]:not([tabindex="-1"])')); if (!focusable.length) return; var first = focusable[0], last = focusable[focusable.length - 1]; if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); } }
+
+  document.querySelectorAll('.nav-btn').forEach(function (button) { button.addEventListener('click', function () { var name = button.dataset.view; document.querySelectorAll('.view').forEach(function (view) { var active = view.id === 'view-' + name; view.hidden = !active; view.classList.toggle('active', active); }); document.querySelectorAll('.nav-btn').forEach(function (item) { var active = item === button; item.classList.toggle('active', active); if (active) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current'); }); closeDrawer(); $('view-' + name).querySelector('h1').focus({ preventScroll: true }); if (name === 'agenda') loadAgenda(); if (name === 'bloqueios' && !$('blockList').children.length) loadBlocks(); }); });
+  function closeDrawer() { $('sidebar').classList.remove('open'); $('drawerOverlay').hidden = true; $('menuButton').setAttribute('aria-expanded', 'false'); }
+  $('menuButton').onclick = function () { var open = !$('sidebar').classList.contains('open'); $('sidebar').classList.toggle('open', open); $('drawerOverlay').hidden = !open; $('menuButton').setAttribute('aria-expanded', String(open)); }; $('drawerOverlay').onclick = closeDrawer;
+  $('reloadButton').onclick = loadInitial; $('requestSearch').oninput = renderRequests; $('requestStatus').onchange = renderRequests; $('clientSearch').oninput = renderClients; $('paymentSearch').oninput = renderPayments; $('paymentStatus').onchange = renderPayments;
+  $('agendaDate').onchange = loadAgenda; $('agendaToday').onclick = function () { $('agendaDate').value = state.today; loadAgenda(); }; document.querySelectorAll('[data-agenda-mode]').forEach(function (button) { button.onclick = function () { state.agendaMode = button.dataset.agendaMode; document.querySelectorAll('[data-agenda-mode]').forEach(function (item) { var active = item === button; item.classList.toggle('active', active); item.setAttribute('aria-pressed', String(active)); }); $('agendaGrid').className = ''; loadAgenda(); }; }); $('loadBlocks').onclick = loadBlocks;
+  $('modalClose').onclick = closeModal; $('modalBackdrop').onclick = function (event) { if (event.target === $('modalBackdrop')) closeModal(); }; document.addEventListener('keydown', trapModal);
+  loadInitial();
+}());
+</script>
