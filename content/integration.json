@@ -10,7 +10,7 @@
     "unavailable": "A integração com a agenda ainda não está disponível. Use os canais de contato do site.",
     "loading": "Consultando disponibilidade…",
     "processing": "Enviando solicitação pendente…",
-    "noAvailability": "Não há horários disponíveis nesta data.",
+    "noAvailability": "Não há horários disponíveis nesta data. Escolha outro dia ou fale com a Pati pelo WhatsApp.",
     "invalidResponse": "A agenda retornou uma resposta inválida. Tente novamente mais tarde.",
     "pendingCreated": "Pré-solicitação registrada com sucesso. A Pati analisará as informações e entrará em contato para confirmar, pedir mais informações ou informar que não poderá atender.",
     "inactive": "Agenda online em configuração. Para consultar horários agora, fale diretamente com a Pati.",

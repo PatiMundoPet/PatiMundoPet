@@ -133,7 +133,7 @@
 
   <div class="relative max-w-5xl mx-auto px-5 sm:px-8 text-center">
     <span class="tag-chip inline-block bg-moss-700/70 text-brass-300 text-xs font-semibold uppercase tracking-wider pl-6 pr-4 py-1.5 rounded-full reveal">
-      Dog Walker especializado
+      Passeios com cuidado especializado
     </span>
 
     <h1 class="reveal mt-6 font-display font-semibold text-4xl sm:text-5xl md:text-6xl leading-[1.08] text-stone-50 text-balance">
@@ -184,7 +184,7 @@
         <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
       </div>
       <p class="text-sm font-semibold leading-snug">Passeio das 7h · Parque Ibirapuera</p>
-      <p class="text-xs text-ink-700/70 mt-0.5">Ana P. — dog walker credenciada</p>
+      <p class="text-xs text-ink-700/70 mt-0.5">Ana P. — tutora do Thor</p>
     </div>
   </div>
 
@@ -274,18 +274,6 @@
     </div>
 
     <div class="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Dog Walker -->
-      <div class="reveal bg-stone-50 rounded-2xl p-7 flex flex-col">
-        <div class="w-11 h-11 rounded-xl bg-cognac-600/10 text-cognac-600 flex items-center justify-center mb-5">
-          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4a3 3 0 1 0 0 6"/><path d="M5 10c0 6 6 4 6 9M13 6c3 0 5 2 5 5 0 4-4 3-4 8"/></svg>
-        </div>
-        <h3 class="font-display font-semibold text-lg mb-2">Dog Walker</h3>
-        <p class="text-ink-700 text-[15px] leading-relaxed flex-1">Passeios diários, individuais ou em pequenos grupos, no ritmo e na energia do seu cão.</p>
-        <a {{WHATSAPP_ATTRIBUTES}} target="_blank" rel="noopener noreferrer" class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-moss-700 hover:text-moss-800">
-          Solicitar pelo WhatsApp
-          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </a>
-      </div>
       <!-- Ritmo tranquilo -->
       <div class="reveal bg-stone-50 rounded-2xl p-7 flex flex-col">
         <div class="w-11 h-11 rounded-xl bg-cognac-600/10 text-cognac-600 flex items-center justify-center mb-5">
@@ -348,8 +336,8 @@
       <p class="text-sm text-ink-700">Consulte o <a class="underline" href="privacy.html">aviso de privacidade em rascunho</a> antes de enviar seus dados.</p>
       <div id="schedule-validation" class="schedule-validation" role="alert" aria-live="assertive"></div>
       <fieldset class="schedule-panel"><legend>1. Selecione o serviço</legend><div class="schedule-options schedule-services">{{SCHEDULING_SERVICES}}</div></fieldset>
-      <fieldset id="schedule-live-date-panel" class="schedule-panel"><legend>2. Escolha uma data disponível</legend><div class="schedule-date-navigation"><button type="button" id="schedule-previous-month" aria-label="Mês anterior">‹</button><p id="schedule-month-label" aria-live="polite"></p><button type="button" id="schedule-next-month" aria-label="Próximo mês">›</button></div><p id="schedule-availability-status" aria-live="polite">Carregando dias disponíveis…</p><div id="schedule-live-dates" class="schedule-options" role="group" aria-label="Dias disponíveis"></div></fieldset>
-      <fieldset id="schedule-live-time-panel" class="schedule-panel"><legend>3. Escolha um horário solicitado</legend><div id="schedule-live-times" class="schedule-options" role="group" aria-label="Horários disponíveis"></div></fieldset>
+      <fieldset id="schedule-live-date-panel" class="schedule-panel"><legend>2. Escolha uma data para consultar</legend><div class="schedule-date-navigation"><button type="button" id="schedule-previous-month" aria-label="Mês anterior">‹</button><p id="schedule-month-label" aria-live="polite"></p><button type="button" id="schedule-next-month" aria-label="Próximo mês">›</button></div><div id="schedule-live-dates" class="schedule-options" role="group" aria-label="Datas para consulta"></div></fieldset>
+      <fieldset id="schedule-live-time-panel" class="schedule-panel"><legend>3. Escolha um horário solicitado</legend><p id="schedule-availability-status" class="schedule-availability-status" aria-live="polite">Selecione uma data para consultar os horários.</p><div id="schedule-live-times" class="schedule-options" role="radiogroup" aria-label="Horários disponíveis"></div><a id="schedule-availability-contact" {{WHATSAPP_ATTRIBUTES}} target="_blank" rel="noopener noreferrer" class="schedule-availability-contact" hidden>Falar com a Pati pelo WhatsApp</a></fieldset>
       <fieldset class="schedule-panel schedule-contact"><legend>4. Preencha a ficha uma única vez</legend><p class="required-note">Informe pelo menos um contato válido. O canal escolhido será obrigatório.</p><div class="schedule-fields">{{SCHEDULING_FIELDS}}</div></fieldset>
       <div id="schedule-review" class="schedule-review" hidden><h3>{{SCHEDULING_SUMMARY_TITLE}}</h3><div id="schedule-summary" aria-live="polite" aria-atomic="true"></div></div>
       <label class="schedule-confirmation" for="schedule-privacy-confirmation"><input id="schedule-privacy-confirmation" name="privacyAccepted" type="checkbox" required aria-required="true" aria-describedby="error-privacidade"><span>Li o <a class="underline" href="privacy.html">aviso de privacidade</a> e autorizo o uso dos dados para analisar esta pré-solicitação.</span></label><span class="schedule-error" id="error-privacidade"></span>

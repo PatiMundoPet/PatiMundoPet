@@ -18,9 +18,15 @@
   var dates = document.getElementById('schedule-live-dates');
   var times = document.getElementById('schedule-live-times');
   var fallback = document.getElementById('schedule-whatsapp-fallback');
+  var availabilityContact = document.getElementById('schedule-availability-contact');
   var copyText = document.getElementById('schedule-copy-text');
   var sending = false;
   var selectedDate = '';
+  var availabilitySequence = 0;
+  var today = new Date();
+  today = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  var maximum = api.addCalendarDays(today, integration.maxFutureDays);
+  var cursor = new Date(today.getFullYear(), today.getMonth(), 1);
   var labels = { serviceId: 'Serviço', date: 'Data solicitada', time: 'Horário solicitado', responsibleName: 'Responsável', whatsapp: 'WhatsApp', email: 'E-mail', petName: 'Pet', region: 'Região', notes: 'Observações', submissionChannel: 'Canal escolhido' };
 
   inactive.hidden = true; form.hidden = false;
@@ -56,14 +62,28 @@
   function renderTimes(data) {
     times.replaceChildren(); data.available.concat(data.unavailable).sort().forEach(function (time) { var enabled=data.available.indexOf(time)>=0,label=document.createElement('label'),input=document.createElement('input'),span=document.createElement('span'); label.className='schedule-choice'+(enabled?'':' is-unavailable'); input.type='radio'; input.name='horario'; input.value=time; input.disabled=!enabled; input.setAttribute('aria-label',(enabled?'Horário disponível ':'Horário indisponível ')+time); span.textContent=time; label.append(input,span); times.append(label); });
   }
-  function loadDate(date) { status.textContent=integration.messages.loading; times.replaceChildren(); client.availability(date).then(function(result){ if(!result.ok){status.textContent=result.message;return;} renderTimes(result.data); status.textContent=result.data.available.length?'Selecione um horário disponível.':integration.messages.noAvailability; }).catch(function(){status.textContent=integration.messages.unavailable;}); }
-  function prepareCalendar() {
-    var today=new Date(), maximum=api.addCalendarDays(today,integration.maxFutureDays), cursor=new Date(today.getFullYear(),today.getMonth(),1);
-    document.getElementById('schedule-month-label').textContent=cursor.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-    dates.replaceChildren(); for(var day=new Date(cursor);day.getMonth()===cursor.getMonth();day.setDate(day.getDate()+1)){ var date=api.formatCalendarDate(day), button=document.createElement('button'); button.type='button'; button.textContent=String(day.getDate()); button.disabled=day<new Date(today.getFullYear(),today.getMonth(),today.getDate())||day>maximum; button.setAttribute('aria-label','Consultar disponibilidade em '+date); button.dataset.date=date; dates.append(button); }
-    status.textContent='Escolha um dia para consultar os horários reais.';
+  function setAvailabilityMessage(message, showContact) { status.textContent=message; availabilityContact.hidden=!showContact; }
+  function loadDate(date, button) {
+    var sequence=++availabilitySequence;
+    setAvailabilityMessage(integration.messages.loading, false); times.replaceChildren();
+    button.classList.add('is-loading'); button.setAttribute('aria-busy','true');
+    client.availability(date).then(function(result){
+      if(sequence!==availabilitySequence)return;
+      if(!result.ok){setAvailabilityMessage(integration.messages.unavailable,true);return;}
+      renderTimes(result.data);
+      setAvailabilityMessage(result.data.available.length?'Selecione um horário disponível.':integration.messages.noAvailability,!result.data.available.length);
+    }).catch(function(){if(sequence===availabilitySequence)setAvailabilityMessage(integration.messages.unavailable,true);})
+      .finally(function(){button.classList.remove('is-loading');button.removeAttribute('aria-busy');});
   }
-  dates.addEventListener('click',function(event){ if(event.target.tagName!=='BUTTON'||event.target.disabled)return; selectedDate=event.target.dataset.date; dates.querySelectorAll('button').forEach(function(button){button.setAttribute('aria-pressed',String(button===event.target));}); loadDate(selectedDate); renderSummary(''); });
+  function prepareCalendar() {
+    document.getElementById('schedule-month-label').textContent=cursor.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    dates.replaceChildren(); for(var day=new Date(cursor);day.getMonth()===cursor.getMonth();day.setDate(day.getDate()+1)){ var date=api.formatCalendarDate(day), button=document.createElement('button'); button.type='button'; button.textContent=String(day.getDate()); button.disabled=day<today||day>maximum; button.setAttribute('aria-label',(button.disabled?'Data indisponível ':'Consultar disponibilidade em ')+date); button.dataset.date=date; if(date===selectedDate)button.setAttribute('aria-pressed','true'); dates.append(button); }
+    document.getElementById('schedule-previous-month').disabled=cursor<=new Date(today.getFullYear(),today.getMonth(),1);
+    document.getElementById('schedule-next-month').disabled=new Date(cursor.getFullYear(),cursor.getMonth()+1,1)>maximum;
+  }
+  dates.addEventListener('click',function(event){ if(event.target.tagName!=='BUTTON'||event.target.disabled)return; selectedDate=event.target.dataset.date; dates.querySelectorAll('button').forEach(function(button){button.setAttribute('aria-pressed',String(button===event.target));}); loadDate(selectedDate,event.target); renderSummary(''); });
+  document.getElementById('schedule-previous-month').addEventListener('click',function(){cursor=new Date(cursor.getFullYear(),cursor.getMonth()-1,1);prepareCalendar();});
+  document.getElementById('schedule-next-month').addEventListener('click',function(){cursor=new Date(cursor.getFullYear(),cursor.getMonth()+1,1);prepareCalendar();});
   form.addEventListener('input',function(){ validation.textContent=''; notice.classList.remove('is-visible'); renderSummary(''); });
   function whatsappMessage(data, requestId) { var rows=[form.dataset.projectName,'Código: '+cleanText(requestId,36),'Status: PENDENTE','Responsável: '+cleanText(data.responsibleName,120),'Pet: '+cleanText(data.petName,80),'Serviço: '+cleanText(selected('servico').dataset.label||data.serviceId,80),'Data solicitada: '+cleanText(data.date,10),'Horário solicitado: '+cleanText(data.time,5),'Região: '+cleanText(data.region,120)]; if(data.notes)rows.push('Observações: '+cleanText(data.notes,500)); rows.push('Esta é uma pré-solicitação pendente e ainda depende da confirmação da '+form.dataset.professionalName+'.'); return rows.join('\n'); }
   form.addEventListener('submit',async function(event){ event.preventDefault(); if(sending)return; var channel=event.submitter&&event.submitter.value; if(channel!=='whatsapp'&&channel!=='email')return; var data=payload(channel); renderSummary(channel); if(!validate(data))return; sending=true; form.querySelectorAll('button[type="submit"]').forEach(function(button){button.disabled=true;});

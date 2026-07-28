@@ -46,7 +46,7 @@ await assert.rejects(client(() => response('x'.repeat(5000))).health(), /RESPONS
 await assert.rejects(client(() => { throw new Error('offline'); }).health(), /NETWORK_ERROR/);
 await assert.rejects(client(() => new Promise(() => {})).health(), /TIMEOUT/);
 
-const payload = { serviceId: 'dog-walker', date: '2026-08-01', time: '09:00', responsibleName: 'Ana', whatsapp: '5511999999999', email: '', submissionChannel: 'whatsapp', petName: 'Rex', region: 'Centro', notes: '', reviewAccepted: true, privacyAccepted: true, privacyPolicyVersion: 'draft-2026-01', honeypot: '' };
+const payload = { serviceId: 'passeio-individual', date: '2026-08-01', time: '09:00', responsibleName: 'Ana', whatsapp: '5511999999999', email: '', submissionChannel: 'whatsapp', petName: 'Rex', region: 'Centro', notes: '', reviewAccepted: true, privacyAccepted: true, privacyPolicyVersion: 'draft-2026-01', honeypot: '' };
 calls = [];
 const createdClient = client(() => response({ ok: true, code: 'REQUEST_CREATED', message: 'pendente', requestId: uuid.randomUUID() }));
 assert.equal((await createdClient.request(payload)).code, 'REQUEST_CREATED');
@@ -73,4 +73,8 @@ assert.match(source, /schedule-copy-button/);
 assert.match(source, /result\.code!=='REQUEST_CREATED'/);
 assert.match(source, /integration\.mode === 'live'/);
 assert.match(source, /privacyAccepted/);
+assert.match(source, /Selecione uma data para consultar os horários|schedule-availability-status/);
+assert.match(source, /client\.availability\(date\)/, 'disponibilidade é consultada após a escolha da data');
+assert.equal((source.match(/client\.request\(/g) || []).length, 1, 'a criação existe somente no envio explícito do formulário');
+assert.match(source, /form\.addEventListener\('submit',[\s\S]*client\.request\(data\)/, 'a criação depende do envio explícito do formulário');
 console.log('Scheduling API: todos os testes locais passaram.');
