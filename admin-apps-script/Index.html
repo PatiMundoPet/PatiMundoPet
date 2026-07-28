@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light">
+  <title>Pati MundoPet — Painel privado</title>
+  <?!= include('Styles'); ?>
+</head>
+<body>
+  <a class="skip-link" href="#main">Ir para o conteúdo</a>
+  <div id="app" class="shell" aria-busy="true">
+    <aside class="sidebar" id="sidebar" aria-label="Menu principal">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">◆</span><span><strong>Pati MundoPet</strong><small>Painel privado</small></span></div>
+      <nav class="nav">
+        <button class="nav-btn active" data-view="inicio" aria-current="page">Início</button>
+        <button class="nav-btn" data-view="solicitacoes">Solicitações <span class="count" id="navRequests">0</span></button>
+        <button class="nav-btn" data-view="agenda">Agenda</button>
+        <button class="nav-btn" data-view="bloqueios">Bloqueios</button>
+        <button class="nav-btn" data-view="clientes">Clientes</button>
+        <button class="nav-btn" data-view="pagamentos">Pagamentos <span class="count" id="navPayments">0</span></button>
+      </nav>
+      <p class="sidebar-foot">Fase 10A · consulta segura, sem alterações</p>
+    </aside>
+    <div class="drawer-overlay" id="drawerOverlay" hidden></div>
+    <div class="content-shell">
+      <header class="topbar">
+        <button class="icon-btn" id="menuButton" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+        <strong>Pati MundoPet</strong><span aria-hidden="true"></span>
+      </header>
+      <main class="main" id="main" tabindex="-1">
+        <div class="notice loading" id="globalNotice" role="status" aria-live="polite">Carregando dados reais do painel…</div>
+
+        <section class="view active" id="view-inicio" aria-labelledby="title-inicio">
+          <header class="page-head"><div><h1 tabindex="-1" id="title-inicio">Início</h1><p id="todayText">Resumo operacional</p></div><button class="btn btn-outline" id="reloadButton">Atualizar dados</button></header>
+          <div class="grid grid-4">
+            <article class="card stat"><span>Solicitações pendentes</span><strong id="statRequests">—</strong></article>
+            <article class="card stat"><span>Atendimentos hoje</span><strong id="statToday">—</strong></article>
+            <article class="card stat"><span>Próximos 7 dias</span><strong id="statNext">—</strong></article>
+            <article class="card stat"><span>Pagamentos a acompanhar</span><strong id="statPayments">—</strong></article>
+          </div>
+          <h2>Resumo real da agenda</h2><div class="card list" id="dashboardAgenda"></div>
+        </section>
+
+        <section class="view" id="view-solicitacoes" aria-labelledby="title-solicitacoes" hidden>
+          <header class="page-head"><div><h1 tabindex="-1" id="title-solicitacoes">Solicitações</h1><p>Pré-solicitações recebidas, somente para consulta.</p></div></header>
+          <div class="toolbar"><label class="grow">Buscar solicitações<input class="input" id="requestSearch" type="search" placeholder="Responsável, pet, serviço ou região"></label><label>Status<select id="requestStatus"><option value="TODOS">Todos</option><option>PENDENTE</option><option>CONFIRMADO</option><option>MAIS_INFORMACOES</option><option>RECUSADO</option><option>CANCELADO</option></select></label></div>
+          <div class="list" id="requestList"></div>
+        </section>
+
+        <section class="view" id="view-agenda" aria-labelledby="title-agenda" hidden>
+          <header class="page-head"><div><h1 tabindex="-1" id="title-agenda">Agenda</h1><p>Atendimentos e indisponibilidades dos calendários privados.</p></div></header>
+          <div class="agenda-toolbar"><div class="seg" aria-label="Visualização"><button class="active" data-agenda-mode="dia" aria-pressed="true">Dia</button><button data-agenda-mode="semana" aria-pressed="false">Semana</button></div><label>Data<input class="input" id="agendaDate" type="date"></label><button class="btn btn-outline" id="agendaToday">Hoje</button></div>
+          <div class="notice" id="agendaNotice" role="status" aria-live="polite" hidden></div><div id="agendaGrid"></div>
+        </section>
+
+        <section class="view" id="view-bloqueios" aria-labelledby="title-bloqueios" hidden>
+          <header class="page-head"><div><h1 tabindex="-1" id="title-bloqueios">Bloqueios</h1><p>Indisponibilidades reais do calendário.</p></div><button class="btn btn-primary" disabled title="Disponível em uma próxima fase">Criar bloqueio · próxima fase</button></header>
+          <div class="toolbar"><label>De<input class="input" id="blockStart" type="date"></label><label>Até<input class="input" id="blockEnd" type="date"></label><button class="btn btn-outline" id="loadBlocks">Consultar</button></div><div class="list" id="blockList"></div>
+        </section>
+
+        <section class="view" id="view-clientes" aria-labelledby="title-clientes" hidden>
+          <header class="page-head"><div><h1 tabindex="-1" id="title-clientes">Clientes</h1><p>Cadastro real disponível na planilha.</p></div><button class="btn btn-primary" disabled>Adicionar cliente · próxima fase</button></header>
+          <label class="search-label">Buscar clientes<input class="input" id="clientSearch" type="search" placeholder="Responsável, pets, e-mail ou WhatsApp"></label><div class="list" id="clientList"></div>
+        </section>
+
+        <section class="view" id="view-pagamentos" aria-labelledby="title-pagamentos" hidden>
+          <header class="page-head"><div><h1 tabindex="-1" id="title-pagamentos">Pagamentos</h1><p>Controle financeiro real, em modo de leitura.</p></div><button class="btn btn-primary" disabled>Registrar pagamento · próxima fase</button></header>
+          <div class="toolbar"><label class="grow">Buscar pagamentos<input class="input" id="paymentSearch" type="search" placeholder="Cliente, solicitação ou serviço"></label><label>Status<select id="paymentStatus"><option value="TODOS">Todos</option><option>PENDENTE</option><option>PAGO</option><option>ATRASADO</option><option>CANCELADO</option><option>ISENTO</option></select></label></div><div class="list" id="paymentList"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <header class="modal-head"><h2 id="modalTitle">Detalhes</h2><button class="modal-close" id="modalClose" aria-label="Fechar">×</button></header>
+      <div class="modal-body" id="modalBody"></div><footer class="modal-foot" id="modalFoot"></footer>
+    </section>
+  </div>
+  <?!= include('App'); ?>
+</body>
+</html>
