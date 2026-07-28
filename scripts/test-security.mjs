@@ -11,5 +11,5 @@ for (const file of ['index.html', 'privacy.html']) {
 const index = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 assert.match(index.match(/<head>[\s\S]*?<\/head>/i)[0], /<script src="assets\/js\/boot\.js"><\/script>/);
 const integration = JSON.parse(await readFile(new URL('../content/integration.json', import.meta.url), 'utf8'));
-assert.equal(integration.mode, 'demo'); assert.equal(integration.webAppUrl, '');
+assert.equal(integration.mode, 'live'); assert.match(integration.webAppUrl, /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/);
 console.log('Verificações estáticas de segurança concluídas.');

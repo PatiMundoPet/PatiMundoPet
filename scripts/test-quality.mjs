@@ -47,8 +47,8 @@ assert.ok(reviewStart >= 0 && summaryPos > reviewStart && summaryPos < reviewEnd
 assert.ok(privacyPos > reviewEnd, 'consentimento deve ficar fora e depois do resumo');
 const scheduling = template.slice(template.indexOf('<section id="agendamento"'), template.indexOf('<!-- ============================================================ COMO FUNCIONA'));
 assert.equal(count(scheduling, /<div\b/gi), count(scheduling, /<\/div>/gi), 'divs desbalanceadas no agendamento');
-assert.equal(integration.mode, 'demo');
-assert.equal(integration.webAppUrl, '');
+assert.equal(integration.mode, 'live');
+assert.match(integration.webAppUrl, /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/);
 assert.equal(seo.indexingEnabled, false);
 assert.equal(seo.siteUrl, '');
 assert.equal(seo.socialImage, '');
