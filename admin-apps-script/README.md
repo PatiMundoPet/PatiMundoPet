@@ -85,12 +85,14 @@ A restrição da implantação é a primeira camada. Toda função de leitura ta
 - [ ] Consultar intervalos sem bloqueios e com bloqueios.
 - [ ] Abrir e fechar detalhes por teclado; testar Escape e retenção/retorno do foco.
 - [ ] Confirmar que WhatsApp/e-mail abrem somente após clique e apenas com dados válidos.
-- [ ] Confirmar que todos os controles de escrita estão desativados.
+- [ ] Sem Q:R, confirmar que as ações permanecem desativadas.
+- [ ] Com Q:R corretas e os calendários disponíveis, confirmar que as ações permitidas pelo status ficam habilitadas.
+- [ ] Confirmar que solicitações RECUSADAS e CANCELADAS não exibem ações de escrita.
 
 ## Limitações preservadas após a Fase 10B
 
 - Não cria, edita, pausa ou exclui bloqueios manualmente. Eventos de atendimento são criados ou removidos somente pelas ações explícitas de confirmar e cancelar.
-- Não cria atendimentos ou recorrências.
+- Não existe criação manual de atendimento nesta fase; confirmar uma solicitação cria somente o evento vinculado, e recorrências continuam fora de escopo.
 - Não edita clientes nem adiciona pets.
 - Não registra, edita ou altera pagamentos.
 - Não envia mensagens, e-mails ou cobranças automaticamente; links de contato dependem de clique explícito.

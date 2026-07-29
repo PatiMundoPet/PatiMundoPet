@@ -90,6 +90,9 @@ for(const columns of [16,17]){resetAdmin(columns);assert.equal(adminContext.writ
 resetAdmin();assert.equal(adminContext.writesConfigured_(adminProperties),true);sheets.Solicitações.rows[0][17]='errado';assert.equal(adminContext.writesConfigured_(adminProperties),false);
 for(const [start,end,expected] of [['10:11','11:37',''],['17:47','18:00',''],['08:29','09:00','INVALID_INTERVAL'],['17:47','18:01','INVALID_INTERVAL'],['10:11','10:11','INVALID_INTERVAL'],['texto 10:11','11:37','INVALID_INTERVAL']]){resetAdmin();addRequest(ids[0],start,end);const code=safeCode(()=>adminContext.confirmarSolicitacao(ids[0]));assert.equal(code,expected,`${start}-${end}`);if(!expected)assert.equal(appointmentCalendar.creates,1);}
 resetAdmin();addRequest(ids[0],'10:11','11:37','PENDENTE','','2026-02-30');assert.equal(safeCode(()=>adminContext.confirmarSolicitacao(ids[0])),'INVALID_INTERVAL');
+const nativeDate=new Date('2026-08-10T12:00:00Z'),nativeStart=new Date('1899-12-30T10:11:00Z'),nativeEnd=new Date('1899-12-30T11:37:00Z');
+for (const [dateValue,startValue,endValue] of [[nativeDate,'10:11','11:37'],['2026-08-10',nativeStart,'11:37'],['2026-08-10','10:11',nativeEnd],[nativeDate,nativeStart,nativeEnd]]) { resetAdmin();addRequest();sheets.Solicitações.rows[1][4]=dateValue;sheets.Solicitações.rows[1][5]=startValue;sheets.Solicitações.rows[1][15]=endValue;assert.equal(safeCode(()=>adminContext.confirmarSolicitacao(ids[0])),'','valores Date nativos confirmam 10:11–11:37');assert.equal(appointmentCalendar.creates,1); }
+
 resetAdmin();addRequest();appointmentCalendar.events.push(mockEvent('adjacente',parseAdminDate('2026-08-10 09:00'),parseAdminDate('2026-08-10 10:11')));assert.equal(safeCode(()=>adminContext.confirmarSolicitacao(ids[0])), '');
 for(const target of ['appointments','availability']){resetAdmin();addRequest();const calendar=target==='appointments'?appointmentCalendar:availabilityCalendar;calendar.events.push(mockEvent(target,parseAdminDate('2026-08-10 11:36'),parseAdminDate('2026-08-10 12:00')));assert.equal(safeCode(()=>adminContext.confirmarSolicitacao(ids[0])),'INTERVAL_UNAVAILABLE');}
 for(const title of ['dia inteiro','ocorrência recorrente']){resetAdmin();addRequest();appointmentCalendar.events.push(mockEvent(title,parseAdminDate('2026-08-10 00:00'),parseAdminDate('2026-08-11 00:00')));assert.equal(safeCode(()=>adminContext.confirmarSolicitacao(ids[0])),'INTERVAL_UNAVAILABLE');}
@@ -110,4 +113,11 @@ assert.match(app,/textarea:not\(\[disabled\]\)/,'textarea participa da navegaç�
 for (const codeName of ['ACCESS_DENIED','CONFIG_ERROR','INVALID_REQUEST','INVALID_TRANSITION','INVALID_INTERVAL','INTERVAL_UNAVAILABLE','LOCK_TIMEOUT','RECONCILIATION_REQUIRED','PERSISTENCE_FAILED','WRITE_ERROR','NOT_FOUND']) assert.match(app,new RegExp(`${codeName}:`),`mensagem segura ausente: ${codeName}`);
 assert.match(app,/agendaDate = \$\('agendaDate'\)\.value/,'data da agenda é preservada');
 assert.match(app,/\.then\(refreshAfterWrite\)\.then/,'sucesso somente é exibido após releitura');
+const mapped=adminContext.mapRequest_({requestId:ids[0],status:'PENDENTE','observaçãoAdministrativa':'Nota interna'},'America/Sao_Paulo');assert.equal(mapped.adminNote,'Nota interna');
+assert.match(app,/if \(row\.adminNote\) requestFields\.push\(\['Observação administrativa', row\.adminNote\]\)/,'observação administrativa aparece condicionalmente');
+assert.match(app,/action\[1\] !== 'confirmarSolicitacao'/,'Confirmar não cria textarea');
+assert.match(app,/action\[2\] \? ' \(obrigatória\)' : ' \(opcional\)'/,'demais ações mantêm observação obrigatória ou opcional');
+const requestModalSource=app.slice(app.indexOf('function openRequest'),app.indexOf('function renderClients'));
+assert.doesNotMatch(requestModalSource,/eventIdAtendimento/,'modal não expõe ID do evento');
+
 console.log('Admin Apps Script: operações administrativas e compensações validadas com mocks.');
