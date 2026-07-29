@@ -87,10 +87,9 @@ A restrição da implantação é a primeira camada. Toda função de leitura ta
 - [ ] Confirmar que WhatsApp/e-mail abrem somente após clique e apenas com dados válidos.
 - [ ] Confirmar que todos os controles de escrita estão desativados.
 
-## Limitações da Fase 10A
+## Limitações preservadas após a Fase 10B
 
-- Não confirma, recusa, cancela nem pede informações sobre solicitações.
-- Não cria, edita, pausa ou exclui bloqueios e eventos.
+- Não cria, edita, pausa ou exclui bloqueios manualmente. Eventos de atendimento são criados ou removidos somente pelas ações explícitas de confirmar e cancelar.
 - Não cria atendimentos ou recorrências.
 - Não edita clientes nem adiciona pets.
 - Não registra, edita ou altera pagamentos.
@@ -98,7 +97,7 @@ A restrição da implantação é a primeira camada. Toda função de leitura ta
 - Não oferece gateway de pagamento.
 - Relações avançadas de histórico permanecem reservadas para evolução posterior.
 
-Todas as funções de escrita ficam reservadas para as próximas fases. Não há fallback fictício nem simulação local de salvamento.
+Não há fallback fictício nem simulação local de salvamento. As únicas escritas desta fase são as transições explícitas de solicitações.
 
 ## Fase 10B — aprovação manual
 

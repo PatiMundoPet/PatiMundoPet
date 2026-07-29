@@ -27,3 +27,5 @@ A consulta pública é apenas informativa e reflete os eventos reais dos dois ca
 O backend público aceita a aba `Solicitações` com A:P, A:Q ou A:R, desde que as colunas opcionais finais sejam, nessa ordem, `eventIdAtendimento` e `observaçãoAdministrativa`. Pré-solicitações permanecem `PENDENTE`, escrevem somente dados públicos em A:P e deixam Q:R vazias. Textos controlados pelo usuário são neutralizados antes da escrita quando começam com `=`, `+`, `-` ou `@`.
 
 Se o cadastro do cliente falhar após o append, somente a linha recém-criada e identificada pelo mesmo `requestId` é removida e a planilha é sincronizada. O backend público não cria eventos de calendário.
+
+A versão pública `2.4.0` identifica o endurecimento de persistência e a compatibilidade A:P/A:Q/A:R desta revisão.
