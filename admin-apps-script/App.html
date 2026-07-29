@@ -1,7 +1,7 @@
 <script>
 (function () {
   'use strict';
-  var state = { requests: [], clients: [], payments: [], summary: {}, settings: null, today: '', agendaMode: 'dia', modalOpener: null };
+  var state = { requests: [], clients: [], payments: [], summary: {}, settings: null, today: '', agendaMode: 'dia', modalOpener: null, writesConfigured: false, writing: false };
   var $ = function (id) { return document.getElementById(id); };
 
   function rpc(name, args) {
@@ -32,7 +32,7 @@
       Object.assign(state, data);
       $('agendaDate').value = state.today; $('blockStart').value = state.today; $('blockEnd').value = addDays(state.today, 30);
       renderAll();
-      setNotice($('globalNotice'), 'Dados carregados com segurança. Este painel está em modo somente leitura.', 'success');
+      setNotice($('globalNotice'), 'Dados carregados com segurança.', 'success');
       window.setTimeout(function () { hideNotice($('globalNotice')); }, 4500);
     }).catch(function (error) {
       setNotice($('globalNotice'), errorKind(error), 'error');
@@ -72,7 +72,19 @@
   function openRequest(row, opener) {
     openModal('Detalhes da solicitação', details([['Responsável', row.responsible], ['Pet', row.pet], ['Serviço', row.service], ['Data e horário', formatDate(row.date) + ' · ' + text(row.time) + (row.endTime ? '–' + row.endTime : '')], ['WhatsApp', row.whatsapp], ['E-mail', row.email], ['Região', row.region], ['Recebida em', formatDateTime(row.receivedAt)], ['Status', row.status], ['Observações', row.notes]]), opener);
     addContactButtons(row.whatsapp, row.email);
-    ['Confirmar', 'Pedir mais informações', 'Recusar', 'Cancelar'].forEach(function (label) { var button = el('button', 'btn btn-outline', label + ' · próxima fase'); button.disabled = true; $('modalFoot').appendChild(button); });
+    var actions = row.status === 'PENDENTE' ? [['Confirmar','confirmarSolicitacao',false],['Pedir mais informações','pedirMaisInformacoes',true],['Recusar','recusarSolicitacao',true],['Cancelar','cancelarSolicitacao',false]] : row.status === 'MAIS_INFORMACOES' ? [['Confirmar','confirmarSolicitacao',false],['Voltar para pendente','voltarSolicitacaoParaPendente',false],['Recusar','recusarSolicitacao',true],['Cancelar','cancelarSolicitacao',false]] : row.status === 'CONFIRMADO' ? [['Cancelar','cancelarSolicitacao',false]] : [];
+    actions.forEach(function (action) { var button = el('button', 'btn btn-outline', action[0]); button.disabled = !state.writesConfigured; button.addEventListener('click', function () { showAction(row, action); }); $('modalFoot').appendChild(button); });
+    if (!state.writesConfigured && actions.length) $('modalBody').appendChild(el('p', 'notice', 'Ações indisponíveis: configuração administrativa pendente.'));
+  }
+
+
+  function showAction(row, action) {
+    var area = el('section', 'action-panel'); area.setAttribute('aria-labelledby', 'actionTitle');
+    var title = el('h3', '', action[0]); title.id = 'actionTitle'; area.append(title, el('p', '', 'A alteração só será aplicada após confirmação e releitura segura no servidor.'));
+    var label = el('label', '', 'Observação administrativa' + (action[2] ? ' (obrigatória)' : ' (opcional)')); var input = document.createElement('textarea'); input.maxLength = 500; input.rows = 4; input.required = action[2]; label.appendChild(input); area.appendChild(label);
+    var controls = el('div', 'modal-actions'), back = el('button', 'btn btn-outline', 'Desistir'), confirm = el('button', 'btn btn-primary', 'Confirmar ação'); controls.append(back, confirm); area.appendChild(controls); $('modalBody').appendChild(area); input.focus();
+    back.onclick = function () { area.remove(); };
+    confirm.onclick = function () { if (state.writing || action[2] && !input.value.trim()) { input.focus(); return; } state.writing = true; Array.from($('modalBackdrop').querySelectorAll('button,textarea')).forEach(function (control) { control.disabled = true; }); confirm.textContent = 'Processando…'; rpc(action[1], action[1] === 'confirmarSolicitacao' ? [row.requestId] : [row.requestId, input.value]).then(function () { closeModal(); setNotice($('globalNotice'), 'Ação concluída com segurança.', 'success'); return loadInitial(); }).catch(function (error) { setNotice($('globalNotice'), errorKind(error), 'error'); Array.from($('modalBackdrop').querySelectorAll('button,textarea')).forEach(function (control) { control.disabled = false; }); confirm.textContent = 'Confirmar ação'; }).finally(function () { state.writing = false; }); };
   }
 
   function renderClients() {

@@ -99,3 +99,9 @@ A restrição da implantação é a primeira camada. Toda função de leitura ta
 - Relações avançadas de histórico permanecem reservadas para evolução posterior.
 
 Todas as funções de escrita ficam reservadas para as próximas fases. Não há fallback fictício nem simulação local de salvamento.
+
+## Fase 10B — aprovação manual
+
+As ações de confirmar, pedir informações, voltar a PENDENTE, recusar e cancelar são exclusivas do painel privado e exigem a conta administrativa autorizada. A escrita somente é habilitada quando `Solicitações!Q:R` contém, exatamente, `eventIdAtendimento` e `observaçãoAdministrativa`, e ambos os calendários configurados estão acessíveis. Sem essa migração, a leitura continua disponível.
+
+A confirmação relê a solicitação sob lock, revalida o intervalo e os dois calendários, cria um único evento privado e só então persiste `CONFIRMADO` e o ID. Se a planilha falhar, o evento recém-criado é removido; falhas de reconciliação nunca são corrigidas automaticamente. Nenhuma ação envia mensagens ou cria pagamentos.

@@ -22,8 +22,8 @@ for (const name of ['carregarDadosIniciais', 'listarSolicitacoes', 'listarClient
 for (const view of ['inicio', 'solicitacoes', 'agenda', 'bloqueios', 'clientes', 'pagamentos']) {
   if (!index.includes(`id="view-${view}"`)) throw new Error(`Módulo ausente: ${view}`);
 }
-for (const forbidden of ['setValue', 'setValues', 'appendRow', 'insertRow', 'deleteRow', 'createEvent', 'createAllDayEvent', 'deleteEvent']) {
-  if (new RegExp(`\\b${forbidden}\\s*\\(`).test(code)) throw new Error(`Operação de escrita encontrada: ${forbidden}`);
+for (const name of ['confirmarSolicitacao', 'pedirMaisInformacoes', 'voltarSolicitacaoParaPendente', 'recusarSolicitacao', 'cancelarSolicitacao']) {
+  if (!new RegExp(`function\\s+${name}\\s*\\(`).test(code)) throw new Error(`Função administrativa ausente: ${name}`);
 }
 if (/painel\.html/.test(read('index.html'))) throw new Error('O site público referencia o painel.');
 if (fs.existsSync(new URL('painel.html', root))) throw new Error('O protótipo ainda está na raiz.');
@@ -35,7 +35,7 @@ if (!code.includes('Session.getActiveUser().getEmail()')) throw new Error('Autor
 if (manifest.runtimeVersion !== 'V8' || manifest.timeZone !== 'America/Sao_Paulo') throw new Error('Manifesto inválido.');
 const expectedScopes = [
   'https://www.googleapis.com/auth/spreadsheets',
-  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/calendar',
   'https://www.googleapis.com/auth/userinfo.email'
 ];
 if (!Array.isArray(manifest.oauthScopes) || manifest.oauthScopes.length !== expectedScopes.length || expectedScopes.some((scope) => !manifest.oauthScopes.includes(scope))) {
