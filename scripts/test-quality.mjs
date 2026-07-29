@@ -57,7 +57,7 @@ assert.match(await readFile('content/site.json', 'utf8'), /contactsConfigured/);
 const removedServicePattern = new RegExp(['dog', 'walker'].join('[ -]?'), 'i');
 assert.doesNotMatch(index + template + await readFile('content/scheduling.json', 'utf8'), removedServicePattern, 'catálogo público não deve conter o serviço removido');
 assert.match(index, /Escolha uma data para consultar/);
-assert.match(index, /Selecione uma data para consultar os horários\./);
-assert.match(index, /Não há horários disponíveis nesta data\. Escolha outro dia ou fale com a Pati pelo WhatsApp\./);
+assert.match(index, /Atendimentos entre 08:30 e 18:00\. Escolha qualquer minuto\./);
+assert.match(index, /Verificar disponibilidade/);
 
 console.log('Testes estáticos de SEO, acessibilidade e performance aprovados.');

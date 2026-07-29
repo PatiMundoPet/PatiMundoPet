@@ -40,7 +40,31 @@ const availability = await client(() => response({ ok: true, code: 'AVAILABILITY
 assert.deepEqual(availability.data.available, ['09:00']);
 assert.deepEqual(availability.data.unavailable, [], 'interface não depende da publicação de horários ocupados');
 assert.doesNotThrow(() => availability.data.available.concat(availability.data.unavailable), 'formato compatível não causa TypeError na renderização');
+
 assert.equal(calls[0][1].cache, 'no-store'); assert.equal(calls[0][1].redirect, 'follow');
+const exactResponse = { ok: true, code: 'AVAILABILITY_OK', message: 'livre agora', data: { date: '2026-08-01', startTime: '10:11', endTime: '11:37', available: true, unavailable: false } };
+const exactAvailability = await client(() => response(exactResponse)).availability('2026-08-01', '10:11', '11:37');
+assert.equal(exactAvailability.data.available, true, 'consulta exata aceita booleano');
+await assert.rejects(client(() => response({ ok: true, code: 'AVAILABILITY_OK', message: 'legado', data: { date: '2026-08-01', available: [], unavailable: [] } })).availability('2026-08-01', '10:11', '11:37'), /INVALID_RESPONSE/, 'arrays legados nunca confirmam intervalo exato');
+await assert.rejects(client(() => response({ ...exactResponse, data: { ...exactResponse.data, available: ['10:11'], unavailable: [] } })).availability('2026-08-01', '10:11', '11:37'), /INVALID_RESPONSE/, 'qualquer array falha na chamada exata');
+await assert.rejects(client(() => response({ ...exactResponse, data: { ...exactResponse.data, available: 1 } })).availability('2026-08-01', '10:11', '11:37'), /INVALID_RESPONSE/, 'available precisa ser booleano');
+await assert.rejects(client(() => response({ ...exactResponse, data: { ...exactResponse.data, endTime: '12:00' } })).availability('2026-08-01', '10:11', '11:37'), /INVALID_RESPONSE/, 'resposta precisa coincidir com o término enviado');
+await assert.rejects(client(() => response({ ...exactResponse, data: { ...exactResponse.data, startTime: '10:12' } })).availability('2026-08-01', '10:11', '11:37'), /INVALID_RESPONSE/, 'resposta precisa coincidir com o início enviado');
+await assert.rejects(client(() => response({ ...exactResponse, data: { ...exactResponse.data, date: '2026-08-02' } })).availability('2026-08-01', '10:11', '11:37'), /INVALID_RESPONSE/, 'resposta de outro dia é rejeitada');
+await assert.rejects(client(() => response({ ...exactResponse, data: { ...exactResponse.data, available: true, unavailable: true } })).availability('2026-08-01', '10:11', '11:37'), /INVALID_RESPONSE/, 'true/true é inconsistente');
+await assert.rejects(client(() => response({ ...exactResponse, data: { ...exactResponse.data, available: false, unavailable: false } })).availability('2026-08-01', '10:11', '11:37'), /INVALID_RESPONSE/, 'false/false é inconsistente');
+assert.equal((await client(() => response({ ...exactResponse, data: { ...exactResponse.data, available: false, unavailable: true } })).availability('2026-08-01', '10:11', '11:37')).data.available, false, 'false/true é aceito');
+
+const requested = { sequence: 4, interval: '2026-08-01|10:11|11:37', date: '2026-08-01', startTime: '10:11', endTime: '11:37' };
+assert.equal(Api.canAcceptExactAvailability(requested, { ...requested }, exactResponse), true, 'resposta atual e exata pode ser aceita');
+assert.equal(Api.canAcceptExactAvailability(requested, { ...requested, interval: '2026-08-01|10:11|12:00', endTime: '12:00', sequence: 5 }, exactResponse), false, 'alterar somente o término neutraliza resposta antiga');
+assert.equal(Api.canAcceptExactAvailability(requested, { ...requested, date: '2026-08-02', interval: '2026-08-02|10:11|11:37', sequence: 5 }, exactResponse), false, 'alterar a data neutraliza resposta antiga');
+assert.equal(Api.canAcceptExactAvailability(requested, { ...requested, sequence: 5 }, exactResponse), false, 'nova sequência neutraliza resposta pendente');
+assert.equal(Api.canAcceptExactAvailability(requested, { ...requested }, { ...exactResponse, data: { ...exactResponse.data, date: '2026-08-02' } }), false, 'resposta de outro dia nunca confirma o estado atual');
+assert.equal(Api.canAcceptExactAvailability(requested, { ...requested }, { ...exactResponse, data: { ...exactResponse.data, available: true, unavailable: true } }), false, 'estado booleano inconsistente nunca confirma');
+assert.equal(Api.canAcceptExactAvailability(requested, { ...requested }, { ...exactResponse, data: { ...exactResponse.data, available: [] } }), false, 'array nunca confirma o intervalo na interface');
+
+
 await assert.rejects(client(() => response({ what: 'ever' })).health(), /INVALID_RESPONSE/);
 await assert.rejects(client(() => response('x'.repeat(5000))).health(), /RESPONSE_TOO_LARGE/);
 await assert.rejects(client(() => { throw new Error('offline'); }).health(), /NETWORK_ERROR/);
@@ -74,7 +98,14 @@ assert.match(source, /result\.code!=='REQUEST_CREATED'/);
 assert.match(source, /integration\.mode === 'live'/);
 assert.match(source, /privacyAccepted/);
 assert.match(source, /Selecione uma data para consultar os horários|schedule-availability-status/);
-assert.match(source, /client\.availability\(date\)/, 'disponibilidade é consultada após a escolha da data');
+assert.match(source, /client\.availability\(requestedDate,requestedStart,requestedEnd\)/, 'disponibilidade usa os valores capturados');
+assert.match(source, /requestedInterval=intervalKey\(\)/, 'a chave exata é capturada antes da resposta');
+assert.match(source, /canAcceptExactAvailability\(requested,current,result\)/, 'resposta passa pela validação completa de estado');
+assert.match(source, /verifiedInterval=requestedInterval/, 'a confirmação usa apenas a chave capturada');
+assert.match(source, /function invalidateAvailability\(\) \{ availabilitySequence\+=1; verifiedInterval=''/, 'qualquer alteração invalida respostas pendentes');
+assert.match(await readFile(new URL('../assets/js/scheduling-api.js', import.meta.url), 'utf8'), /typeof result\.data\.available === 'boolean'/, 'interface exige booleano no resultado exato');
+assert.doesNotMatch(source, /role=['"]radiogroup['"]/, 'fluxo novo não usa radiogroup de slots');
+assert.match(source, /verifiedInterval!==intervalKey/, 'envio exige verificação ainda válida');
 assert.equal((source.match(/client\.request\(/g) || []).length, 1, 'a criação existe somente no envio explícito do formulário');
 assert.match(source, /form\.addEventListener\('submit',[\s\S]*client\.request\(data\)/, 'a criação depende do envio explícito do formulário');
 console.log('Scheduling API: todos os testes locais passaram.');
