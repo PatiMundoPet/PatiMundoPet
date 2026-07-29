@@ -85,17 +85,24 @@ A restrição da implantação é a primeira camada. Toda função de leitura ta
 - [ ] Consultar intervalos sem bloqueios e com bloqueios.
 - [ ] Abrir e fechar detalhes por teclado; testar Escape e retenção/retorno do foco.
 - [ ] Confirmar que WhatsApp/e-mail abrem somente após clique e apenas com dados válidos.
-- [ ] Confirmar que todos os controles de escrita estão desativados.
+- [ ] Sem Q:R, confirmar que as ações permanecem desativadas.
+- [ ] Com Q:R corretas e os calendários disponíveis, confirmar que as ações permitidas pelo status ficam habilitadas.
+- [ ] Confirmar que solicitações RECUSADAS e CANCELADAS não exibem ações de escrita.
 
-## Limitações da Fase 10A
+## Limitações preservadas após a Fase 10B
 
-- Não confirma, recusa, cancela nem pede informações sobre solicitações.
-- Não cria, edita, pausa ou exclui bloqueios e eventos.
-- Não cria atendimentos ou recorrências.
+- Não cria, edita, pausa ou exclui bloqueios manualmente. Eventos de atendimento são criados ou removidos somente pelas ações explícitas de confirmar e cancelar.
+- Não existe criação manual de atendimento nesta fase; confirmar uma solicitação cria somente o evento vinculado, e recorrências continuam fora de escopo.
 - Não edita clientes nem adiciona pets.
 - Não registra, edita ou altera pagamentos.
 - Não envia mensagens, e-mails ou cobranças automaticamente; links de contato dependem de clique explícito.
 - Não oferece gateway de pagamento.
 - Relações avançadas de histórico permanecem reservadas para evolução posterior.
 
-Todas as funções de escrita ficam reservadas para as próximas fases. Não há fallback fictício nem simulação local de salvamento.
+Não há fallback fictício nem simulação local de salvamento. As únicas escritas desta fase são as transições explícitas de solicitações.
+
+## Fase 10B — aprovação manual
+
+As ações de confirmar, pedir informações, voltar a PENDENTE, recusar e cancelar são exclusivas do painel privado e exigem a conta administrativa autorizada. A escrita somente é habilitada quando `Solicitações!Q:R` contém, exatamente, `eventIdAtendimento` e `observaçãoAdministrativa`, e ambos os calendários configurados estão acessíveis. Sem essa migração, a leitura continua disponível.
+
+A confirmação relê a solicitação sob lock, revalida o intervalo e os dois calendários, cria um único evento privado e só então persiste `CONFIRMADO` e o ID. Se a planilha falhar, o evento recém-criado é removido; falhas de reconciliação nunca são corrigidas automaticamente. Nenhuma ação envia mensagens ou cria pagamentos.

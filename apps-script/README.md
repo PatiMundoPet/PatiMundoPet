@@ -21,3 +21,11 @@ Não há operação administrativa em `doGet` ou `doPost`. A implantação e seu
 A aba `Solicitações` aceita durante a migração os 15 cabeçalhos atuais ou uma 16ª coluna `horárioTérmino`, exclusivamente no final. Solicitações no contrato novo só são gravadas quando essa coluna final existe; assim, uma implantação intermediária não produz linha parcial. O campo `horário` preserva o início e `horárioTérmino` preserva o término literal.
 
 A consulta pública é apenas informativa e reflete os eventos reais dos dois calendários no instante da consulta: não reserva, não confirma, não cria evento e não bloqueia a agenda. O POST também nunca cria eventos; grava exclusivamente uma pré-solicitação `PENDENTE`, e pedidos distintos podem solicitar o mesmo intervalo enquanto permanecem pendentes. A segunda consulta sob `LockService` apenas evita registrar um pedido depois que um evento real passou a ocupar o período.
+
+## Compatibilidade e segurança da Fase 10B
+
+O backend público aceita a aba `Solicitações` com A:P, A:Q ou A:R, desde que as colunas opcionais finais sejam, nessa ordem, `eventIdAtendimento` e `observaçãoAdministrativa`. Pré-solicitações permanecem `PENDENTE`, escrevem somente dados públicos em A:P e deixam Q:R vazias. Textos controlados pelo usuário são neutralizados antes da escrita quando começam com `=`, `+`, `-` ou `@`.
+
+Se o cadastro do cliente falhar após o append, somente a linha recém-criada e identificada pelo mesmo `requestId` é removida e a planilha é sincronizada. O backend público não cria eventos de calendário.
+
+A versão pública `2.4.0` identifica o endurecimento de persistência e a compatibilidade A:P/A:Q/A:R desta revisão.
