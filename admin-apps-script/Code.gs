@@ -2,7 +2,7 @@
  * Pati MundoPet — painel administrativo privado (Fase 10A, somente leitura).
  */
 var ADMIN = Object.freeze({
-  properties: ['ADMIN_EMAIL', 'SPREADSHEET_ID', 'APPOINTMENTS_CALENDAR_ID', 'AVAILABILITY_CALENDAR_ID', 'TIMEZONE', 'SLOT_INTERVAL_MINUTES', 'WORKDAY_START_TIME', 'WORKDAY_END_TIME'],
+  properties: ['ADMIN_EMAIL', 'SPREADSHEET_ID', 'APPOINTMENTS_CALENDAR_ID', 'AVAILABILITY_CALENDAR_ID', 'TIMEZONE', 'WORKDAY_START_TIME', 'WORKDAY_END_TIME'],
   sheets: {
     requests: { name: 'Solicitações', headers: ['requestId', 'dataRecebimento', 'submissionChannel', 'serviço', 'data', 'horário', 'responsável', 'WhatsApp', 'e-mail', 'pet', 'região', 'observações', 'status', 'notificationStatus', 'dataÚltimaAtualização'] },
     clients: { name: 'Clientes', headers: ['clienteId', 'responsável', 'WhatsApp', 'e-mail', 'pets', 'observações', 'dataCadastro', 'últimoAtendimento'] },
@@ -104,11 +104,9 @@ function getConfig_() {
   var values = PropertiesService.getScriptProperties().getProperties();
   var missing = ADMIN.properties.filter(function (key) { return !String(values[key] || '').trim(); });
   if (missing.length) throw safeError_('CONFIG_ERROR', 'A configuração privada do painel está incompleta.');
-  var interval = Number(values.SLOT_INTERVAL_MINUTES);
-  if (values.TIMEZONE !== 'America/Sao_Paulo' || interval !== 30 || values.WORKDAY_START_TIME !== '08:30' || values.WORKDAY_END_TIME !== '18:00') {
+  if (values.TIMEZONE !== 'America/Sao_Paulo' || values.WORKDAY_START_TIME !== '08:30' || values.WORKDAY_END_TIME !== '18:00') {
     throw safeError_('CONFIG_ERROR', 'Os horários operacionais do painel precisam ser revisados.');
   }
-  values.SLOT_INTERVAL_MINUTES = interval;
   return values;
 }
 
@@ -145,7 +143,7 @@ function readSheet_(config, schema, mapper) {
 function mapRequest_(row, timezone) {
   return {
     requestId: text_(row.requestId), receivedAt: dateTime_(row.dataRecebimento, timezone), channel: text_(row.submissionChannel),
-    service: text_(row['serviço']), date: date_(row.data, timezone), time: time_(row['horário'], timezone), responsible: text_(row['responsável']),
+    service: text_(row['serviço']), date: date_(row.data, timezone), time: time_(row['horário'], timezone), endTime: time_(row['horárioTérmino'], timezone), responsible: text_(row['responsável']),
     whatsapp: text_(row.WhatsApp), email: text_(row['e-mail']), pet: text_(row.pet), region: text_(row['região']), notes: text_(row['observações']),
     status: officialStatus_(row.status, ADMIN.requestStatuses), notificationStatus: text_(row.notificationStatus), updatedAt: dateTime_(row['dataÚltimaAtualização'], timezone)
   };
@@ -219,7 +217,7 @@ function readCalendar_(calendarId, start, end, timezone, type) {
 }
 
 function publicSettings_(config) {
-  return { timezone: config.TIMEZONE, slotIntervalMinutes: config.SLOT_INTERVAL_MINUTES, workdayStart: config.WORKDAY_START_TIME, workdayEnd: config.WORKDAY_END_TIME, firstSlot: '08:30', lastSlot: '17:30' };
+  return { timezone: config.TIMEZONE, workdayStart: config.WORKDAY_START_TIME, workdayEnd: config.WORKDAY_END_TIME };
 }
 function countStatus_(rows, key, statuses) { return rows.filter(function (row) { return statuses.indexOf(row[key]) >= 0; }).length; }
 function overlapsPeriod_(event, periodStart, periodEnd) { return event.start < periodEnd && event.end > periodStart; }

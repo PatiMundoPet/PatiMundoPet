@@ -27,8 +27,10 @@ for (const forbidden of ['setValue', 'setValues', 'appendRow', 'insertRow', 'del
 }
 if (/painel\.html/.test(read('index.html'))) throw new Error('O site público referencia o painel.');
 if (fs.existsSync(new URL('painel.html', root))) throw new Error('O protótipo ainda está na raiz.');
-if (!code.includes("WORKDAY_START_TIME !== '08:30'") || !code.includes("WORKDAY_END_TIME !== '18:00'") || !code.includes('interval !== 30')) throw new Error('Regras operacionais ausentes.');
-if (!app.includes('while (current < end)')) throw new Error('A grade deve excluir 18:00 como início.');
+if (!code.includes("WORKDAY_START_TIME !== '08:30'") || !code.includes("WORKDAY_END_TIME !== '18:00'")) throw new Error('Regras operacionais ausentes.');
+if (app.includes('slotTimes') || app.includes('slotIntervalMinutes')) throw new Error('A agenda não deve depender de grade artificial.');
+if (!app.includes("grid.appendChild(eventCard(event))")) throw new Error('Lista cronológica ausente.');
+if (!/data\.appointments\.concat\(data\.blocks\)\.filter[\s\S]*?\.sort\(function \(a, b\) \{ return a\.start\.localeCompare\(b\.start\); \}\)/.test(app)) throw new Error('Visão semanal não ordena conjuntamente atendimentos e bloqueios.');
 if (!code.includes('Session.getActiveUser().getEmail()')) throw new Error('Autorização por usuário ausente.');
 if (manifest.runtimeVersion !== 'V8' || manifest.timeZone !== 'America/Sao_Paulo') throw new Error('Manifesto inválido.');
 const expectedScopes = [

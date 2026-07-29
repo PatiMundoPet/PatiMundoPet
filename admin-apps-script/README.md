@@ -41,11 +41,10 @@ Nenhum valor real deve ser versionado. Cadastre diretamente nas propriedades do 
 | `APPOINTMENTS_CALENDAR_ID` | Calendário de atendimentos |
 | `AVAILABILITY_CALENDAR_ID` | Calendário de indisponibilidades |
 | `TIMEZONE` | Fuso operacional |
-| `SLOT_INTERVAL_MINUTES` | Intervalo da grade |
 | `WORKDAY_START_TIME` | Início da jornada |
 | `WORKDAY_END_TIME` | Final da jornada |
 
-Os valores operacionais exigidos pelo código são: fuso `America/Sao_Paulo`, jornada de `08:30` a `18:00` e intervalos de `30` minutos. `17:30` é o último início exibido; `18:00` é apenas o limite final.
+Os valores operacionais exigidos pelo código são: fuso `America/Sao_Paulo` e jornada de `08:30` a `18:00`. Início e término podem ocorrer em qualquer minuto dentro desses limites. A agenda é uma lista cronológica baseada exclusivamente nos eventos reais dos dois calendários, sem grade ou duração fixa. O painel permanece somente leitura, e toda solicitação pública continua com status `PENDENTE` até uma aprovação manual futura da Pati.
 
 ## Implantação obrigatoriamente privada
 
@@ -80,8 +79,8 @@ A restrição da implantação é a primeira camada. Toda função de leitura ta
 - [ ] Testar busca e filtros de Solicitações, Clientes e Pagamentos.
 - [ ] Conferir estados vazios nas três listas.
 - [ ] Alternar Agenda entre Dia e Semana e mudar a data.
-- [ ] Confirmar slots de 30 minutos de 08:30 a 17:30, sem slot 18:00.
-- [ ] Conferir evento com múltiplos slots, bloqueio parcial e bloqueio de dia inteiro.
+- [ ] Confirmar a lista cronológica com início e término reais.
+- [ ] Conferir eventos temporizados e de dia inteiro sem duplicação.
 - [ ] Confirmar que solicitações pendentes não aparecem como ocupação na agenda.
 - [ ] Consultar intervalos sem bloqueios e com bloqueios.
 - [ ] Abrir e fechar detalhes por teclado; testar Escape e retenção/retorno do foco.
