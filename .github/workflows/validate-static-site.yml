@@ -47,9 +47,12 @@ jobs:
           node --check scripts/build-site.mjs
           node --check scripts/test-security.mjs
           node --check scripts/test-apps-script.mjs
+          node --check scripts/test-admin-apps-script.mjs
           node --check scripts/test-quality.mjs
           cp apps-script/Code.gs /tmp/paty-mundopet-Code.js
           node --check /tmp/paty-mundopet-Code.js
+          cp admin-apps-script/Code.gs /tmp/pati-mundopet-admin-Code.js
+          node --check /tmp/pati-mundopet-admin-Code.js
 
       - name: Test Apps Script backend with local mocks
         run: npm run test:apps-script
@@ -62,6 +65,9 @@ jobs:
 
       - name: Test SEO, accessibility and performance guarantees
         run: npm run test:quality
+
+      - name: Test private admin panel with local mocks
+        run: npm run test:admin-apps-script
 
       - name: Parse index.html
         run: |
