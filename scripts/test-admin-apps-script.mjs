@@ -22,8 +22,8 @@ for (const name of ['carregarDadosIniciais', 'listarSolicitacoes', 'listarClient
 for (const view of ['inicio', 'solicitacoes', 'agenda', 'bloqueios', 'clientes', 'pagamentos']) {
   if (!index.includes(`id="view-${view}"`)) throw new Error(`Módulo ausente: ${view}`);
 }
-for (const forbidden of ['setValue(', 'setValues(', 'appendRow(', 'createEvent(', 'createAllDayEvent(', 'deleteEvent(']) {
-  if (code.includes(forbidden)) throw new Error(`Operação de escrita encontrada: ${forbidden}`);
+for (const forbidden of ['setValue', 'setValues', 'appendRow', 'insertRow', 'deleteRow', 'createEvent', 'createAllDayEvent', 'deleteEvent']) {
+  if (new RegExp(`\\b${forbidden}\\s*\\(`).test(code)) throw new Error(`Operação de escrita encontrada: ${forbidden}`);
 }
 if (/painel\.html/.test(read('index.html'))) throw new Error('O site público referencia o painel.');
 if (fs.existsSync(new URL('painel.html', root))) throw new Error('O protótipo ainda está na raiz.');
@@ -31,7 +31,14 @@ if (!code.includes("WORKDAY_START_TIME !== '08:30'") || !code.includes("WORKDAY_
 if (!app.includes('while (current < end)')) throw new Error('A grade deve excluir 18:00 como início.');
 if (!code.includes('Session.getActiveUser().getEmail()')) throw new Error('Autorização por usuário ausente.');
 if (manifest.runtimeVersion !== 'V8' || manifest.timeZone !== 'America/Sao_Paulo') throw new Error('Manifesto inválido.');
-if (manifest.oauthScopes.some((scope) => !scope.endsWith('.readonly') && !scope.endsWith('userinfo.email'))) throw new Error('Escopo não mínimo encontrado.');
+const expectedScopes = [
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/userinfo.email'
+];
+if (!Array.isArray(manifest.oauthScopes) || manifest.oauthScopes.length !== expectedScopes.length || expectedScopes.some((scope) => !manifest.oauthScopes.includes(scope))) {
+  throw new Error('O manifesto deve conter exatamente os três escopos autorizados.');
+}
 
 const serverContext = vm.createContext({ console, Date });
 new vm.Script(code).runInContext(serverContext);

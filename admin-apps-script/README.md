@@ -12,7 +12,13 @@ A Fase 10A é estritamente de **leitura**. O navegador conversa somente com fun�
 - `Index.html`: estrutura semântica das seis áreas.
 - `Styles.html`: identidade visual e responsividade.
 - `App.html`: navegação, estados, filtros locais e renderização segura.
-- `appsscript.json`: runtime V8 e escopos mínimos de leitura.
+- `appsscript.json`: runtime V8 e os três escopos autorizados.
+
+## Escopos e autorização
+
+O manifesto utiliza `https://www.googleapis.com/auth/spreadsheets` porque `SpreadsheetApp.openById()` exigiu essa permissão no teste da implantação real. Esse escopo de serviço mais amplo não muda os limites da Fase 10A: o painel continua estritamente somente leitura e seu código não possui métodos de gravação. Os calendários permanecem protegidos pelo escopo `https://www.googleapis.com/auth/calendar.readonly`.
+
+A implantação permanece exclusiva em `MYSELF`, e toda leitura continua protegida pela comparação da conta ativa com `ADMIN_EMAIL`.
 
 ## Criar o projeto separado
 
@@ -59,7 +65,8 @@ A restrição da implantação é a primeira camada. Toda função de leitura ta
 - [ ] `ADMIN_EMAIL` definido apenas em Script Properties.
 - [ ] IDs definidos apenas em Script Properties.
 - [ ] Nenhuma propriedade ou URL privada inserida nos arquivos.
-- [ ] Manifesto contém apenas escopos de planilha/calendário em leitura e identidade.
+- [ ] Manifesto contém exatamente `spreadsheets`, `calendar.readonly` e `userinfo.email`.
+- [ ] Código administrativo permanece sem métodos de gravação, apesar do escopo `spreadsheets` exigido por `SpreadsheetApp.openById()`.
 - [ ] Implantação não permite acesso público ou anônimo.
 - [ ] Conta sem autorização recebe “Acesso negado”.
 - [ ] Valores das fontes são apresentados como texto, nunca executados como HTML ou URL.
