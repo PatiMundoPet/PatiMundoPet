@@ -136,13 +136,13 @@
   function runWriteThenRefresh_(write, refresh, onSuccess, onRefreshFailure, onWriteFailure) { return write().then(function (result) { return refresh().then(function () { return onSuccess(result); }, function (error) { return onRefreshFailure(result, error); }); }, onWriteFailure); }
   function openCreateBlock() {
     if (!writesAllowed_(state)) return;
-    var form = el('form', 'block-form'); form.noValidate = true;
+    var form = el('form', 'block-form'); form.id = 'createBlockForm'; form.noValidate = true;
     var typeLabel = el('label', 'form-field', 'Tipo de bloqueio'), type = document.createElement('select'); type.name = 'tipo'; type.innerHTML = '<option value="horario">Horário específico</option><option value="dia_inteiro">Dia inteiro / vários dias</option>'; typeLabel.appendChild(type);
     var timed = el('div', 'form-grid'); timed.append(blockFormField('Data', 'date', 'data'), blockFormField('Início', 'time', 'inicio'), blockFormField('Término', 'time', 'termino'));
     var full = el('div', 'form-grid'); full.append(blockFormField('Data inicial', 'date', 'dataInicial'), blockFormField('Data final (inclusiva)', 'date', 'dataFinal'));
     var reasonLabel = el('label', 'form-field', 'Motivo (obrigatório)'), reason = document.createElement('textarea'); reason.name = 'motivo'; reason.required = true; reason.maxLength = 120; reason.rows = 3; reasonLabel.appendChild(reason);
     form.append(el('p', '', 'O período ficará indisponível no site após a criação.'), typeLabel, timed, full, reasonLabel); openModal('Criar bloqueio', form, $('createBlock'));
-    var giveUp = el('button', 'btn btn-outline', 'Desistir'), submit = el('button', 'btn btn-primary', 'Criar bloqueio'); submit.type = 'submit'; $('modalFoot').append(giveUp, submit);
+    var giveUp = el('button', 'btn btn-outline', 'Desistir'), submit = el('button', 'btn btn-primary', 'Criar bloqueio'); submit.type = 'submit'; submit.setAttribute('form', form.id); $('modalFoot').append(giveUp, submit);
     var blockSession = newBlockSession_(function () { return crypto.randomUUID(); });
     function syncCurrentType() { syncBlockType(type.value, timed, full); }
     type.onchange = syncCurrentType; syncCurrentType();
