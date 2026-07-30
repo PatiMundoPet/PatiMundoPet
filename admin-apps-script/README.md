@@ -106,3 +106,11 @@ Não há fallback fictício nem simulação local de salvamento. As únicas escr
 As ações de confirmar, pedir informações, voltar a PENDENTE, recusar e cancelar são exclusivas do painel privado e exigem a conta administrativa autorizada. A escrita somente é habilitada quando `Solicitações!Q:R` contém, exatamente, `eventIdAtendimento` e `observaçãoAdministrativa`, e ambos os calendários configurados estão acessíveis. Sem essa migração, a leitura continua disponível.
 
 A confirmação relê a solicitação sob lock, revalida o intervalo e os dois calendários, cria um único evento privado e só então persiste `CONFIRMADO` e o ID. Se a planilha falhar, o evento recém-criado é removido; falhas de reconciliação nunca são corrigidas automaticamente. Nenhuma ação envia mensagens ou cria pagamentos.
+
+## Fase 10C-1 — bloqueios de disponibilidade
+
+O painel cria bloqueios temporizados, preservando qualquer minuto entre 08:30 e 18:00, e bloqueios de dia inteiro ou de vários dias **somente** no calendário configurado por `AVAILABILITY_CALENDAR_ID`. A data final de um bloqueio de dia inteiro é inclusiva na interface; o servidor converte essa data para o término exclusivo exigido pelo Google Agenda.
+
+Cada bloqueio criado pelo painel recebe um UUID e um marcador privado. Isso torna a criação idempotente e permite que a exclusão confirme a identidade do evento no calendário de Disponibilidade. Bloqueios criados manualmente no Google Agenda continuam visíveis no painel e na Agenda, mas são identificados como gerenciados diretamente no Google Agenda e não podem ser excluídos pelo painel.
+
+Criar ou excluir bloqueios não lê nem altera linhas de planilhas, não cria pagamentos e não envia mensagens. O site público passa a respeitar automaticamente esses períodos porque sua disponibilidade já consulta os calendários configurados. Edição e recorrências continuam fora do escopo desta fase.

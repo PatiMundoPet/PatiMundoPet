@@ -20,7 +20,7 @@
         <button class="nav-btn" data-view="clientes">Clientes</button>
         <button class="nav-btn" data-view="pagamentos">Pagamentos <span class="count" id="navPayments">0</span></button>
       </nav>
-      <p class="sidebar-foot">Fase 10B · aprovação manual segura</p>
+      <p class="sidebar-foot">Fase 10C-1 · bloqueios seguros</p>
     </aside>
     <div class="drawer-overlay" id="drawerOverlay" hidden></div>
     <div class="content-shell">
@@ -55,7 +55,7 @@
         </section>
 
         <section class="view" id="view-bloqueios" aria-labelledby="title-bloqueios" hidden>
-          <header class="page-head"><div><h1 tabindex="-1" id="title-bloqueios">Bloqueios</h1><p>Indisponibilidades reais do calendário.</p></div><button class="btn btn-primary" disabled title="Disponível em uma próxima fase">Criar bloqueio · próxima fase</button></header>
+          <header class="page-head"><div><h1 tabindex="-1" id="title-bloqueios">Bloqueios</h1><p>Indisponibilidades reais do calendário.</p></div><button class="btn btn-primary" id="createBlock">Criar bloqueio</button></header>
           <div class="toolbar"><label>De<input class="input" id="blockStart" type="date"></label><label>Até<input class="input" id="blockEnd" type="date"></label><button class="btn btn-outline" id="loadBlocks">Consultar</button></div><div class="list" id="blockList"></div>
         </section>
 
