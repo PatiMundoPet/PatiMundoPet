@@ -347,12 +347,18 @@ function editarBloqueio(eventId, blockId, payload) {
       setBlockPeriod_(event, input.allDay, input.start, input.end);
       event.setTitle(input.title);
       event.setDescription(blockDescription_(input.blockId, input.reason));
+      if (!blockEventEquals_(event, input)) throw new Error('final state mismatch');
+      var result = blockResult_(event, input, false, config.TIMEZONE);
     } catch (writeError) {
-      try { restoreBlock_(event, snapshot); }
+      try { restoreBlock_(event, snapshot); if (!blockSnapshotEquals_(event, snapshot)) throw new Error('restore mismatch'); }
       catch (restoreError) { console.error('ADMIN_BLOCK_EDIT_RESTORE_FAILED'); throw safeError_('RECONCILIATION_REQUIRED', 'O bloqueio precisa de revisão no Google Agenda.'); }
       throw safeError_('WRITE_ERROR', 'Não foi possível editar o bloqueio. O estado anterior foi restaurado.');
     }
-    return { ok: true, data: blockResult_(event, input, false, config.TIMEZONE) };
+    return { ok: true, data: result };
+  } catch (error) {
+    if (error && error.safeCode) throw error;
+    console.error('ADMIN_BLOCK_EDIT_FAILED');
+    throw safeError_('WRITE_ERROR', 'Não foi possível editar o bloqueio. Tente novamente.');
   } finally { lock.releaseLock(); }
 }
 
@@ -360,6 +366,7 @@ function validateEventId_(eventId) { if (typeof eventId !== 'string' || !eventId
 function hasConflictExcept_(calendar, interval, eventId) { return calendar.getEvents(interval.start, interval.end).some(function (event) { return text_(event.getId()) !== eventId && !(typeof event.getEventStatus === 'function' && String(event.getEventStatus()).toLowerCase() === 'canceled') && event.getStartTime().getTime() < interval.end.getTime() && event.getEndTime().getTime() > interval.start.getTime(); }); }
 function blockEventEquals_(event, input) { return event.isAllDayEvent() === input.allDay && event.getStartTime().getTime() === input.start.getTime() && event.getEndTime().getTime() === input.end.getTime() && String(event.getTitle()) === input.title && String(event.getDescription()) === blockDescription_(input.blockId, input.reason); }
 function snapshotBlock_(event) { return { allDay: event.isAllDayEvent(), start: new Date(event.getStartTime().getTime()), end: new Date(event.getEndTime().getTime()), title: String(event.getTitle()), description: String(event.getDescription()) }; }
+function blockSnapshotEquals_(event, snapshot) { return event.isAllDayEvent() === snapshot.allDay && event.getStartTime().getTime() === snapshot.start.getTime() && event.getEndTime().getTime() === snapshot.end.getTime() && String(event.getTitle()) === snapshot.title && String(event.getDescription()) === snapshot.description; }
 function setBlockPeriod_(event, allDay, start, end) { if (allDay) event.setAllDayDates(start, end); else event.setTime(start, end); }
 function restoreBlock_(event, snapshot) { setBlockPeriod_(event, snapshot.allDay, snapshot.start, snapshot.end); event.setTitle(snapshot.title); event.setDescription(snapshot.description); }
 
