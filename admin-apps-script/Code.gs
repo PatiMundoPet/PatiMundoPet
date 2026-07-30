@@ -209,11 +209,13 @@ function readCalendar_(calendarId, start, end, timezone, type) {
   return calendar.getEvents(start, end).map(function (event) {
     var eventStart = event.getStartTime();
     var eventEnd = event.getEndTime();
-    return {
+    var result = {
       type: type, title: text_(event.getTitle()), allDay: event.isAllDayEvent(),
       start: Utilities.formatDate(eventStart, timezone, "yyyy-MM-dd'T'HH:mm:ss"),
       end: Utilities.formatDate(eventEnd, timezone, "yyyy-MM-dd'T'HH:mm:ss")
     };
+    if (type === 'bloqueio') { var identity = blockIdentity_(event.getDescription()); result.eventId = text_(event.getId()); result.blockId = identity.blockId; result.managed = identity.managed; }
+    return result;
   }).sort(function (a, b) { return a.start.localeCompare(b.start); });
 }
 
@@ -271,3 +273,84 @@ function interval_(context) { var date = strictSheetDate_(context.record.data, c
 function hasConflict_(calendar, interval) { return calendar.getEvents(interval.start, interval.end).some(function (event) { return !(typeof event.getEventStatus === 'function' && String(event.getEventStatus()).toLowerCase() === 'canceled') && event.getStartTime().getTime() < interval.end.getTime() && event.getEndTime().getTime() > interval.start.getTime(); }); }
 function confirmRequest_(context) { var current = status_(context), eventId = String(context.record.eventIdAtendimento || '').trim(); if (current === 'CONFIRMADO') { if (!eventId || !eventMatches_(context.appointments.getEventById(eventId), context.requestId)) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); return { requestId: context.requestId, status: current, idempotent: true }; } if (eventId) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); if (['PENDENTE', 'MAIS_INFORMACOES'].indexOf(current) < 0) throw safeError_('INVALID_TRANSITION', 'Esta ação não é permitida para o status atual.'); var interval = interval_(context); if (hasConflict_(context.appointments, interval) || hasConflict_(context.availability, interval)) throw safeError_('INTERVAL_UNAVAILABLE', 'O período solicitado não está disponível.'); var description = marker_(context.requestId) + '\nserviço: ' + text_(context.record['serviço']) + '\nresponsável: ' + text_(context.record['responsável']) + '\npet: ' + text_(context.record.pet) + '\nWhatsApp: ' + text_(context.record.WhatsApp) + '\ne-mail: ' + text_(context.record['e-mail']) + '\nregião: ' + text_(context.record['região']) + '\nobservações: ' + text_(context.record['observações']); var event = context.appointments.createEvent('Atendimento — ' + text_(context.record.pet) + ' — ' + text_(context.record['responsável']), interval.start, interval.end, { description: description }); try { return persist_(context, 'CONFIRMADO', event.getId()); } catch (error) { try { event.deleteEvent(); } catch (compensationError) { console.error('CONFIRM_COMPENSATION_FAILED requestId=%s', context.requestId); throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); } throw safeError_('PERSISTENCE_FAILED', 'Não foi possível salvar a confirmação.'); } }
 function cancelRequest_(context) { var current = status_(context); assertNoUnexpectedEvent_(context, current); if (current === 'CANCELADO') return { requestId: context.requestId, status: current, idempotent: true }; if (current === 'RECUSADO') throw safeError_('INVALID_TRANSITION', 'Esta ação não é permitida para o status atual.'); if (current !== 'CONFIRMADO') return changeStatus_(context, ['PENDENTE', 'MAIS_INFORMACOES'], 'CANCELADO'); var eventId = String(context.record.eventIdAtendimento || '').trim(), event = eventId && context.appointments.getEventById(eventId); if (!eventMatches_(event, context.requestId)) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); event.deleteEvent(); try { return persist_(context, 'CANCELADO', ''); } catch (error) { throw safeError_('RECONCILIATION_REQUIRED', 'O cancelamento precisa de revisão administrativa.'); } }
+
+var BLOCK_MARKER_ = 'PATI_MUNDOPET_BLOCK';
+
+function criarBloqueio(payload) {
+  var config, input;
+  try { config = getConfig_(); authorize_(config); input = validateBlock_(payload, config); }
+  catch (error) { if (error && error.safeCode) throw error; throw safeError_('INVALID_REQUEST', 'Revise os dados do bloqueio.'); }
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) throw safeError_('LOCK_TIMEOUT', 'O painel está ocupado. Tente novamente.');
+  try {
+    var appointments = CalendarApp.getCalendarById(config.APPOINTMENTS_CALENDAR_ID);
+    var availability = CalendarApp.getCalendarById(config.AVAILABILITY_CALENDAR_ID);
+    if (!appointments || !availability) throw safeError_('CONFIG_ERROR', 'Os calendários privados precisam ser revisados.');
+    var existing = findBlock_(availability, input);
+    if (existing) return { ok: true, data: blockResult_(existing, input, true, config.TIMEZONE) };
+    if (hasConflict_(appointments, input) || hasConflict_(availability, input)) throw safeError_('INTERVAL_UNAVAILABLE', 'O período já possui atendimento ou indisponibilidade.');
+    var options = { description: blockDescription_(input.blockId, input.reason) };
+    var event = input.allDay
+      ? availability.createAllDayEvent(input.title, input.start, input.end, options)
+      : availability.createEvent(input.title, input.start, input.end, options);
+    return { ok: true, data: blockResult_(event, input, false, config.TIMEZONE) };
+  } catch (error) {
+    if (error && error.safeCode) throw error;
+    console.error('ADMIN_BLOCK_WRITE_FAILED');
+    throw safeError_('WRITE_ERROR', 'Não foi possível criar o bloqueio. Os dados não foram considerados alterados.');
+  } finally { lock.releaseLock(); }
+}
+
+function excluirBloqueio(eventId, blockId) {
+  var config;
+  try { config = getConfig_(); authorize_(config); validateUuid_(blockId); if (typeof eventId !== 'string' || !eventId.trim() || eventId.trim().length > 512) throw safeError_('INVALID_REQUEST', 'O bloqueio informado é inválido.'); }
+  catch (error) { if (error && error.safeCode) throw error; throw safeError_('INVALID_REQUEST', 'O bloqueio informado é inválido.'); }
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) throw safeError_('LOCK_TIMEOUT', 'O painel está ocupado. Tente novamente.');
+  try {
+    var calendar = CalendarApp.getCalendarById(config.AVAILABILITY_CALENDAR_ID);
+    if (!calendar) throw safeError_('CONFIG_ERROR', 'O calendário de disponibilidade precisa ser revisado.');
+    var event = calendar.getEventById(eventId.trim());
+    var identity = event && blockIdentity_(event.getDescription());
+    if (!event || !identity.managed || identity.blockId !== blockId.trim()) throw safeError_('RECONCILIATION_REQUIRED', 'Não repita a ação. Revise o bloqueio no Google Agenda.');
+    event.deleteEvent();
+    return { ok: true, data: { blockId: blockId.trim(), deleted: true } };
+  } catch (error) {
+    if (error && error.safeCode) throw error;
+    console.error('ADMIN_BLOCK_DELETE_FAILED');
+    throw safeError_('RECONCILIATION_REQUIRED', 'Não repita a ação. Revise o bloqueio no Google Agenda.');
+  } finally { lock.releaseLock(); }
+}
+
+function blockIdentity_(description) {
+  var match = /^PATI_MUNDOPET_BLOCK\nblockId: ([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})(?:\n|$)/i.exec(String(description || ''));
+  return { managed: Boolean(match), blockId: match ? match[1] : '' };
+}
+function blockDescription_(blockId, reason) { return BLOCK_MARKER_ + '\nblockId: ' + blockId + '\nmotivo: ' + reason; }
+function blockReason_(value) { var reason = String(value || '').replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\s+/g, ' ').trim(); if (!reason || reason.length > 120) throw safeError_('INVALID_REQUEST', 'Informe um motivo com até 120 caracteres.'); return reason; }
+function strictBlockDate_(value, timezone) { var iso = validateIsoDate_(value), parsed; try { parsed = Utilities.parseDate(iso + ' 00:00', timezone, 'yyyy-MM-dd HH:mm'); if (Utilities.formatDate(parsed, timezone, 'yyyy-MM-dd') !== iso) throw new Error('round trip'); } catch (error) { throw safeError_('INVALID_DATE', 'A data informada é inválida.'); } return parsed; }
+function strictBlockTime_(value) { if (typeof value !== 'string' || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) throw safeError_('INVALID_INTERVAL', 'Informe horários válidos.'); return value; }
+function validateBlock_(payload, config) {
+  if (!payload || Object.prototype.toString.call(payload) !== '[object Object]') throw safeError_('INVALID_REQUEST', 'Revise os dados do bloqueio.');
+  validateUuid_(payload.blockId); var reason = blockReason_(payload.motivo), type = payload.tipo;
+  if (type === 'horario') {
+    var date = validateIsoDate_(payload.data), startTime = strictBlockTime_(payload.inicio), endTime = strictBlockTime_(payload.termino);
+    if (startTime < '08:30' || startTime >= endTime || endTime > '18:00') throw safeError_('INVALID_INTERVAL', 'O horário deve ficar entre 08:30 e 18:00.');
+    strictBlockDate_(date, config.TIMEZONE); var start, end;
+    try { start = Utilities.parseDate(date + ' ' + startTime, config.TIMEZONE, 'yyyy-MM-dd HH:mm'); end = Utilities.parseDate(date + ' ' + endTime, config.TIMEZONE, 'yyyy-MM-dd HH:mm'); if (Utilities.formatDate(start, config.TIMEZONE, 'yyyy-MM-dd HH:mm') !== date + ' ' + startTime || Utilities.formatDate(end, config.TIMEZONE, 'yyyy-MM-dd HH:mm') !== date + ' ' + endTime) throw new Error('round trip'); } catch (error) { throw safeError_('INVALID_DATE', 'A data informada é inválida.'); }
+    if (start.getTime() < new Date().getTime()) throw safeError_('INVALID_INTERVAL', 'O início do bloqueio não pode estar no passado.');
+    return { blockId: payload.blockId.trim(), type: type, allDay: false, start: start, end: end, reason: reason, title: 'Bloqueio — ' + reason };
+  }
+  if (type === 'dia_inteiro') {
+    var startDay = strictBlockDate_(payload.dataInicial, config.TIMEZONE), inclusiveEnd = strictBlockDate_(payload.dataFinal, config.TIMEZONE);
+    if (inclusiveEnd.getTime() < startDay.getTime()) throw safeError_('INVALID_RANGE', 'A data final não pode ser anterior à inicial.');
+    var exclusiveEnd = new Date(inclusiveEnd.getTime() + 86400000), days = (exclusiveEnd.getTime() - startDay.getTime()) / 86400000;
+    if (days > 366) throw safeError_('INVALID_RANGE', 'O bloqueio pode ter no máximo 366 dias.');
+    var today = dayRange_(Utilities.formatDate(new Date(), config.TIMEZONE, 'yyyy-MM-dd'), config.TIMEZONE).start;
+    if (exclusiveEnd.getTime() <= today.getTime()) throw safeError_('INVALID_RANGE', 'O período não pode estar completamente no passado.');
+    return { blockId: payload.blockId.trim(), type: type, allDay: true, start: startDay, end: exclusiveEnd, reason: reason, title: 'Bloqueio — ' + reason };
+  }
+  throw safeError_('INVALID_REQUEST', 'Escolha um tipo de bloqueio válido.');
+}
+function findBlock_(calendar, input) { var events = calendar.getEvents(input.start, input.end); for (var i = 0; i < events.length; i++) { var event = events[i], identity = blockIdentity_(event.getDescription()); if (identity.managed && identity.blockId === input.blockId) { if (event.getStartTime().getTime() === input.start.getTime() && event.getEndTime().getTime() === input.end.getTime() && event.isAllDayEvent() === input.allDay && String(event.getTitle()) === input.title && String(event.getDescription()) === blockDescription_(input.blockId, input.reason)) return event; throw safeError_('RECONCILIATION_REQUIRED', 'Não repita a ação. Revise o bloqueio no Google Agenda.'); } } return null; }
+function blockResult_(event, input, idempotent, timezone) { return { blockId: input.blockId, eventId: text_(event.getId()), tipo: input.type, inicio: Utilities.formatDate(event.getStartTime(), timezone, "yyyy-MM-dd'T'HH:mm:ss"), termino: Utilities.formatDate(event.getEndTime(), timezone, "yyyy-MM-dd'T'HH:mm:ss"), allDay: input.allDay, titulo: input.title }; }
