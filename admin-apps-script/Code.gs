@@ -214,7 +214,7 @@ function readCalendar_(calendarId, start, end, timezone, type) {
       start: Utilities.formatDate(eventStart, timezone, "yyyy-MM-dd'T'HH:mm:ss"),
       end: Utilities.formatDate(eventEnd, timezone, "yyyy-MM-dd'T'HH:mm:ss")
     };
-    if (type === 'bloqueio') { var identity = blockIdentity_(event.getDescription()); result.eventId = text_(event.getId()); result.blockId = identity.blockId; result.managed = identity.managed; }
+    if (type === 'bloqueio') { var identity = blockIdentity_(event.getDescription()); result.eventId = text_(event.getId()); result.blockId = identity.blockId; result.managed = identity.managed; result.reason = identity.managed ? blockReasonFromDescription_(event.getDescription()) : ''; result.motivo = result.reason; }
     return result;
   }).sort(function (a, b) { return a.start.localeCompare(b.start); });
 }
@@ -322,10 +322,59 @@ function excluirBloqueio(eventId, blockId) {
   } finally { lock.releaseLock(); }
 }
 
+function editarBloqueio(eventId, blockId, payload) {
+  var config, input, cleanEventId;
+  try {
+    config = getConfig_(); authorize_(config);
+    cleanEventId = validateEventId_(eventId); validateUuid_(blockId);
+    input = validateBlock_(payload, config);
+    if (input.blockId !== blockId.trim()) throw safeError_('INVALID_REQUEST', 'A identidade do bloqueio é inválida.');
+  } catch (error) { if (error && error.safeCode) throw error; throw safeError_('INVALID_REQUEST', 'Revise os dados do bloqueio.'); }
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) throw safeError_('LOCK_TIMEOUT', 'O painel está ocupado. Tente novamente.');
+  try {
+    var appointments = CalendarApp.getCalendarById(config.APPOINTMENTS_CALENDAR_ID);
+    var availability = CalendarApp.getCalendarById(config.AVAILABILITY_CALENDAR_ID);
+    if (!appointments || !availability) throw safeError_('CONFIG_ERROR', 'Os calendários privados precisam ser revisados.');
+    if (appointments.getEventById(cleanEventId)) throw safeError_('RECONCILIATION_REQUIRED', 'O evento informado não é um bloqueio de disponibilidade.');
+    var event = availability.getEventById(cleanEventId), identity = event && blockIdentity_(event.getDescription());
+    if (!event) throw safeError_('NOT_FOUND', 'O bloqueio não foi encontrado.');
+    if (!identity.managed || identity.blockId !== blockId.trim()) throw safeError_('RECONCILIATION_REQUIRED', 'Não repita a ação. Revise o bloqueio no Google Agenda.');
+    if (blockEventEquals_(event, input)) return { ok: true, data: blockResult_(event, input, true, config.TIMEZONE) };
+    if (hasConflict_(appointments, input) || hasConflictExcept_(availability, input, cleanEventId)) throw safeError_('INTERVAL_UNAVAILABLE', 'O período já possui atendimento ou indisponibilidade.');
+    var snapshot = snapshotBlock_(event);
+    try {
+      setBlockPeriod_(event, input.allDay, input.start, input.end);
+      event.setTitle(input.title);
+      event.setDescription(blockDescription_(input.blockId, input.reason));
+      if (!blockEventEquals_(event, input)) throw new Error('final state mismatch');
+      var result = blockResult_(event, input, false, config.TIMEZONE);
+    } catch (writeError) {
+      try { restoreBlock_(event, snapshot); if (!blockSnapshotEquals_(event, snapshot)) throw new Error('restore mismatch'); }
+      catch (restoreError) { console.error('ADMIN_BLOCK_EDIT_RESTORE_FAILED'); throw safeError_('RECONCILIATION_REQUIRED', 'O bloqueio precisa de revisão no Google Agenda.'); }
+      throw safeError_('WRITE_ERROR', 'Não foi possível editar o bloqueio. O estado anterior foi restaurado.');
+    }
+    return { ok: true, data: result };
+  } catch (error) {
+    if (error && error.safeCode) throw error;
+    console.error('ADMIN_BLOCK_EDIT_FAILED');
+    throw safeError_('WRITE_ERROR', 'Não foi possível editar o bloqueio. Tente novamente.');
+  } finally { lock.releaseLock(); }
+}
+
+function validateEventId_(eventId) { if (typeof eventId !== 'string' || !eventId.trim() || eventId.trim().length > 512) throw safeError_('INVALID_REQUEST', 'O bloqueio informado é inválido.'); return eventId.trim(); }
+function hasConflictExcept_(calendar, interval, eventId) { return calendar.getEvents(interval.start, interval.end).some(function (event) { return text_(event.getId()) !== eventId && !(typeof event.getEventStatus === 'function' && String(event.getEventStatus()).toLowerCase() === 'canceled') && event.getStartTime().getTime() < interval.end.getTime() && event.getEndTime().getTime() > interval.start.getTime(); }); }
+function blockEventEquals_(event, input) { return event.isAllDayEvent() === input.allDay && event.getStartTime().getTime() === input.start.getTime() && event.getEndTime().getTime() === input.end.getTime() && String(event.getTitle()) === input.title && String(event.getDescription()) === blockDescription_(input.blockId, input.reason); }
+function snapshotBlock_(event) { return { allDay: event.isAllDayEvent(), start: new Date(event.getStartTime().getTime()), end: new Date(event.getEndTime().getTime()), title: String(event.getTitle()), description: String(event.getDescription()) }; }
+function blockSnapshotEquals_(event, snapshot) { return event.isAllDayEvent() === snapshot.allDay && event.getStartTime().getTime() === snapshot.start.getTime() && event.getEndTime().getTime() === snapshot.end.getTime() && String(event.getTitle()) === snapshot.title && String(event.getDescription()) === snapshot.description; }
+function setBlockPeriod_(event, allDay, start, end) { if (allDay) event.setAllDayDates(start, end); else event.setTime(start, end); }
+function restoreBlock_(event, snapshot) { setBlockPeriod_(event, snapshot.allDay, snapshot.start, snapshot.end); event.setTitle(snapshot.title); event.setDescription(snapshot.description); }
+
 function blockIdentity_(description) {
   var match = /^PATI_MUNDOPET_BLOCK\nblockId: ([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})(?:\n|$)/i.exec(String(description || ''));
   return { managed: Boolean(match), blockId: match ? match[1] : '' };
 }
+function blockReasonFromDescription_(description) { var match = /(?:^|\n)motivo: ([^\n]*)/.exec(String(description || '')); return match ? match[1] : ''; }
 function blockDescription_(blockId, reason) { return BLOCK_MARKER_ + '\nblockId: ' + blockId + '\nmotivo: ' + reason; }
 function blockReason_(value) { var reason = String(value || '').replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\s+/g, ' ').trim(); if (!reason || reason.length > 120) throw safeError_('INVALID_REQUEST', 'Informe um motivo com até 120 caracteres.'); return reason; }
 function strictBlockDate_(value, timezone) { var iso = validateIsoDate_(value), parsed; try { parsed = Utilities.parseDate(iso + ' 00:00', timezone, 'yyyy-MM-dd HH:mm'); if (Utilities.formatDate(parsed, timezone, 'yyyy-MM-dd') !== iso) throw new Error('round trip'); } catch (error) { throw safeError_('INVALID_DATE', 'A data informada é inválida.'); } return parsed; }
@@ -353,4 +402,4 @@ function validateBlock_(payload, config) {
   throw safeError_('INVALID_REQUEST', 'Escolha um tipo de bloqueio válido.');
 }
 function findBlock_(calendar, input) { var events = calendar.getEvents(input.start, input.end); for (var i = 0; i < events.length; i++) { var event = events[i], identity = blockIdentity_(event.getDescription()); if (identity.managed && identity.blockId === input.blockId) { if (event.getStartTime().getTime() === input.start.getTime() && event.getEndTime().getTime() === input.end.getTime() && event.isAllDayEvent() === input.allDay && String(event.getTitle()) === input.title && String(event.getDescription()) === blockDescription_(input.blockId, input.reason)) return event; throw safeError_('RECONCILIATION_REQUIRED', 'Não repita a ação. Revise o bloqueio no Google Agenda.'); } } return null; }
-function blockResult_(event, input, idempotent, timezone) { return { blockId: input.blockId, eventId: text_(event.getId()), tipo: input.type, inicio: Utilities.formatDate(event.getStartTime(), timezone, "yyyy-MM-dd'T'HH:mm:ss"), termino: Utilities.formatDate(event.getEndTime(), timezone, "yyyy-MM-dd'T'HH:mm:ss"), allDay: input.allDay, titulo: input.title }; }
+function blockResult_(event, input, idempotent, timezone) { return { blockId: input.blockId, eventId: text_(event.getId()), tipo: input.type, inicio: Utilities.formatDate(event.getStartTime(), timezone, "yyyy-MM-dd'T'HH:mm:ss"), termino: Utilities.formatDate(event.getEndTime(), timezone, "yyyy-MM-dd'T'HH:mm:ss"), allDay: input.allDay, titulo: input.title, motivo: input.reason, idempotent: Boolean(idempotent) }; }
