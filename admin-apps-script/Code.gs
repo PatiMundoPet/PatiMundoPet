@@ -237,6 +237,27 @@ function voltarSolicitacaoParaPendente(requestId, observacao) { return safelyWri
 function recusarSolicitacao(requestId, observacao) { return safelyWrite_(requestId, observacao, true, function (context) { return changeStatus_(context, ['PENDENTE', 'MAIS_INFORMACOES'], 'RECUSADO'); }); }
 function cancelarSolicitacao(requestId, observacao) { return safelyWrite_(requestId, observacao, false, cancelRequest_); }
 
+function excluirSolicitacao(requestId) {
+  var config;
+  try { config = getConfig_(); authorize_(config); validateUuid_(requestId); requestId = requestId.trim(); }
+  catch (error) { if (error && error.safeCode) throw error; throw safeError_('INVALID_REQUEST', 'A solicitação informada é inválida.'); }
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) throw safeError_('LOCK_TIMEOUT', 'O painel está ocupado. Tente novamente.');
+  try {
+    if (!writesConfigured_(config)) throw safeError_('CONFIG_ERROR', 'As ações aguardam a configuração administrativa.');
+    var context = requestContext_(config, requestId), current = status_(context);
+    if (['PENDENTE', 'CANCELADO'].indexOf(current) < 0) throw safeError_('INVALID_TRANSITION', 'Esta solicitação precisa ser cancelada antes da exclusão.');
+    if (String(context.record.eventIdAtendimento || '').trim() || hasRequestCalendarLink_(context)) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação possui um vínculo que precisa de revisão.');
+    if (hasPaymentForRequest_(config, requestId)) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação possui um pagamento vinculado e não pode ser excluída.');
+    context.sheet.deleteRow(context.rowNumber);
+    return { ok: true, data: { requestId: requestId, deleted: true } };
+  } catch (error) {
+    if (error && error.safeCode) throw error;
+    console.error('ADMIN_REQUEST_DELETE_FAILED requestId=%s', requestId);
+    throw safeError_('WRITE_ERROR', 'Não foi possível excluir a solicitação. Os dados foram preservados.');
+  } finally { lock.releaseLock(); }
+}
+
 function safelyWrite_(requestId, note, noteRequired, writer) {
   var config;
   try { config = getConfig_(); authorize_(config); validateUuid_(requestId); note = adminNote_(note, noteRequired); }
@@ -265,6 +286,8 @@ function persist_(context, status, eventId) { var row = context.values.slice(); 
 function changeStatus_(context, allowed, target) { var current = status_(context); assertNoUnexpectedEvent_(context, current); if (current === target) return { requestId: context.requestId, status: target, idempotent: true }; if (allowed.indexOf(current) < 0) throw safeError_('INVALID_TRANSITION', 'Esta ação não é permitida para o status atual.'); return persist_(context, target); }
 function marker_(requestId) { return 'PATI_MUNDOPET_REQUEST\nrequestId: ' + requestId; }
 function eventMatches_(event, requestId) { return Boolean(event) && String(event.getDescription() || '').indexOf(marker_(requestId)) >= 0; }
+function hasRequestCalendarLink_(context) { var date; try { date = strictSheetDate_(context.record.data, context.config.TIMEZONE); } catch (error) { throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); } var range = dayRange_(date, context.config.TIMEZONE); return context.appointments.getEvents(range.start, range.end).some(function (event) { return eventMatches_(event, context.requestId); }); }
+function hasPaymentForRequest_(config, requestId) { var sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(ADMIN.sheets.payments.name); if (!sheet) throw safeError_('CONFIG_ERROR', 'A aba Pagamentos não foi encontrada.'); var lastRow = sheet.getLastRow(), lastColumn = sheet.getLastColumn(); if (lastRow < 1 || lastColumn < 1) throw safeError_('CONFIG_ERROR', 'A aba Pagamentos precisa ser revisada.'); var values = sheet.getRange(1, 1, lastRow, lastColumn).getValues(), headers = values[0].map(function (value) { return String(value).trim(); }), idIndex = headers.indexOf('requestId'); if (idIndex < 0) throw safeError_('CONFIG_ERROR', 'Os cabeçalhos da aba Pagamentos precisam ser revisados.'); return values.slice(1).some(function (row) { return String(row[idIndex]).trim() === requestId; }); }
 function assertNoUnexpectedEvent_(context, current) { if (current !== 'CONFIRMADO' && String(context.record.eventIdAtendimento || '').trim()) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); }
 function nativeDate_(value) { return Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime()); }
 function strictSheetDate_(value, timezone) { if (nativeDate_(value)) return Utilities.formatDate(value, timezone, 'yyyy-MM-dd'); if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value; throw safeError_('INVALID_INTERVAL', 'O horário da solicitação é inválido ou legado.'); }
