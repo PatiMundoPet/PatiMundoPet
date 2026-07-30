@@ -120,6 +120,30 @@ assert.match(app,/action\[2\] \? ' \(obrigatória\)' : ' \(opcional\)'/,'demais 
 const requestModalSource=app.slice(app.indexOf('function openRequest'),app.indexOf('function renderClients'));
 assert.doesNotMatch(requestModalSource,/eventIdAtendimento/,'modal não expõe ID do evento');
 
+// Executa o modal de criação em um DOM mínimo: o submit fica no rodapé, fora do form.
+function fakeBlockElement(tag) {
+  const node={tag,children:[],attributes:{},dataset:{},hidden:false,disabled:false,required:false,value:'',name:'',type:'',textContent:'',className:'',append(...children){this.children.push(...children);for(const child of children)child.parent=this;},appendChild(child){this.append(child);return child;},setAttribute(name,value){this.attributes[name]=String(value);},focus(){},querySelectorAll(selector){const found=[];const visit=child=>{if(selector==='input'&&child.tag==='input')found.push(child);for(const nested of child.children||[])visit(nested);};for(const child of this.children)visit(child);return found;},reportValidity(){return this.valid!==false;}};
+  if(tag==='form')node.elements={};
+  node.click=function(){if(this.onclick)this.onclick({target:this});if(this.type==='submit'&&!this.disabled){const target=blockNodes[this.attributes.form];if(target&&target.onsubmit)target.onsubmit({preventDefault(){}});}};
+  return node;
+}
+const blockNodes={},modalFoot=fakeBlockElement('footer'),modalBody=fakeBlockElement('main'),createBlockButton=fakeBlockElement('button');
+const blockDocument={createElement:fakeBlockElement};
+const blockState={writing:false,refreshRequired:false},modalBlockId=ids[0];let closed=0,uuidCallsForModal=0,blockWrites=[];
+function blockEl(tag,className,content){const node=fakeBlockElement(tag);node.className=className||'';if(content!==undefined)node.textContent=content;return node;}
+function blockOpenModal(title,form){modalBody.append(form);blockNodes[form.id]=form;}
+function blockPerformWrite(method,args){if(blockState.writing)return;blockState.writing=true;blockWrites.push({method,args});}
+const createBlockSource=['writesAllowed_','blockFormField','syncBlockType','newBlockSession_','openCreateBlock'].map(name=>functionSource(app,name)).join('\n');
+const blockUiContext=vm.createContext({Array,document:blockDocument,crypto:{randomUUID(){uuidCallsForModal++;return modalBlockId;}},state:blockState,$(id){return id==='modalFoot'?modalFoot:id==='createBlock'?createBlockButton:null;},el:blockEl,openModal:blockOpenModal,closeModal(){closed++;},performBlockWrite:blockPerformWrite});
+new vm.Script(createBlockSource).runInContext(blockUiContext);blockUiContext.openCreateBlock();
+const createdForm=modalBody.children[0],giveUpButton=modalFoot.children[0],createButton=modalFoot.children[1];
+for(const input of createdForm.querySelectorAll('input'))if(input.name)createdForm.elements[input.name]=input;
+assert.equal(createButton.type,'submit','Criar bloqueio continua sendo um botão submit');assert.equal(createButton.attributes.form,createdForm.id,'botão externo está associado ao formulário criado');assert.equal(createdForm.id,'createBlockForm');
+createdForm.valid=false;createButton.click();assert.equal(blockWrites.length,0,'formulário inválido não chama criarBloqueio');
+createdForm.valid=true;createButton.click();assert.equal(blockWrites.length,1,'clique submete e chama criarBloqueio exatamente uma vez');assert.equal(blockWrites[0].method,'criarBloqueio');assert.equal(blockWrites[0].args[0].blockId,modalBlockId);assert.equal(uuidCallsForModal,1);
+createButton.click();assert.equal(blockWrites.length,1,'clique duplo é bloqueado durante a escrita');assert.equal(blockWrites[0].args[0].blockId,modalBlockId,'a tentativa preserva o blockId da sessão');
+giveUpButton.click();assert.equal(blockWrites.length,1,'Desistir não envia o formulário');assert.equal(closed,1);
+
 
 // Fase 10C-1: criação e exclusão de bloqueios com calendários simulados.
 const blockId=ids[0];
