@@ -112,7 +112,7 @@ assert.match(app,/querySelector\('\.action-panel'\)/,'somente um painel de açã
 assert.match(app,/textarea:not\(\[disabled\]\)/,'textarea participa da navegação por teclado');
 for (const codeName of ['ACCESS_DENIED','CONFIG_ERROR','INVALID_REQUEST','INVALID_TRANSITION','INVALID_INTERVAL','INTERVAL_UNAVAILABLE','LOCK_TIMEOUT','RECONCILIATION_REQUIRED','PERSISTENCE_FAILED','WRITE_ERROR','NOT_FOUND']) assert.match(app,new RegExp(`${codeName}:`),`mensagem segura ausente: ${codeName}`);
 assert.match(app,/agendaDate = \$\('agendaDate'\)\.value/,'data da agenda é preservada');
-assert.match(app,/\.then\(refreshAfterWrite\)\.then/,'sucesso somente é exibido após releitura');
+assert.match(app,/runWriteThenRefresh_/,'escrita e releitura usam resultados separados');
 const mapped=adminContext.mapRequest_({requestId:ids[0],status:'PENDENTE','observaçãoAdministrativa':'Nota interna'},'America/Sao_Paulo');assert.equal(mapped.adminNote,'Nota interna');
 assert.match(app,/if \(row\.adminNote\) requestFields\.push\(\['Observação administrativa', row\.adminNote\]\)/,'observação administrativa aparece condicionalmente');
 assert.match(app,/action\[1\] !== 'confirmarSolicitacao'/,'Confirmar não cria textarea');
@@ -142,5 +142,24 @@ resetAdmin();assert.equal(safeCode(()=>adminContext.criarBloqueio(timedPayload()
 resetAdmin();const appointment=mockEvent('atendimento',parseAdminDate('2026-08-10 10:00'),parseAdminDate('2026-08-10 11:00'),'PATI_MUNDOPET_BLOCK\nblockId: '+blockId);appointment.id='appointment';appointmentCalendar.events.push(appointment);assert.equal(safeCode(()=>adminContext.excluirBloqueio('appointment',blockId)),'RECONCILIATION_REQUIRED');assert.equal(appointment.deleted,false);assert.equal(appointmentCalendar.lookups,0,'exclusão não consulta Atendimentos');
 assert.match(app,/crypto\.randomUUID\(\)/);assert.doesNotMatch(app,/window\.(?:prompt|confirm)\(/);assert.match(app,/if \(row\.managed\)/);assert.match(app,/Gerenciado diretamente no Google Agenda/);assert.doesNotMatch(app,/text\(row\.eventId|eventId\)/,'eventId não é renderizado');assert.match(app,/if \(state\.writing\) return;/);assert.match(app,/Promise\.all\(\[loadAgenda\(\), loadBlocks\(\)\]\)/);
 console.log('Admin Apps Script: bloqueios temporizados, de dia inteiro, idempotência e exclusão segura validados com mocks.');
+
+// Helpers reais da interface são executados com controles e promessas simulados.
+function functionSource(source,name){const start=source.indexOf(`function ${name}(`);assert.notEqual(start,-1,`helper ausente: ${name}`);let brace=source.indexOf('{',start),depth=0;for(let i=brace;i<source.length;i++){if(source[i]==='{')depth++;if(source[i]==='}'&&--depth===0)return source.slice(start,i+1);}throw Error(`helper incompleto: ${name}`);}
+const uiHelpers=['syncBlockType','newBlockSession_','runWriteThenRefresh_','allDayPeriodText','formatDate','addDays','pad'].map(name=>functionSource(app,name)).join('\n');
+const uiContext=vm.createContext({Array,Date,Promise});new vm.Script(uiHelpers).runInContext(uiContext);
+const timedInputs=[{value:'2026-08-10'},{value:'10:11'},{value:'11:37'}],fullInputs=[{value:''},{value:''}];
+const group=inputs=>({hidden:false,querySelectorAll(selector){assert.equal(selector,'input');return inputs;}}),timedGroup=group(timedInputs),fullGroup=group(fullInputs);
+const reportValidity=()=>timedInputs.concat(fullInputs).every(input=>input.disabled||!input.required||Boolean(input.value));
+uiContext.syncBlockType('horario',timedGroup,fullGroup);assert.equal(timedGroup.hidden,false);assert.equal(fullGroup.hidden,true);assert.ok(timedInputs.every(input=>!input.disabled&&input.required));assert.ok(fullInputs.every(input=>input.disabled&&!input.required));assert.equal(reportValidity(),true,'campos de dia inteiro invisíveis não invalidam');
+uiContext.syncBlockType('dia_inteiro',timedGroup,fullGroup);assert.equal(timedGroup.hidden,true);assert.equal(fullGroup.hidden,false);assert.ok(timedInputs.every(input=>input.disabled&&!input.required));assert.ok(fullInputs.every(input=>!input.disabled&&input.required));assert.equal(reportValidity(),false,'campos de dia inteiro ativos são obrigatórios');
+fullInputs.forEach((input,index)=>input.value=index?'2026-08-17':'2026-08-10');assert.equal(reportValidity(),true);uiContext.syncBlockType('horario',timedGroup,fullGroup);assert.equal(reportValidity(),true);assert.ok(fullInputs.every(input=>input.disabled&&!input.required),'retorno desativa campos de dia inteiro');
+let uuidCalls=0;const session=uiContext.newBlockSession_(()=>{uuidCalls++;return blockId;});const attemptIds=[];let attempt=0;const sessionWrite=()=>{attemptIds.push(session.blockId);attempt++;return attempt===1?Promise.reject(Error('write')):Promise.resolve('created');};await uiContext.runWriteThenRefresh_(sessionWrite,()=>Promise.resolve(),()=>{},()=>{},()=>{});await uiContext.runWriteThenRefresh_(sessionWrite,()=>Promise.resolve(),()=>{},()=>{},()=>{});assert.deepEqual(attemptIds,[blockId,blockId]);assert.equal(uuidCalls,1,'falha antes do sucesso permite nova tentativa com o mesmo UUID da abertura');
+let writes=0,refreshes=0,normalSuccess=0,refreshFailure=0,writeFailure=0;
+await uiContext.runWriteThenRefresh_(()=>{writes++;return Promise.reject(Error('write'));},()=>{refreshes++;return Promise.resolve();},()=>normalSuccess++,()=>refreshFailure++,()=>writeFailure++);assert.deepEqual([writes,refreshes,normalSuccess,refreshFailure,writeFailure],[1,0,0,0,1],'falha de escrita permite tratamento sem releitura');
+await uiContext.runWriteThenRefresh_(()=>{writes++;return Promise.resolve('created');},()=>{refreshes++;return Promise.reject(Error('refresh'));},()=>normalSuccess++,()=>refreshFailure++,()=>writeFailure++);assert.deepEqual([writes,refreshes,normalSuccess,refreshFailure,writeFailure],[2,1,0,1,1],'sucesso seguido de falha de releitura não reenvia criação');
+let deleteWrites=0;await uiContext.runWriteThenRefresh_(()=>{deleteWrites++;return Promise.resolve('deleted');},()=>Promise.reject(Error('refresh')),()=>{},()=>{},()=>{});assert.equal(deleteWrites,1,'exclusão concluída não é reenviada após falha de releitura');
+assert.equal(uiContext.allDayPeriodText({start:'2026-08-10T00:00:00',end:'2026-08-11T00:00:00'}),'10/08/2026 · dia inteiro');assert.equal(uiContext.allDayPeriodText({start:'2026-08-10T00:00:00',end:'2026-08-18T00:00:00'}),'10/08/2026 a 17/08/2026 · dias inteiros');
+console.log('Admin Apps Script: estado dos campos, sessão UUID, escrita/releitura e intervalos visuais validados por comportamento.');
+
 
 console.log('Admin Apps Script: operações administrativas e compensações validadas com mocks.');
