@@ -113,4 +113,11 @@ O painel cria bloqueios temporizados, preservando qualquer minuto entre 08:30 e 
 
 Cada bloqueio criado pelo painel recebe um UUID e um marcador privado. Isso torna a criação idempotente e permite que a exclusão confirme a identidade do evento no calendário de Disponibilidade. Bloqueios criados manualmente no Google Agenda continuam visíveis no painel e na Agenda, mas são identificados como gerenciados diretamente no Google Agenda e não podem ser excluídos pelo painel.
 
-Criar ou excluir bloqueios não lê nem altera linhas de planilhas, não cria pagamentos e não envia mensagens. O site público passa a respeitar automaticamente esses períodos porque sua disponibilidade já consulta os calendários configurados. Edição e recorrências continuam fora do escopo desta fase.
+Criar ou excluir bloqueios não lê nem altera linhas de planilhas, não cria pagamentos e não envia mensagens. O site público passa a respeitar automaticamente esses períodos porque sua disponibilidade já consulta os calendários configurados. Recorrências continuam fora do escopo desta fase.
+
+
+## Fase 10C-2 — edição segura
+
+Bloqueios gerenciados podem ser editados no próprio evento, inclusive convertendo entre horário específico e dia inteiro. O painel preserva `eventId`, UUID e marcador, ignora somente o próprio evento ao procurar conflitos e aceita períodos adjacentes. Uma repetição com os mesmos dados é idempotente.
+
+Antes da escrita, o servidor guarda período, tipo, título e descrição. Se uma alteração parcial falhar, ele tenta restaurar integralmente o mesmo evento; uma restauração impossível exige reconciliação manual. Eventos manuais permanecem somente leitura e nunca exibem ações de edição ou exclusão.
