@@ -20,7 +20,7 @@
         <button class="nav-btn" data-view="clientes">Clientes</button>
         <button class="nav-btn" data-view="pagamentos">Pagamentos <span class="count" id="navPayments">0</span></button>
       </nav>
-      <p class="sidebar-foot">Fase 10A · consulta segura, sem alterações</p>
+      <p class="sidebar-foot">Fase 10B · aprovação manual segura</p>
     </aside>
     <div class="drawer-overlay" id="drawerOverlay" hidden></div>
     <div class="content-shell">
@@ -43,7 +43,7 @@
         </section>
 
         <section class="view" id="view-solicitacoes" aria-labelledby="title-solicitacoes" hidden>
-          <header class="page-head"><div><h1 tabindex="-1" id="title-solicitacoes">Solicitações</h1><p>Pré-solicitações recebidas, somente para consulta.</p></div></header>
+          <header class="page-head"><div><h1 tabindex="-1" id="title-solicitacoes">Solicitações</h1><p>Pré-solicitações recebidas para análise e aprovação manual.</p></div></header>
           <div class="toolbar"><label class="grow">Buscar solicitações<input class="input" id="requestSearch" type="search" placeholder="Responsável, pet, serviço ou região"></label><label>Status<select id="requestStatus"><option value="TODOS">Todos</option><option>PENDENTE</option><option>CONFIRMADO</option><option>MAIS_INFORMACOES</option><option>RECUSADO</option><option>CANCELADO</option></select></label></div>
           <div class="list" id="requestList"></div>
         </section>
