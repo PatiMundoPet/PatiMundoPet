@@ -59,6 +59,81 @@ function listarClientes() {
   return safelyRead_(function (config) { return readSheet_(config, ADMIN.sheets.clients, mapClient_); });
 }
 
+function cadastrarCliente(payload) { return saveClient_(payload, false); }
+function editarCliente(payload) { return saveClient_(payload, true); }
+
+function saveClient_(payload, editing) {
+  var config, input;
+  try {
+    config = getConfig_(); authorize_(config); input = validateClientInput_(payload, editing);
+  } catch (error) {
+    if (error && error.safeCode) throw error;
+    throw safeError_('INVALID_CLIENT', 'Revise os dados do cliente.');
+  }
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) throw safeError_('LOCK_TIMEOUT', 'O painel está ocupado. Tente novamente.');
+  try {
+    var source = clientSheet_(config), matches = clientMatches_(source, input), target;
+    if (editing) {
+      target = matches.byId;
+      if (!target) throw safeError_('CLIENT_NOT_FOUND', 'O cliente não foi encontrado. Atualize os dados e tente novamente.');
+      if (matches.idCount !== 1) throw safeError_('RECONCILIATION_REQUIRED', 'O cadastro precisa de revisão antes de continuar.');
+    } else {
+      var rememberedId = PropertiesService.getScriptProperties().getProperty(clientOperationKey_(input.operationId));
+      var remembered = rememberedId && matches.rows.filter(function (item) { return item.clientId === rememberedId; })[0];
+      if (remembered) return { ok: true, data: { clientId: remembered.clientId, idempotent: true } };
+    }
+    if (matches.phoneDuplicate) throw safeError_('DUPLICATE_WHATSAPP', 'Já existe um cliente com este WhatsApp.');
+    if (matches.emailDuplicate) throw safeError_('DUPLICATE_EMAIL', 'Já existe um cliente com este e-mail.');
+    if (editing) {
+      var updated = target.values.slice();
+      setClientFormFields_(updated, source.headers, input);
+      source.sheet.getRange(target.rowNumber, 1, 1, source.headers.length).setValues([updated]);
+      SpreadsheetApp.flush();
+      return { ok: true, data: { clientId: target.clientId, updated: true } };
+    }
+    var clientId = Utilities.getUuid(); validateUuid_(clientId);
+    var row = source.headers.map(function () { return ''; });
+    row[source.headers.indexOf('clienteId')] = clientId;
+    setClientFormFields_(row, source.headers, input);
+    row[source.headers.indexOf('dataCadastro')] = new Date();
+    source.sheet.appendRow(row); SpreadsheetApp.flush();
+    PropertiesService.getScriptProperties().setProperty(clientOperationKey_(input.operationId), clientId);
+    return { ok: true, data: { clientId: clientId, created: true } };
+  } catch (error) {
+    if (error && error.safeCode) throw error;
+    console.error('ADMIN_CLIENT_WRITE_FAILED');
+    throw safeError_('WRITE_ERROR', 'Não foi possível salvar o cliente. Os demais dados foram preservados.');
+  } finally { lock.releaseLock(); }
+}
+
+function validateClientInput_(payload, editing) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw safeError_('INVALID_CLIENT', 'Revise os dados do cliente.');
+  var operationId = String(payload.operationId || '').trim(); validateUuid_(operationId);
+  var clientId = String(payload.clientId || '').trim();
+  if (editing) validateUuid_(clientId); else if (clientId) throw safeError_('INVALID_CLIENT', 'Revise os dados do cliente.');
+  var responsible = cleanClientText_(payload.responsible, 120, true, 'responsável');
+  var whatsapp = normalizeClientWhatsapp_(payload.whatsapp);
+  var email = normalizeClientEmail_(payload.email);
+  if (!whatsapp && !email) throw safeError_('INVALID_CLIENT', 'Informe um WhatsApp ou e-mail válido.');
+  if (!Array.isArray(payload.pets) || !payload.pets.length || payload.pets.length > 20) throw safeError_('INVALID_CLIENT', 'Informe ao menos um pet válido.');
+  var pets = payload.pets.map(function (pet) { var clean = cleanClientText_(pet, 80, true, 'pet'); if (clean.indexOf(',') >= 0) throw safeError_('INVALID_CLIENT', 'Os nomes dos pets não podem conter vírgulas.'); return clean; });
+  var seen = {}; pets = pets.filter(function (pet) { var key = comparisonText_(pet); if (seen[key]) return false; seen[key] = true; return true; });
+  return { operationId: operationId, clientId: clientId, responsible: responsible, whatsapp: whatsapp, email: email, pets: pets, notes: cleanClientText_(payload.notes, 1000, false, 'observações') };
+}
+function cleanClientText_(value, limit, required, label) { var clean = String(value || '').replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\s+/g, ' ').trim(); if (required && !clean) throw safeError_('INVALID_CLIENT', 'Informe ' + label + '.'); if (clean.length > limit) throw safeError_('INVALID_CLIENT', 'Revise o tamanho dos campos informados.'); return /^[=+\-@]/.test(clean) ? "'" + clean : clean; }
+function comparisonText_(value) { return String(value || '').replace(/^'/, '').trim().toLocaleLowerCase('pt-BR'); }
+function normalizeClientWhatsapp_(value) { var raw = String(value || '').trim(), digits = raw.replace(/\D/g, ''); if (!raw) return ''; if (digits.length < 10 || digits.length > 13) throw safeError_('INVALID_CLIENT', 'Informe um WhatsApp válido.'); if (digits.length <= 11) digits = '55' + digits; return digits; }
+function normalizeClientEmail_(value) { var email = displayClientEmail_(value); if (!email) return ''; if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw safeError_('INVALID_CLIENT', 'Informe um e-mail válido.'); return email; }
+function safeClientEmail_(value) { var email = normalizeClientEmail_(value); return /^[=+\-@]/.test(email) ? "'" + email : email; }
+function displayClientEmail_(value) { var email = String(value || '').trim(); return /^'[=+\-@]/.test(email) ? email.slice(1) : email; }
+function clientEmailKey_(value) { return displayClientEmail_(value).toLowerCase(); }
+function clientSheet_(config) { var sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(ADMIN.sheets.clients.name); if (!sheet) throw safeError_('CONFIG_ERROR', 'O cadastro de clientes precisa ser revisado.'); var columns = sheet.getLastColumn(), headers = columns ? sheet.getRange(1, 1, 1, columns).getValues()[0].map(function (value) { return String(value).trim(); }) : []; if (ADMIN.sheets.clients.headers.some(function (header) { return headers.indexOf(header) < 0; })) throw safeError_('CONFIG_ERROR', 'O cadastro de clientes precisa ser revisado.'); var count = sheet.getLastRow() - 1, rows = count > 0 ? sheet.getRange(2, 1, count, columns).getValues() : []; return { sheet: sheet, headers: headers, rows: rows }; }
+function clientMatches_(source, input) { var id = source.headers.indexOf('clienteId'), phone = source.headers.indexOf('WhatsApp'), email = source.headers.indexOf('e-mail'), result = { byId: null, idCount: 0, phoneDuplicate: null, emailDuplicate: null, rows: [] }; source.rows.forEach(function (row, index) { var item = { values: row, rowNumber: index + 2, clientId: String(row[id] || '').trim() }; result.rows.push(item); if (input.clientId && item.clientId === input.clientId) { result.idCount++; if (!result.byId) result.byId = item; } var own = input.clientId && item.clientId === input.clientId; if (!own && input.whatsapp && normalizeStoredWhatsapp_(row[phone]) === input.whatsapp) result.phoneDuplicate = item; if (!own && input.email && clientEmailKey_(row[email]) === clientEmailKey_(input.email)) result.emailDuplicate = item; }); return result; }
+function normalizeStoredWhatsapp_(value) { var digits = String(value || '').replace(/\D/g, ''); return digits && digits.length <= 11 ? '55' + digits : digits; }
+function clientOperationKey_(operationId) { return 'CLIENT_CREATE_' + operationId; }
+function setClientFormFields_(row, headers, input) { row[headers.indexOf('responsável')] = input.responsible; row[headers.indexOf('WhatsApp')] = input.whatsapp; row[headers.indexOf('e-mail')] = safeClientEmail_(input.email); row[headers.indexOf('pets')] = input.pets.join(', '); row[headers.indexOf('observações')] = input.notes; }
+
 function listarPagamentos() {
   return safelyRead_(function (config) { return readSheet_(config, ADMIN.sheets.payments, mapPayment_); });
 }
@@ -151,7 +226,7 @@ function mapRequest_(row, timezone) {
 }
 
 function mapClient_(row, timezone) {
-  return { clientId: text_(row.clienteId), responsible: text_(row['responsável']), whatsapp: text_(row.WhatsApp), email: text_(row['e-mail']), pets: text_(row.pets), notes: text_(row['observações']), registeredAt: dateTime_(row.dataCadastro, timezone), lastAppointment: dateTime_(row['últimoAtendimento'], timezone) };
+  return { clientId: text_(row.clienteId), responsible: text_(row['responsável']), whatsapp: text_(row.WhatsApp), email: displayClientEmail_(row['e-mail']), pets: text_(row.pets), notes: text_(row['observações']), registeredAt: dateTime_(row.dataCadastro, timezone), lastAppointment: dateTime_(row['últimoAtendimento'], timezone) };
 }
 
 function mapPayment_(row, timezone) {

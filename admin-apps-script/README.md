@@ -89,17 +89,17 @@ A restrição da implantação é a primeira camada. Toda função de leitura ta
 - [ ] Com Q:R corretas e os calendários disponíveis, confirmar que as ações permitidas pelo status ficam habilitadas.
 - [ ] Confirmar que solicitações RECUSADAS e CANCELADAS não exibem ações de escrita.
 
-## Limitações preservadas após a Fase 10B
+## Limitações preservadas após a Fase 10D-1
 
 - Não cria, edita, pausa ou exclui bloqueios manualmente. Eventos de atendimento são criados ou removidos somente pelas ações explícitas de confirmar e cancelar.
 - Não existe criação manual de atendimento nesta fase; confirmar uma solicitação cria somente o evento vinculado, e recorrências continuam fora de escopo.
-- Não edita clientes nem adiciona pets.
+- Não exclui nem arquiva clientes e não cria atendimentos a partir do cadastro.
 - Não registra, edita ou altera pagamentos.
 - Não envia mensagens, e-mails ou cobranças automaticamente; links de contato dependem de clique explícito.
 - Não oferece gateway de pagamento.
 - Relações avançadas de histórico permanecem reservadas para evolução posterior.
 
-Não há fallback fictício nem simulação local de salvamento. As únicas escritas desta fase são as transições explícitas de solicitações.
+Não há fallback fictício nem simulação local de salvamento. Escritas são limitadas às operações administrativas explicitamente documentadas.
 
 ## Fase 10B — aprovação manual
 
@@ -121,3 +121,11 @@ Criar ou excluir bloqueios não lê nem altera linhas de planilhas, não cria pa
 Bloqueios gerenciados podem ser editados no próprio evento, inclusive convertendo entre horário específico e dia inteiro. O painel preserva `eventId`, UUID e marcador, ignora somente o próprio evento ao procurar conflitos e aceita períodos adjacentes. Uma repetição com os mesmos dados é idempotente.
 
 Antes da escrita, o servidor guarda período, tipo, título e descrição. Se uma alteração parcial falhar, ele tenta restaurar integralmente o mesmo evento; uma restauração impossível exige reconciliação manual. Eventos manuais permanecem somente leitura e nunca exibem ações de edição ou exclusão.
+
+## Fase 10D-1 — clientes e pets
+
+O módulo Clientes permite cadastrar e editar responsável, WhatsApp, e-mail, pets e observações. Cada criação recebe um UUID gerado no servidor e uma chave de operação por abertura do formulário, usada para tornar repetições idempotentes. Toda escrita exige a conta administrativa, adquire `LockService` e relê a aba completa dentro do lock antes de verificar identidade e duplicidades.
+
+WhatsApp e e-mail são comparados em formato normalizado. Na edição, o próprio UUID é desconsiderado, enquanto `clienteId`, `dataCadastro`, `últimoAtendimento` e eventuais colunas internas permanecem inalterados. Textos e e-mails iniciados por caracteres interpretáveis como fórmula são neutralizados antes da gravação, sem exibir o marcador de segurança nem prejudicar o link de contato. Erros seguros aparecem dentro do formulário, preservando os valores para correção e nova tentativa. Após qualquer sucesso, o painel relê os dados iniciais, a agenda e os bloqueios antes de liberar novas escritas.
+
+Exclusão, arquivamento, histórico detalhado, atendimentos manuais, pagamentos e recorrências permanecem fora do escopo.
