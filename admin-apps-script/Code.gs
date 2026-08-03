@@ -114,7 +114,8 @@ function excluirCliente(clientId) {
 function futureClientAppointments_(config, client, clientHeaders) {
   var phone = normalizeStoredWhatsapp_(client.values[clientHeaders.indexOf('WhatsApp')]);
   var email = clientEmailKey_(client.values[clientHeaders.indexOf('e-mail')]);
-  var sharedIdentity = clientSheet_(config).rows.some(function (row) {
+  var clientRows = clientSheet_(config).rows;
+  var sharedIdentity = clientRows.some(function (row) {
     if (String(row[clientHeaders.indexOf('clienteId')] || '').trim() === client.clientId) return false;
     return (phone && normalizeStoredWhatsapp_(row[clientHeaders.indexOf('WhatsApp')]) === phone) || (email && clientEmailKey_(row[clientHeaders.indexOf('e-mail')]) === email);
   });
@@ -127,8 +128,16 @@ function futureClientAppointments_(config, client, clientHeaders) {
   if (!calendar) throw safeError_('CONFIG_ERROR', 'A agenda de atendimentos precisa ser revisada.');
   var now = new Date().getTime(), links = [];
   rows.forEach(function (row, index) {
-    var contactMatch = (phone && normalizeStoredWhatsapp_(row[indexes.WhatsApp]) === phone) || (email && clientEmailKey_(row[indexes['e-mail']]) === email);
+    var requestPhone = normalizeStoredWhatsapp_(row[indexes.WhatsApp]), requestEmail = clientEmailKey_(row[indexes['e-mail']]);
+    var contactMatch = (phone && requestPhone === phone) || (email && requestEmail === email);
     if (!contactMatch || String(row[indexes.status] || '').trim().toUpperCase() !== 'CONFIRMADO') return;
+    var ownerIds = [];
+    clientRows.forEach(function (clientRow) {
+      var ownerId = String(clientRow[clientHeaders.indexOf('clienteId')] || '').trim();
+      var ownsContact = (requestPhone && normalizeStoredWhatsapp_(clientRow[clientHeaders.indexOf('WhatsApp')]) === requestPhone) || (requestEmail && clientEmailKey_(clientRow[clientHeaders.indexOf('e-mail')]) === requestEmail);
+      if (ownsContact && ownerIds.indexOf(ownerId) < 0) ownerIds.push(ownerId);
+    });
+    if (ownerIds.length !== 1 || ownerIds[0] !== client.clientId) throw safeError_('RECONCILIATION_REQUIRED', 'O vínculo do agendamento precisa de revisão antes de continuar.');
     var context = { config: config, record: {}, values: row, headers: source.headers };
     source.headers.forEach(function (header, column) { context.record[header] = row[column]; });
     var interval; try { interval = interval_(context); } catch (error) { if (error.safeCode === 'INTERVAL_UNAVAILABLE') return; throw safeError_('RECONCILIATION_REQUIRED', 'Um agendamento futuro precisa de revisão antes da exclusão.'); }
