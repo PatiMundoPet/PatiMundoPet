@@ -59,6 +59,30 @@ function listarClientes() {
   return safelyRead_(function (config) { return readSheet_(config, ADMIN.sheets.clients, mapClient_); });
 }
 
+function listarProximosAgendamentosCliente(clientId) {
+  var config;
+  try { config = getConfig_(); authorize_(config); validateUuid_(clientId); clientId = clientId.trim(); }
+  catch (error) { if (error && error.safeCode) throw error; throw safeError_('INVALID_REQUEST', 'O cliente informado é inválido.'); }
+  try {
+    var source = clientSheet_(config), matches = clientMatches_(source, { clientId: clientId, whatsapp: '', email: '' });
+    if (!matches.byId) throw safeError_('CLIENT_NOT_FOUND', 'O cliente não foi encontrado. Atualize os dados e tente novamente.');
+    if (matches.idCount !== 1) throw safeError_('RECONCILIATION_REQUIRED', 'O cadastro precisa de revisão antes de continuar.');
+    return { ok: true, data: futureClientAppointments_(config, matches.byId, source.headers).map(function (link) {
+      return {
+        date: Utilities.formatDate(link.interval.start, config.TIMEZONE, 'yyyy-MM-dd'),
+        startTime: Utilities.formatDate(link.interval.start, config.TIMEZONE, 'HH:mm'),
+        endTime: Utilities.formatDate(link.interval.end, config.TIMEZONE, 'HH:mm'),
+        service: text_(link.values[link.headers.indexOf('serviço')]),
+        pet: text_(link.values[link.headers.indexOf('pet')])
+      };
+    }).sort(function (a, b) { return (a.date + 'T' + a.startTime).localeCompare(b.date + 'T' + b.startTime); }) };
+  } catch (error) {
+    if (error && error.safeCode) throw error;
+    console.error('ADMIN_CLIENT_APPOINTMENTS_READ_FAILED');
+    throw safeError_('READ_ERROR', 'Não foi possível consultar os agendamentos agora.');
+  }
+}
+
 function cadastrarCliente(payload) { return saveClient_(payload, false); }
 function editarCliente(payload) { return saveClient_(payload, true); }
 
@@ -90,7 +114,8 @@ function excluirCliente(clientId) {
 function futureClientAppointments_(config, client, clientHeaders) {
   var phone = normalizeStoredWhatsapp_(client.values[clientHeaders.indexOf('WhatsApp')]);
   var email = clientEmailKey_(client.values[clientHeaders.indexOf('e-mail')]);
-  var sharedIdentity = clientSheet_(config).rows.some(function (row) {
+  var clientRows = clientSheet_(config).rows;
+  var sharedIdentity = clientRows.some(function (row) {
     if (String(row[clientHeaders.indexOf('clienteId')] || '').trim() === client.clientId) return false;
     return (phone && normalizeStoredWhatsapp_(row[clientHeaders.indexOf('WhatsApp')]) === phone) || (email && clientEmailKey_(row[clientHeaders.indexOf('e-mail')]) === email);
   });
@@ -103,12 +128,21 @@ function futureClientAppointments_(config, client, clientHeaders) {
   if (!calendar) throw safeError_('CONFIG_ERROR', 'A agenda de atendimentos precisa ser revisada.');
   var now = new Date().getTime(), links = [];
   rows.forEach(function (row, index) {
-    var contactMatch = (phone && normalizeStoredWhatsapp_(row[indexes.WhatsApp]) === phone) || (email && clientEmailKey_(row[indexes['e-mail']]) === email);
-    if (!contactMatch || String(row[indexes.status] || '').trim().toUpperCase() !== 'CONFIRMADO') return;
+    if (String(row[indexes.status] || '').trim().toUpperCase() !== 'CONFIRMADO') return;
+    var requestPhone = normalizeStoredWhatsapp_(row[indexes.WhatsApp]), requestEmail = clientEmailKey_(row[indexes['e-mail']]);
+    var contactMatch = (phone && requestPhone === phone) || (email && requestEmail === email);
+    if (!contactMatch) return;
     var context = { config: config, record: {}, values: row, headers: source.headers };
     source.headers.forEach(function (header, column) { context.record[header] = row[column]; });
     var interval; try { interval = interval_(context); } catch (error) { if (error.safeCode === 'INTERVAL_UNAVAILABLE') return; throw safeError_('RECONCILIATION_REQUIRED', 'Um agendamento futuro precisa de revisão antes da exclusão.'); }
     if (interval.start.getTime() <= now) return;
+    var ownerIds = [];
+    clientRows.forEach(function (clientRow) {
+      var ownerId = String(clientRow[clientHeaders.indexOf('clienteId')] || '').trim();
+      var ownsContact = (requestPhone && normalizeStoredWhatsapp_(clientRow[clientHeaders.indexOf('WhatsApp')]) === requestPhone) || (requestEmail && clientEmailKey_(clientRow[clientHeaders.indexOf('e-mail')]) === requestEmail);
+      if (ownsContact && ownerIds.indexOf(ownerId) < 0) ownerIds.push(ownerId);
+    });
+    if (ownerIds.length !== 1 || ownerIds[0] !== client.clientId) throw safeError_('RECONCILIATION_REQUIRED', 'O vínculo do agendamento precisa de revisão antes de continuar.');
     var requestId = String(row[indexes.requestId] || '').trim(); validateUuid_(requestId);
     var eventId = String(row[indexes.eventIdAtendimento] || '').trim(), event = eventId && calendar.getEventById(eventId);
     if (!eventMatches_(event, requestId)) throw safeError_('RECONCILIATION_REQUIRED', 'Um agendamento futuro precisa de revisão antes da exclusão.');
