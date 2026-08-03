@@ -128,9 +128,14 @@ function futureClientAppointments_(config, client, clientHeaders) {
   if (!calendar) throw safeError_('CONFIG_ERROR', 'A agenda de atendimentos precisa ser revisada.');
   var now = new Date().getTime(), links = [];
   rows.forEach(function (row, index) {
+    if (String(row[indexes.status] || '').trim().toUpperCase() !== 'CONFIRMADO') return;
     var requestPhone = normalizeStoredWhatsapp_(row[indexes.WhatsApp]), requestEmail = clientEmailKey_(row[indexes['e-mail']]);
     var contactMatch = (phone && requestPhone === phone) || (email && requestEmail === email);
-    if (!contactMatch || String(row[indexes.status] || '').trim().toUpperCase() !== 'CONFIRMADO') return;
+    if (!contactMatch) return;
+    var context = { config: config, record: {}, values: row, headers: source.headers };
+    source.headers.forEach(function (header, column) { context.record[header] = row[column]; });
+    var interval; try { interval = interval_(context); } catch (error) { if (error.safeCode === 'INTERVAL_UNAVAILABLE') return; throw safeError_('RECONCILIATION_REQUIRED', 'Um agendamento futuro precisa de revisão antes da exclusão.'); }
+    if (interval.start.getTime() <= now) return;
     var ownerIds = [];
     clientRows.forEach(function (clientRow) {
       var ownerId = String(clientRow[clientHeaders.indexOf('clienteId')] || '').trim();
@@ -138,10 +143,6 @@ function futureClientAppointments_(config, client, clientHeaders) {
       if (ownsContact && ownerIds.indexOf(ownerId) < 0) ownerIds.push(ownerId);
     });
     if (ownerIds.length !== 1 || ownerIds[0] !== client.clientId) throw safeError_('RECONCILIATION_REQUIRED', 'O vínculo do agendamento precisa de revisão antes de continuar.');
-    var context = { config: config, record: {}, values: row, headers: source.headers };
-    source.headers.forEach(function (header, column) { context.record[header] = row[column]; });
-    var interval; try { interval = interval_(context); } catch (error) { if (error.safeCode === 'INTERVAL_UNAVAILABLE') return; throw safeError_('RECONCILIATION_REQUIRED', 'Um agendamento futuro precisa de revisão antes da exclusão.'); }
-    if (interval.start.getTime() <= now) return;
     var requestId = String(row[indexes.requestId] || '').trim(); validateUuid_(requestId);
     var eventId = String(row[indexes.eventIdAtendimento] || '').trim(), event = eventId && calendar.getEventById(eventId);
     if (!eventMatches_(event, requestId)) throw safeError_('RECONCILIATION_REQUIRED', 'Um agendamento futuro precisa de revisão antes da exclusão.');
