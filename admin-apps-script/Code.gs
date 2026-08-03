@@ -75,7 +75,10 @@ function excluirCliente(clientId) {
     var target = matches.byId, links = futureClientAppointments_(config, target, source.headers);
     cancelClientAppointments_(links);
     try { source.sheet.deleteRow(target.rowNumber); SpreadsheetApp.flush(); }
-    catch (deleteError) { restoreClientAppointments_(links); throw safeError_('WRITE_ERROR', 'Não foi possível excluir o cliente. Os dados foram preservados.'); }
+    catch (deleteError) {
+      if (!restoreClientAppointments_(links)) throw safeError_('RECONCILIATION_REQUIRED', 'A operação precisa de revisão administrativa.');
+      throw safeError_('WRITE_ERROR', 'Não foi possível excluir o cliente. Os dados foram preservados.');
+    }
     return { ok: true, data: { deleted: true, canceledAppointments: links.length } };
   } catch (error) {
     if (error && error.safeCode) throw error;
@@ -122,14 +125,22 @@ function cancelClientAppointments_(links) {
       var canceled = link.values.slice(); canceled[link.headers.indexOf('status')] = 'CANCELADO'; canceled[link.headers.indexOf('eventIdAtendimento')] = ''; canceled[link.headers.indexOf('dataÚltimaAtualização')] = new Date();
       link.sheet.getRange(link.rowNumber, 1, 1, link.headers.length).setValues([canceled]); SpreadsheetApp.flush();
     });
-  } catch (error) { restoreClientAppointments_(completed); throw safeError_('RECONCILIATION_REQUIRED', 'Não foi possível liberar todos os horários. Os dados precisam de revisão.'); }
+  } catch (error) {
+    if (!completed.length || restoreClientAppointments_(completed)) throw safeError_('WRITE_ERROR', 'Não foi possível excluir o cliente. Os dados foram preservados.');
+    throw safeError_('RECONCILIATION_REQUIRED', 'A operação precisa de revisão administrativa.');
+  }
 }
 function restoreClientAppointments_(links) {
-  links.slice().reverse().forEach(function (link) {
-    var restored = link.calendar.createEvent(link.title, link.interval.start, link.interval.end, { description: link.description });
-    var values = link.values.slice(); values[link.headers.indexOf('eventIdAtendimento')] = restored.getId();
-    link.sheet.getRange(link.rowNumber, 1, 1, link.headers.length).setValues([values]); SpreadsheetApp.flush();
-  });
+  try {
+    links.slice().reverse().forEach(function (link) {
+      var restored = link.calendar.createEvent(link.title, link.interval.start, link.interval.end, { description: link.description });
+      if (!eventMatches_(restored, link.requestId)) { try { restored.deleteEvent(); } catch (ignored) {} throw new Error('invalid restored marker'); }
+      var values = link.values.slice(); values[link.headers.indexOf('eventIdAtendimento')] = restored.getId();
+      try { link.sheet.getRange(link.rowNumber, 1, 1, link.headers.length).setValues([values]); SpreadsheetApp.flush(); }
+      catch (writeError) { try { restored.deleteEvent(); } catch (ignored) {} throw writeError; }
+    });
+    return true;
+  } catch (error) { console.error('ADMIN_CLIENT_RESTORE_FAILED'); return false; }
 }
 
 function saveClient_(payload, editing) {
