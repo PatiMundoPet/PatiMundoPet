@@ -1,7 +1,7 @@
 {
   "_notice": "Trava interna de segurança: integração inativa até configuração manual futura.",
   "mode": "live",
-  "webAppUrl": "https://script.google.com/macros/s/AKfycbz9RyLNBWPGbq8xxfUKipwQ7CYKCwkvNYf0FajD7bX365w9NNFV9pd8Mc-qyeKNoKUQ/exec",
+  "webAppUrl": "https://script.google.com/macros/s/AKfycbzfQmq-u3Hk30aeqcc5xc70M2LHZQU5kt_5cxjkWSteXygUtuSwsUoohuBzk2mT9AA/exec",
   "requestTimeoutMs": 8000,
   "maxResponseBytes": 32768,
   "maxFutureDays": 90,
