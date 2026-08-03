@@ -489,6 +489,11 @@ function strictSheetDate_(value, timezone) { if (nativeDate_(value)) return Util
 function strictSheetTime_(value, timezone) { if (nativeDate_(value)) return Utilities.formatDate(value, timezone, 'HH:mm'); if (typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) return value; throw safeError_('INVALID_INTERVAL', 'O horário da solicitação é inválido ou legado.'); }
 function interval_(context) { var date = strictSheetDate_(context.record.data, context.config.TIMEZONE), start = strictSheetTime_(context.record['horário'], context.config.TIMEZONE), end = strictSheetTime_(context.record['horárioTérmino'], context.config.TIMEZONE); if (start < '08:30' || start >= end || end > '18:00') throw safeError_('INVALID_INTERVAL', 'O horário da solicitação é inválido ou legado.'); var a, b; try { a = Utilities.parseDate(date + ' ' + start, context.config.TIMEZONE, 'yyyy-MM-dd HH:mm'); b = Utilities.parseDate(date + ' ' + end, context.config.TIMEZONE, 'yyyy-MM-dd HH:mm'); if (Utilities.formatDate(a, context.config.TIMEZONE, 'yyyy-MM-dd HH:mm') !== date + ' ' + start || Utilities.formatDate(b, context.config.TIMEZONE, 'yyyy-MM-dd HH:mm') !== date + ' ' + end) throw new Error('round trip'); } catch (error) { throw safeError_('INVALID_INTERVAL', 'O horário da solicitação é inválido ou legado.'); } if (a.getTime() <= new Date().getTime()) throw safeError_('INTERVAL_UNAVAILABLE', 'O período solicitado não está disponível.'); return { start: a, end: b }; }
 function hasConflict_(calendar, interval) { return calendar.getEvents(interval.start, interval.end).some(function (event) { return !(typeof event.getEventStatus === 'function' && String(event.getEventStatus()).toLowerCase() === 'canceled') && event.getStartTime().getTime() < interval.end.getTime() && event.getEndTime().getTime() > interval.start.getTime(); }); }
+function confirmationRowsEqual_(left, right) {
+  if (!left || !right || left.length !== right.length) return false;
+  for (var i = 0; i < left.length; i++) { var a = left[i], b = right[i]; if (nativeDate_(a) || nativeDate_(b)) { if (!nativeDate_(a) || !nativeDate_(b) || a.getTime() !== b.getTime()) return false; } else if (a !== b) return false; }
+  return true;
+}
 function resolveConfirmationClient_(context) {
   var source = clientSheet_(context.config), phone = String(context.record.WhatsApp || '').trim() ? normalizeClientWhatsapp_(context.record.WhatsApp) : '', email = String(context.record['e-mail'] || '').trim() ? normalizeClientEmail_(context.record['e-mail']) : '', phoneMatches = [], emailMatches = []; if (!phone && !email) throw safeError_('INVALID_CLIENT', 'A solicitação não possui contato válido.');
   source.rows.forEach(function (row, index) { var item = { values: row.slice(), rowNumber: index + 2, clientId: String(row[source.headers.indexOf('clienteId')] || '').trim() }; if (phone && normalizeStoredWhatsapp_(row[source.headers.indexOf('WhatsApp')]) === phone) phoneMatches.push(item); if (email && clientEmailKey_(row[source.headers.indexOf('e-mail')]) === email) emailMatches.push(item); });
@@ -496,30 +501,57 @@ function resolveConfirmationClient_(context) {
   var phoneClient = phoneMatches[0], emailClient = emailMatches[0];
   if (phoneClient && emailClient && phoneClient.clientId !== emailClient.clientId) throw safeError_('RECONCILIATION_REQUIRED', 'Os contatos do cliente precisam de revisão.');
   var target = phoneClient || emailClient || null; if (target) validateUuid_(target.clientId);
-  return { source: source, target: target, phone: phone, email: displayClientEmail_(context.record['e-mail']) };
+  return { source: source, target: target, phone: phone, email: email };
 }
-function writeConfirmationClient_(context, resolution) {
-  var h = resolution.source.headers, pet = text_(context.record.pet), target = resolution.target;
-  if (!target) { var id = Utilities.getUuid(); validateUuid_(id); var row = new Array(h.length).fill(''); row[h.indexOf('clienteId')] = id; row[h.indexOf('responsável')] = cleanClientText_(text_(context.record['responsável']), 120, true, 'responsável'); row[h.indexOf('WhatsApp')] = resolution.phone; row[h.indexOf('e-mail')] = safeClientEmail_(resolution.email); row[h.indexOf('pets')] = cleanClientText_(pet, 80, true, 'pet'); row[h.indexOf('dataCadastro')] = new Date(); resolution.source.sheet.appendRow(row); SpreadsheetApp.flush(); return { clientId: id, created: true, rowNumber: resolution.source.sheet.getLastRow(), values: row }; }
-  var updated = target.values.slice(), pets = String(updated[h.indexOf('pets')] || '').split(',').map(function (value) { return value.trim(); }).filter(Boolean);
-  if (!pets.some(function (value) { return value.toLowerCase() === pet.toLowerCase(); })) pets.push(pet);
+function prepareConfirmationClient_(context, resolution) {
+  var h = resolution.source.headers, pet = cleanClientText_(text_(context.record.pet), 80, true, 'pet'), target = resolution.target, updated, clientId;
+  if (!target) { clientId = Utilities.getUuid(); validateUuid_(clientId); updated = new Array(h.length).fill(''); updated[h.indexOf('clienteId')] = clientId; updated[h.indexOf('responsável')] = cleanClientText_(text_(context.record['responsável']), 120, true, 'responsável'); updated[h.indexOf('WhatsApp')] = resolution.phone; updated[h.indexOf('e-mail')] = safeClientEmail_(resolution.email); updated[h.indexOf('pets')] = pet; updated[h.indexOf('dataCadastro')] = new Date(); return { clientId: clientId, created: true, original: null, expected: updated }; }
+  updated = target.values.slice(); var pets = String(updated[h.indexOf('pets')] || '').split(',').map(function (value) { return value.trim(); }).filter(Boolean); if (!pets.some(function (value) { return value.toLowerCase() === pet.toLowerCase(); })) pets.push(pet);
   updated[h.indexOf('responsável')] = cleanClientText_(text_(context.record['responsável']), 120, true, 'responsável'); if (resolution.phone) updated[h.indexOf('WhatsApp')] = resolution.phone; if (resolution.email) updated[h.indexOf('e-mail')] = safeClientEmail_(resolution.email); updated[h.indexOf('pets')] = pets.join(', ');
-  resolution.source.sheet.getRange(target.rowNumber, 1, 1, h.length).setValues([updated]); SpreadsheetApp.flush(); return { clientId: target.clientId, created: false, rowNumber: target.rowNumber, values: target.values.slice() };
+  return { clientId: target.clientId, created: false, rowNumber: target.rowNumber, original: target.values.slice(), expected: updated };
 }
-function compensateConfirmationClient_(resolution, written) {
-  try { if (written.created) { var current = resolution.source.sheet.getRange(written.rowNumber, 1, 1, resolution.source.headers.length).getValues()[0]; if (String(current[resolution.source.headers.indexOf('clienteId')] || '').trim() !== written.clientId) return false; resolution.source.sheet.deleteRow(written.rowNumber); } else resolution.source.sheet.getRange(written.rowNumber, 1, 1, resolution.source.headers.length).setValues([written.values]); SpreadsheetApp.flush(); return true; } catch (error) { return false; }
+function clientPlanMatches_(resolution, plan, expected) {
+  var currentSource = clientSheet_(resolution.config), idIndex = currentSource.headers.indexOf('clienteId'), matches = [];
+  currentSource.rows.forEach(function (row, index) { if (String(row[idIndex] || '').trim() === plan.clientId) matches.push({ rowNumber: index + 2, values: row }); });
+  return matches.length === 1 && confirmationRowsEqual_(matches[0].values, expected);
+}
+function writeConfirmationClient_(resolution, plan) {
+  if (plan.created) resolution.source.sheet.appendRow(plan.expected); else resolution.source.sheet.getRange(plan.rowNumber, 1, 1, resolution.source.headers.length).setValues([plan.expected]);
+  SpreadsheetApp.flush(); if (!clientPlanMatches_(resolution, plan, plan.expected)) throw new Error('client write not verified');
+}
+function compensateConfirmationClient_(resolution, plan) {
+  try {
+    var source = clientSheet_(resolution.config), idIndex = source.headers.indexOf('clienteId'), matches = [];
+    source.rows.forEach(function (row, index) { if (String(row[idIndex] || '').trim() === plan.clientId) matches.push({ rowNumber: index + 2, values: row }); });
+    try { if (plan.created) { if (matches.length > 1) return false; if (matches.length === 1) source.sheet.deleteRow(matches[0].rowNumber); } else if (matches.length === 1) source.sheet.getRange(matches[0].rowNumber, 1, 1, source.headers.length).setValues([plan.original]); } catch (ignored) {}
+    try { SpreadsheetApp.flush(); } catch (ignored) {}
+    source = clientSheet_(resolution.config); matches = source.rows.filter(function (row) { return String(row[source.headers.indexOf('clienteId')] || '').trim() === plan.clientId; });
+    return plan.created ? matches.length === 0 : matches.length === 1 && confirmationRowsEqual_(matches[0], plan.original);
+  } catch (error) { return false; }
+}
+function restoreConfirmationRequest_(context, snapshot) {
+  try { try { context.sheet.getRange(context.rowNumber, 1, 1, context.headers.length).setValues([snapshot]); SpreadsheetApp.flush(); } catch (ignored) {} var current = context.sheet.getRange(context.rowNumber, 1, 1, context.headers.length).getValues()[0]; return confirmationRowsEqual_(current, snapshot); } catch (error) { return false; }
+}
+function removeConfirmationEvent_(context, event) {
+  if (!event) return true; try { event.deleteEvent(); } catch (ignored) {} try { return !context.appointments.getEventById(event.getId()); } catch (error) { return false; }
+}
+function compensateConfirmation_(context, snapshot, resolution, plan, event) {
+  var eventOk = removeConfirmationEvent_(context, event); var clientOk = compensateConfirmationClient_(resolution, plan); var requestOk = restoreConfirmationRequest_(context, snapshot); return { eventOk: eventOk, clientOk: clientOk, requestOk: requestOk, ok: eventOk && clientOk && requestOk };
+}
+function confirmationRequestMatches_(context, clientId, eventId) {
+  var row = context.sheet.getRange(context.rowNumber, 1, 1, context.headers.length).getValues()[0]; return String(row[column_(context, 'status')] || '').trim() === 'CONFIRMADO' && String(row[column_(context, 'clienteId')] || '').trim() === clientId && String(row[column_(context, 'eventIdAtendimento')] || '').trim() === eventId;
 }
 function confirmRequest_(context) {
   var current = status_(context), eventId = String(context.record.eventIdAtendimento || '').trim(), linkedId = String(context.record.clienteId || '').trim();
   if (current === 'CONFIRMADO') { if (!linkedId) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); validateUuid_(linkedId); if (!eventId || !eventMatches_(context.appointments.getEventById(eventId), context.requestId)) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); var existing = clientMatches_(clientSheet_(context.config), { clientId: linkedId, whatsapp: '', email: '' }); if (!existing.byId || existing.idCount !== 1) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); return { requestId: context.requestId, status: current, idempotent: true }; }
   if (eventId || linkedId) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); if (['PENDENTE', 'MAIS_INFORMACOES'].indexOf(current) < 0) throw safeError_('INVALID_TRANSITION', 'Esta ação não é permitida para o status atual.');
-  var resolution = resolveConfirmationClient_(context), interval = interval_(context); if (hasConflict_(context.appointments, interval) || hasConflict_(context.availability, interval)) throw safeError_('INTERVAL_UNAVAILABLE', 'O período solicitado não está disponível.');
-  var written; try { written = writeConfirmationClient_(context, resolution); } catch (error) { throw safeError_('PERSISTENCE_FAILED', 'Não foi possível salvar o cliente.'); }
-  var event, description = marker_(context.requestId) + '\nserviço: ' + text_(context.record['serviço']) + '\nresponsável: ' + text_(context.record['responsável']) + '\npet: ' + text_(context.record.pet);
+  var snapshot = context.values.slice(), resolution = resolveConfirmationClient_(context); resolution.config = context.config; var plan = prepareConfirmationClient_(context, resolution), interval = interval_(context); if (hasConflict_(context.appointments, interval) || hasConflict_(context.availability, interval)) throw safeError_('INTERVAL_UNAVAILABLE', 'O período solicitado não está disponível.');
+  try { writeConfirmationClient_(resolution, plan); } catch (error) { var clientFailure = compensateConfirmation_(context, snapshot, resolution, plan, null); if (!clientFailure.ok) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); throw safeError_('PERSISTENCE_FAILED', 'Não foi possível salvar o cliente.'); }
+  var event, description = marker_(context.requestId) + '\nserviço: ' + text_(context.record['serviço']) + '\nresponsável: ' + text_(context.record['responsável']) + '\npet: ' + text_(context.record.pet) + '\nWhatsApp: ' + text_(context.record.WhatsApp) + '\ne-mail: ' + text_(context.record['e-mail']) + '\nregião: ' + text_(context.record['região']) + '\nobservações: ' + text_(context.record['observações']);
   try { event = context.appointments.createEvent('Atendimento — ' + text_(context.record.pet) + ' — ' + text_(context.record['responsável']), interval.start, interval.end, { description: description }); if (!eventMatches_(event, context.requestId)) throw new Error('marker'); }
-  catch (error) { if (!compensateConfirmationClient_(resolution, written)) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); throw safeError_('PERSISTENCE_FAILED', 'Não foi possível criar o agendamento.'); }
-  try { return persist_(context, 'CONFIRMADO', event.getId(), written.clientId); }
-  catch (error) { var eventRestored = true; try { event.deleteEvent(); } catch (ignored) { eventRestored = false; } if (!eventRestored || !compensateConfirmationClient_(resolution, written)) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); throw safeError_('PERSISTENCE_FAILED', 'Não foi possível salvar a confirmação.'); }
+  catch (error) { var eventFailure = compensateConfirmation_(context, snapshot, resolution, plan, event); if (!eventFailure.ok) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); throw safeError_('PERSISTENCE_FAILED', 'Não foi possível criar o agendamento.'); }
+  try { var result = persist_(context, 'CONFIRMADO', event.getId(), plan.clientId); if (!confirmationRequestMatches_(context, plan.clientId, event.getId()) || !eventMatches_(context.appointments.getEventById(event.getId()), context.requestId) || !clientPlanMatches_(resolution, plan, plan.expected)) throw new Error('confirmation not verified'); return result; }
+  catch (error) { var persistFailure = compensateConfirmation_(context, snapshot, resolution, plan, event); if (!persistFailure.ok) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); throw safeError_('PERSISTENCE_FAILED', 'Não foi possível salvar a confirmação.'); }
 }
 function cancelRequest_(context) { var current = status_(context); assertNoUnexpectedEvent_(context, current); if (current === 'CANCELADO') return { requestId: context.requestId, status: current, idempotent: true }; if (current === 'RECUSADO') throw safeError_('INVALID_TRANSITION', 'Esta ação não é permitida para o status atual.'); if (current !== 'CONFIRMADO') return changeStatus_(context, ['PENDENTE', 'MAIS_INFORMACOES'], 'CANCELADO'); var eventId = String(context.record.eventIdAtendimento || '').trim(), event = eventId && context.appointments.getEventById(eventId); if (!eventMatches_(event, context.requestId)) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); event.deleteEvent(); try { return persist_(context, 'CANCELADO', ''); } catch (error) { throw safeError_('RECONCILIATION_REQUIRED', 'O cancelamento precisa de revisão administrativa.'); } }
 
