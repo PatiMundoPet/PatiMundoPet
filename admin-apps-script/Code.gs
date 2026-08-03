@@ -62,6 +62,87 @@ function listarClientes() {
 function cadastrarCliente(payload) { return saveClient_(payload, false); }
 function editarCliente(payload) { return saveClient_(payload, true); }
 
+function excluirCliente(clientId) {
+  var config;
+  try { config = getConfig_(); authorize_(config); validateUuid_(clientId); clientId = clientId.trim(); }
+  catch (error) { if (error && error.safeCode) throw error; throw safeError_('INVALID_CLIENT', 'O cliente informado é inválido.'); }
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) throw safeError_('LOCK_TIMEOUT', 'O painel está ocupado. Tente novamente.');
+  try {
+    var source = clientSheet_(config), matches = clientMatches_(source, { clientId: clientId, whatsapp: '', email: '' });
+    if (!matches.byId) throw safeError_('CLIENT_NOT_FOUND', 'O cliente não foi encontrado. Atualize os dados e tente novamente.');
+    if (matches.idCount !== 1) throw safeError_('RECONCILIATION_REQUIRED', 'O cadastro precisa de revisão antes de continuar.');
+    var target = matches.byId, links = futureClientAppointments_(config, target, source.headers);
+    cancelClientAppointments_(links);
+    try { source.sheet.deleteRow(target.rowNumber); SpreadsheetApp.flush(); }
+    catch (deleteError) {
+      if (!restoreClientAppointments_(links)) throw safeError_('RECONCILIATION_REQUIRED', 'A operação precisa de revisão administrativa.');
+      throw safeError_('WRITE_ERROR', 'Não foi possível excluir o cliente. Os dados foram preservados.');
+    }
+    return { ok: true, data: { deleted: true, canceledAppointments: links.length } };
+  } catch (error) {
+    if (error && error.safeCode) throw error;
+    console.error('ADMIN_CLIENT_DELETE_FAILED');
+    throw safeError_('WRITE_ERROR', 'Não foi possível excluir o cliente. Os dados foram preservados.');
+  } finally { lock.releaseLock(); }
+}
+
+function futureClientAppointments_(config, client, clientHeaders) {
+  var phone = normalizeStoredWhatsapp_(client.values[clientHeaders.indexOf('WhatsApp')]);
+  var email = clientEmailKey_(client.values[clientHeaders.indexOf('e-mail')]);
+  var sharedIdentity = clientSheet_(config).rows.some(function (row) {
+    if (String(row[clientHeaders.indexOf('clienteId')] || '').trim() === client.clientId) return false;
+    return (phone && normalizeStoredWhatsapp_(row[clientHeaders.indexOf('WhatsApp')]) === phone) || (email && clientEmailKey_(row[clientHeaders.indexOf('e-mail')]) === email);
+  });
+  if (sharedIdentity) throw safeError_('RECONCILIATION_REQUIRED', 'A identidade de contato precisa de revisão antes da exclusão.');
+  var source = requestSheet_(config), count = source.sheet.getLastRow() - 1;
+  var rows = count > 0 ? source.sheet.getRange(2, 1, count, source.headers.length).getValues() : [];
+  var indexes = {}; source.headers.forEach(function (header, index) { indexes[header] = index; });
+  ['requestId', 'status', 'data', 'horário', 'horárioTérmino', 'eventIdAtendimento', 'WhatsApp', 'e-mail'].forEach(function (header) { if (indexes[header] === undefined) throw safeError_('CONFIG_ERROR', 'Os dados dos agendamentos precisam ser revisados.'); });
+  var calendar = CalendarApp.getCalendarById(config.APPOINTMENTS_CALENDAR_ID);
+  if (!calendar) throw safeError_('CONFIG_ERROR', 'A agenda de atendimentos precisa ser revisada.');
+  var now = new Date().getTime(), links = [];
+  rows.forEach(function (row, index) {
+    var contactMatch = (phone && normalizeStoredWhatsapp_(row[indexes.WhatsApp]) === phone) || (email && clientEmailKey_(row[indexes['e-mail']]) === email);
+    if (!contactMatch || String(row[indexes.status] || '').trim().toUpperCase() !== 'CONFIRMADO') return;
+    var context = { config: config, record: {}, values: row, headers: source.headers };
+    source.headers.forEach(function (header, column) { context.record[header] = row[column]; });
+    var interval; try { interval = interval_(context); } catch (error) { if (error.safeCode === 'INTERVAL_UNAVAILABLE') return; throw safeError_('RECONCILIATION_REQUIRED', 'Um agendamento futuro precisa de revisão antes da exclusão.'); }
+    if (interval.start.getTime() <= now) return;
+    var requestId = String(row[indexes.requestId] || '').trim(); validateUuid_(requestId);
+    var eventId = String(row[indexes.eventIdAtendimento] || '').trim(), event = eventId && calendar.getEventById(eventId);
+    if (!eventMatches_(event, requestId)) throw safeError_('RECONCILIATION_REQUIRED', 'Um agendamento futuro precisa de revisão antes da exclusão.');
+    links.push({ sheet: source.sheet, rowNumber: index + 2, headers: source.headers, values: row.slice(), event: event, calendar: calendar, requestId: requestId, interval: interval, title: event.getTitle(), description: event.getDescription() });
+  });
+  return links;
+}
+
+function cancelClientAppointments_(links) {
+  var completed = [];
+  try {
+    links.forEach(function (link) {
+      link.event.deleteEvent(); completed.push(link);
+      var canceled = link.values.slice(); canceled[link.headers.indexOf('status')] = 'CANCELADO'; canceled[link.headers.indexOf('eventIdAtendimento')] = ''; canceled[link.headers.indexOf('dataÚltimaAtualização')] = new Date();
+      link.sheet.getRange(link.rowNumber, 1, 1, link.headers.length).setValues([canceled]); SpreadsheetApp.flush();
+    });
+  } catch (error) {
+    if (!completed.length || restoreClientAppointments_(completed)) throw safeError_('WRITE_ERROR', 'Não foi possível excluir o cliente. Os dados foram preservados.');
+    throw safeError_('RECONCILIATION_REQUIRED', 'A operação precisa de revisão administrativa.');
+  }
+}
+function restoreClientAppointments_(links) {
+  try {
+    links.slice().reverse().forEach(function (link) {
+      var restored = link.calendar.createEvent(link.title, link.interval.start, link.interval.end, { description: link.description });
+      if (!eventMatches_(restored, link.requestId)) { try { restored.deleteEvent(); } catch (ignored) {} throw new Error('invalid restored marker'); }
+      var values = link.values.slice(); values[link.headers.indexOf('eventIdAtendimento')] = restored.getId();
+      try { link.sheet.getRange(link.rowNumber, 1, 1, link.headers.length).setValues([values]); SpreadsheetApp.flush(); }
+      catch (writeError) { try { restored.deleteEvent(); } catch (ignored) {} throw writeError; }
+    });
+    return true;
+  } catch (error) { console.error('ADMIN_CLIENT_RESTORE_FAILED'); return false; }
+}
+
 function saveClient_(payload, editing) {
   var config, input;
   try {

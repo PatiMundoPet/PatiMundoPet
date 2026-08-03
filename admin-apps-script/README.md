@@ -89,11 +89,11 @@ A restrição da implantação é a primeira camada. Toda função de leitura ta
 - [ ] Com Q:R corretas e os calendários disponíveis, confirmar que as ações permitidas pelo status ficam habilitadas.
 - [ ] Confirmar que solicitações RECUSADAS e CANCELADAS não exibem ações de escrita.
 
-## Limitações preservadas após a Fase 10D-1
+## Limitações preservadas após a Fase 10D-2
 
 - Não cria, edita, pausa ou exclui bloqueios manualmente. Eventos de atendimento são criados ou removidos somente pelas ações explícitas de confirmar e cancelar.
 - Não existe criação manual de atendimento nesta fase; confirmar uma solicitação cria somente o evento vinculado, e recorrências continuam fora de escopo.
-- Não exclui nem arquiva clientes e não cria atendimentos a partir do cadastro.
+- Não arquiva clientes e não cria atendimentos a partir do cadastro.
 - Não registra, edita ou altera pagamentos.
 - Não envia mensagens, e-mails ou cobranças automaticamente; links de contato dependem de clique explícito.
 - Não oferece gateway de pagamento.
@@ -128,4 +128,10 @@ O módulo Clientes permite cadastrar e editar responsável, WhatsApp, e-mail, pe
 
 WhatsApp e e-mail são comparados em formato normalizado. Na edição, o próprio UUID é desconsiderado, enquanto `clienteId`, `dataCadastro`, `últimoAtendimento` e eventuais colunas internas permanecem inalterados. Textos e e-mails iniciados por caracteres interpretáveis como fórmula são neutralizados antes da gravação, sem exibir o marcador de segurança nem prejudicar o link de contato. Erros seguros aparecem dentro do formulário, preservando os valores para correção e nova tentativa. Após qualquer sucesso, o painel relê os dados iniciais, a agenda e os bloqueios antes de liberar novas escritas.
 
-Exclusão, arquivamento, histórico detalhado, atendimentos manuais, pagamentos e recorrências permanecem fora do escopo.
+Arquivamento, histórico detalhado, atendimentos manuais, pagamentos e recorrências permanecem fora do escopo.
+
+## Fase 10D-2 — exclusão de clientes
+
+A exclusão fica disponível somente no formulário de edição e exige uma confirmação que identifica o cliente e explica o cancelamento dos horários futuros. Durante a operação, o modal bloqueia todos os controles; falhas mantêm o formulário aberto com uma mensagem segura. Após o sucesso, uma nova leitura atualiza clientes, contadores, agenda e bloqueios.
+
+Sob `LockService`, o servidor relê o cliente pelo `clienteId` UUID e localiza solicitações `CONFIRMADO` futuras por WhatsApp ou e-mail normalizados. Cada horário só é liberado depois de confirmar o vínculo forte entre o `requestId`, a coluna `eventIdAtendimento` e o marcador privado do evento. O nome do cliente nunca é usado como identidade. Solicitações passadas, pagamentos e registros de outros contatos permanecem inalterados. Se a operação parcial falhar, os agendamentos já processados são compensados antes de retornar erro. A confirmação de preservação só é usada quando evento e solicitação foram restaurados; uma compensação incerta exige reconciliação administrativa e nunca permite excluir o cliente.
