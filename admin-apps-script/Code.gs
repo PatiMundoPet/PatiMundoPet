@@ -59,6 +59,30 @@ function listarClientes() {
   return safelyRead_(function (config) { return readSheet_(config, ADMIN.sheets.clients, mapClient_); });
 }
 
+function listarProximosAgendamentosCliente(clientId) {
+  var config;
+  try { config = getConfig_(); authorize_(config); validateUuid_(clientId); clientId = clientId.trim(); }
+  catch (error) { if (error && error.safeCode) throw error; throw safeError_('INVALID_REQUEST', 'O cliente informado é inválido.'); }
+  try {
+    var source = clientSheet_(config), matches = clientMatches_(source, { clientId: clientId, whatsapp: '', email: '' });
+    if (!matches.byId) throw safeError_('CLIENT_NOT_FOUND', 'O cliente não foi encontrado. Atualize os dados e tente novamente.');
+    if (matches.idCount !== 1) throw safeError_('RECONCILIATION_REQUIRED', 'O cadastro precisa de revisão antes de continuar.');
+    return { ok: true, data: futureClientAppointments_(config, matches.byId, source.headers).map(function (link) {
+      return {
+        date: Utilities.formatDate(link.interval.start, config.TIMEZONE, 'yyyy-MM-dd'),
+        startTime: Utilities.formatDate(link.interval.start, config.TIMEZONE, 'HH:mm'),
+        endTime: Utilities.formatDate(link.interval.end, config.TIMEZONE, 'HH:mm'),
+        service: text_(link.values[link.headers.indexOf('serviço')]),
+        pet: text_(link.values[link.headers.indexOf('pet')])
+      };
+    }).sort(function (a, b) { return (a.date + 'T' + a.startTime).localeCompare(b.date + 'T' + b.startTime); }) };
+  } catch (error) {
+    if (error && error.safeCode) throw error;
+    console.error('ADMIN_CLIENT_APPOINTMENTS_READ_FAILED');
+    throw safeError_('READ_ERROR', 'Não foi possível consultar os agendamentos agora.');
+  }
+}
+
 function cadastrarCliente(payload) { return saveClient_(payload, false); }
 function editarCliente(payload) { return saveClient_(payload, true); }
 
