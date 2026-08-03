@@ -85,8 +85,8 @@ A restrição da implantação é a primeira camada. Toda função de leitura ta
 - [ ] Consultar intervalos sem bloqueios e com bloqueios.
 - [ ] Abrir e fechar detalhes por teclado; testar Escape e retenção/retorno do foco.
 - [ ] Confirmar que WhatsApp/e-mail abrem somente após clique e apenas com dados válidos.
-- [ ] Sem Q:R, confirmar que as ações permanecem desativadas.
-- [ ] Com Q:R corretas e os calendários disponíveis, confirmar que as ações permitidas pelo status ficam habilitadas.
+- [ ] Sem Q:S, confirmar que as ações permanecem desativadas.
+- [ ] Com Q:S corretas e os calendários disponíveis, confirmar que as ações permitidas pelo status ficam habilitadas.
 - [ ] Confirmar que solicitações RECUSADAS e CANCELADAS não exibem ações de escrita.
 
 ## Limitações preservadas após a Fase 10D-2
@@ -103,7 +103,7 @@ Não há fallback fictício nem simulação local de salvamento. Escritas são l
 
 ## Fase 10B — aprovação manual
 
-As ações de confirmar, pedir informações, voltar a PENDENTE, recusar e cancelar são exclusivas do painel privado e exigem a conta administrativa autorizada. A escrita somente é habilitada quando `Solicitações!Q:R` contém, exatamente, `eventIdAtendimento` e `observaçãoAdministrativa`, e ambos os calendários configurados estão acessíveis. Sem essa migração, a leitura continua disponível.
+As ações de confirmar, pedir informações, voltar a PENDENTE, recusar e cancelar são exclusivas do painel privado e exigem a conta administrativa autorizada. A escrita somente é habilitada quando `Solicitações!Q:S` contém, exatamente, `eventIdAtendimento`, `observaçãoAdministrativa` e `clienteId`, e ambos os calendários configurados estão acessíveis. Sem essa migração, a leitura continua disponível.
 
 A confirmação relê a solicitação sob lock, revalida o intervalo e os dois calendários, cria um único evento privado e só então persiste `CONFIRMADO` e o ID. Se a planilha falhar, o evento recém-criado é removido; falhas de reconciliação nunca são corrigidas automaticamente. Nenhuma ação envia mensagens ou cria pagamentos.
 
@@ -135,3 +135,12 @@ Arquivamento, histórico detalhado, atendimentos manuais, pagamentos e recorrên
 A exclusão fica disponível somente no formulário de edição e exige uma confirmação que identifica o cliente e explica o cancelamento dos horários futuros. Durante a operação, o modal bloqueia todos os controles; falhas mantêm o formulário aberto com uma mensagem segura. Após o sucesso, uma nova leitura atualiza clientes, contadores, agenda e bloqueios.
 
 Sob `LockService`, o servidor relê o cliente pelo `clienteId` UUID e localiza solicitações `CONFIRMADO` futuras por WhatsApp ou e-mail normalizados. Cada horário só é liberado depois de confirmar o vínculo forte entre o `requestId`, a coluna `eventIdAtendimento` e o marcador privado do evento. O nome do cliente nunca é usado como identidade. Solicitações passadas, pagamentos e registros de outros contatos permanecem inalterados. Se a operação parcial falhar, os agendamentos já processados são compensados antes de retornar erro. A confirmação de preservação só é usada quando evento e solicitação foram restaurados; uma compensação incerta exige reconciliação administrativa e nunca permite excluir o cliente.
+
+
+## Fase corretiva 10D-3A — vínculo definitivo e próximos agendamentos
+
+Adicione manualmente `clienteId` em `Solicitações!S1`, imediatamente depois de `observaçãoAdministrativa`, sem remover ou reordenar linhas existentes. A aba passa a ter 19 colunas (A:S). Pré-solicitações públicas deixam S vazia; somente a confirmação administrativa grava ali um UUID definitivo.
+
+Sob o lock administrativo, a confirmação compara WhatsApp e e-mail normalizados contra todos os clientes. Nenhuma correspondência cria um cliente; uma correspondência inequívoca reutiliza-o; contatos duplicados ou apontando para clientes diferentes exigem reconciliação antes de qualquer escrita. Cliente, evento marcado pelo `requestId` e solicitação confirmada são persistidos como uma unidade compensável: falhas removem o evento novo e restauram ou removem com verificação o cliente afetado.
+
+A tela principal **Cliente**, aberta pelo cartão, consulta todos os próximos horários confirmados. O vínculo por `clienteId` tem prioridade; registros antigos sem vínculo usam contatos somente quando há um único proprietário seguro. A resposta expõe apenas data, início, término, serviço e pet.
