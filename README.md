@@ -65,7 +65,7 @@ O diretório [`apps-script/`](apps-script/) contém o backend de agendamento par
 
 ## Fase 7 — segurança e privacidade
 
-O aviso em `privacy.html` é um **rascunho** gerado de `content/privacy.json`, com versão centralizada e `requiresLegalReview: true`. A Paty precisa revisar textos, responsável e período de retenção antes de qualquer publicação; este projeto não alega conformidade jurídica completa. O formulário possui consentimento de privacidade separado da confirmação de revisão, e nenhum deles confirma automaticamente uma reserva.
+O aviso em `privacy.html` é gerado de `content/privacy.json`, com versão e dados da responsável centralizados. O formulário possui consentimento de privacidade separado da confirmação de revisão, e nenhum deles confirma automaticamente uma reserva.
 
 O backend preparado valida tamanho, tipo e campos do POST, aplica limitação de frequência por hash com sal e mantém idempotência por `requestId`. Eventos pendentes expirados podem ser apenas inspecionados com `previewExpiredPendingEvents()` e removidos manualmente com `cleanupExpiredPendingEvents(true)`, sempre após revisão; nenhum gatilho automático foi criado. Não houve deploy, conexão com Calendar ou ativação: `content/integration.json` continua em `demo`, sem URL. Veja `docs/security-headers.md` antes de escolher uma hospedagem HTTPS.
 

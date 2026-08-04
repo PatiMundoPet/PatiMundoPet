@@ -1,15 +1,15 @@
 {
-  "title": "Aviso de privacidade — rascunho",
-  "version": "draft-2026-01",
-  "updatedAt": "[DATA A DEFINIR]",
-  "dataController": "[RESPONSÁVEL PELO TRATAMENTO A DEFINIR]",
-  "contactEmail": "contato@patymundopet.com.br",
+  "title": "Aviso de privacidade",
+  "version": "2026-08-04",
+  "updatedAt": "4 de agosto de 2026",
+  "dataController": "Patricia Paziani, pessoa física, sem CNPJ",
+  "contactEmail": "mundopet.pati@gmail.com",
   "requestedData": ["serviço, data e horário pretendidos", "nome do responsável", "WhatsApp", "nome do pet", "bairro ou região", "observações opcionais"],
   "purpose": "Analisar e responder à solicitação de agendamento.",
   "noReservation": "O envio da solicitação não confirma uma reserva ou horário.",
   "calendarNotice": "Quando a integração estiver ativa, os dados poderão ser registrados como pré-solicitação pendente na planilha administrativa para revisão.",
-  "retentionPeriod": "[PERÍODO DE RETENÇÃO AINDA NÃO DEFINIDO]",
+  "retentionPeriod": "Os dados são mantidos somente pelo tempo necessário para analisar e responder à solicitação, atender ao agendamento e cumprir obrigações legais aplicáveis; depois, são eliminados com segurança.",
   "correctionDeletion": "Para solicitar correção ou exclusão, escreva para o e-mail de contato e identifique a solicitação sem enviar dados sensíveis adicionais.",
   "sensitiveDataWarning": "Não insira dados sensíveis no campo de observações.",
-  "requiresLegalReview": true
+  "requiresLegalReview": false
 }

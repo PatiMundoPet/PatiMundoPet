@@ -111,11 +111,28 @@ jobs:
           NODE
           private_key_prefix='BEGIN (RSA |EC |OPENSSH )?PRIVATE'
           private_key_suffix=' KEY'
-          ! rg -g '!/.git/**' -e "${private_key_prefix}${private_key_suffix}" .
+          ! grep -R -I -E --exclude-dir=.git --exclude-dir=node_modules \
+            "${private_key_prefix}${private_key_suffix}" .
 
       - name: Verify placeholders and unpublished SEO state
         run: |
-          node -e "const s=require('./content/site.json'); if(s.contactsConfigured!==false) process.exit(1)"
+          node <<'NODE'
+          const site = require('./content/site.json');
+          const validWhatsapp = /^\d{10,15}$/.test(site.whatsappNumber) &&
+            site.whatsappNumber !== '5511999999999';
+          const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(site.email) &&
+            site.email !== 'contato@patymundopet.com.br';
+          let validInstagram = false;
+          try {
+            const instagram = new URL(site.instagram);
+            validInstagram = instagram.protocol === 'https:' &&
+              instagram.hostname === 'www.instagram.com' &&
+              instagram.pathname !== '/';
+          } catch {}
+          if (site.contactsConfigured !== true || !validWhatsapp || !validEmail || !validInstagram) {
+            process.exit(1);
+          }
+          NODE
           node -e "const s=require('./content/seo.json'); if(s.indexingEnabled!==false||s.siteUrl!==''||s.socialImage!=='') process.exit(1)"
           test ! -e sitemap.xml
 
