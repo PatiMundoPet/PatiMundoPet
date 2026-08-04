@@ -216,8 +216,8 @@ function renderCollaborations(projects) {
         <div class="w-11 h-11 rounded-xl bg-moss-800 text-brass-400 flex items-center justify-center mb-5">
           <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
         </div>
-        <h3 class="font-display font-semibold text-lg mb-3">${escapeHtml(project.name)}</h3>
-        <a href="${escapeHtml(project.url)}" target="_blank" rel="noopener noreferrer" class="mt-auto inline-flex items-center gap-2 text-sm font-semibold text-moss-700 hover:text-moss-800 transition-colors" aria-label="Instagram do ${escapeHtml(project.name)} (abre em nova aba)">
+        <h3 class="font-display font-semibold text-lg mb-4 flex-1">${escapeHtml(project.name)}</h3>
+        <a href="${escapeHtml(project.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-sm font-semibold text-moss-700 hover:text-moss-800 transition-colors" aria-label="Instagram do ${escapeHtml(project.name)} (abre em nova aba)">
           <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
           <span>Instagram ${escapeHtml(project.instagram)}</span>
         </a>
