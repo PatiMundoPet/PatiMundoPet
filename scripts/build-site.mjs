@@ -17,7 +17,7 @@ const outputPath = path.join(root, 'index.html');
 
 const requiredFields = [
   'projectName', 'professionalName', 'whatsappNumber', 'displayPhone',
-  'whatsappMessage', 'email', 'instagram', 'serviceArea', 'footerYear',
+  'whatsappMessage', 'email', 'instagram', 'displayInstagram', 'serviceArea', 'footerYear',
 ];
 
 function escapeHtml(value) {
@@ -116,7 +116,7 @@ function validatePrivacy(config, site) {
   const required = ['title', 'version', 'updatedAt', 'dataController', 'contactEmail', 'purpose', 'noReservation', 'calendarNotice', 'retentionPeriod', 'correctionDeletion', 'sensitiveDataWarning'];
   const errors = required.filter((field) => typeof config?.[field] !== 'string' || !config[field].trim()).map((field) => `"${field}" deve ser uma string não vazia`);
   if (!Array.isArray(config?.requestedData) || !config.requestedData.length || config.requestedData.some((item) => typeof item !== 'string' || !item.trim())) errors.push('"requestedData" deve ser uma lista de strings não vazias');
-  if (config?.requiresLegalReview !== true) errors.push('"requiresLegalReview" deve permanecer true');
+  if (typeof config?.requiresLegalReview !== 'boolean') errors.push('"requiresLegalReview" deve ser booleano');
   if (config?.contactEmail !== site.email) errors.push('"contactEmail" deve usar o e-mail centralizado em site.json');
   if (errors.length) throw new Error(`Configuração inválida em content/privacy.json:\n- ${errors.join('\n- ')}`);
 }
@@ -233,10 +233,11 @@ try {
     DISPLAY_PHONE: htmlValues.displayPhone,
     EMAIL: htmlValues.email,
     INSTAGRAM_URL: escapeHtml(config.instagram),
+    DISPLAY_INSTAGRAM: htmlValues.displayInstagram,
     SERVICE_AREA: htmlValues.serviceArea,
     FOOTER_YEAR: htmlValues.footerYear,
     PROJECT_NAME_URL: encodeURIComponent(config.projectName),
-    WHATSAPP_ATTRIBUTES: config.contactsConfigured ? `href=\"https://wa.me/${config.whatsappNumber}?text=${encodeURIComponent(config.whatsappMessage)}\"`.replaceAll('&', '&amp;') : 'aria-disabled=\"true\" tabindex=\"-1\"',
+    WHATSAPP_ATTRIBUTES: config.contactsConfigured ? `href=\"https://wa.me/${config.whatsappNumber}\"` : 'aria-disabled=\"true\" tabindex=\"-1\"',
     CONTACT_PHONE_DISPLAY: config.contactsConfigured ? htmlValues.displayPhone : 'Contato em configuração',
     CONTACT_EMAIL_DISPLAY: config.contactsConfigured ? htmlValues.email : 'Contato em configuração',
     SCHEDULING_TITLE: escapeHtml(scheduling.title),
@@ -277,7 +278,7 @@ try {
     SEO_THEME_COLOR: escapeHtml(seo.themeColor), SEO_ROBOTS: seo.indexingEnabled ? 'index, follow' : 'noindex, nofollow',
     SEO_TWITTER_CARD: escapeHtml(seo.twitterCard),
     SEO_PRIVACY_TITLE: escapeHtml(titleFor(seo, privacy.title)),
-    SEO_PRIVACY_DESCRIPTION: escapeHtml(`Rascunho do aviso de privacidade da ${config.projectName} para solicitações de agendamento.`),
+    SEO_PRIVACY_DESCRIPTION: escapeHtml(`Aviso de privacidade da ${config.projectName} para solicitações de agendamento.`),
     SEO_PRIVACY_OPTIONAL_TAGS: optionalSeoTags(seo, 'privacy.html')
   };
   const privacyOutput = replaceTokens(privacyTemplate, privacyValues, 'src/privacy.template.html');

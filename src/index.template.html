@@ -333,7 +333,7 @@
     <noscript><p class="schedule-noscript">{{SCHEDULING_NOSCRIPT}}</p></noscript>
     <div id="schedule-inactive" class="schedule-panel" aria-live="polite">{{SCHEDULING_INACTIVE}}</div>
     <form id="schedule-form" class="schedule-form" data-whatsapp-number="{{WHATSAPP_NUMBER}}" data-project-name="{{PROJECT_NAME}}" data-professional-name="{{PROFESSIONAL_NAME}}" data-privacy-policy-version="{{PRIVACY_POLICY_VERSION}}" hidden novalidate>
-      <p class="text-sm text-ink-700">Consulte o <a class="underline" href="privacy.html">aviso de privacidade em rascunho</a> antes de enviar seus dados.</p>
+      <p class="text-sm text-ink-700">Consulte o <a class="underline" href="privacy.html">aviso de privacidade</a> antes de enviar seus dados.</p>
       <div id="schedule-validation" class="schedule-validation" role="alert" aria-live="assertive"></div>
       <fieldset class="schedule-panel"><legend>1. Selecione o serviço</legend><div class="schedule-options schedule-services">{{SCHEDULING_SERVICES}}</div></fieldset>
       <fieldset id="schedule-live-date-panel" class="schedule-panel"><legend>2. Escolha uma data para consultar</legend><div class="schedule-date-navigation"><button type="button" id="schedule-previous-month" aria-label="Mês anterior">‹</button><p id="schedule-month-label" aria-live="polite"></p><button type="button" id="schedule-next-month" aria-label="Próximo mês">›</button></div><div id="schedule-live-dates" class="schedule-options" role="group" aria-label="Datas para consulta"></div></fieldset>
@@ -668,6 +668,10 @@
             {{CONTACT_EMAIL_DISPLAY}}
           </li>
           <li class="flex items-center gap-2.5">
+            <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0 text-brass-400" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none"/></svg>
+            <a href="{{INSTAGRAM_URL}}" target="_blank" rel="noopener noreferrer" class="hover:text-stone-50 transition-colors">{{DISPLAY_INSTAGRAM}}</a>
+          </li>
+          <li class="flex items-center gap-2.5">
             <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0 text-brass-400" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
             {{SERVICE_AREA}}, SP
           </li>
@@ -681,7 +685,7 @@
 
     <div class="mt-14 pt-6 border-t border-stone-50/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-stone-50/45 text-xs">
       <p>© {{FOOTER_YEAR}} {{PROJECT_NAME}}. Todos os direitos reservados.</p>
-      <p><a class="underline" href="privacy.html">Aviso de privacidade (rascunho)</a> · Agenda online em configuração.</p>
+      <p><a class="underline" href="privacy.html">Aviso de privacidade</a> · Agenda online em configuração.</p>
     </div>
   </div>
 </footer>

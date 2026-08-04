@@ -1,13 +1,14 @@
 {
-  "_notice": "Contatos ainda não configurados. Não publicar links até contactsConfigured ser true.",
+  "_notice": "Contatos públicos confirmados pela responsável.",
   "projectName": "Pati MundoPet",
   "professionalName": "Pati",
-  "whatsappNumber": "5511999999999",
-  "displayPhone": "(11) 99999-9999",
+  "whatsappNumber": "5511999365433",
+  "displayPhone": "+55 11 99936-5433",
   "whatsappMessage": "Olá! Quero saber mais sobre os serviços da Pati MundoPet.",
-  "email": "contato@patymundopet.com.br",
-  "instagram": "#",
+  "email": "mundopet.pati@gmail.com",
+  "instagram": "https://www.instagram.com/pati.mundopet/",
+  "displayInstagram": "@pati.mundopet",
   "serviceArea": "São Paulo",
   "footerYear": "2026",
-  "contactsConfigured": false
+  "contactsConfigured": true
 }
