@@ -8,6 +8,27 @@
   "email": "mundopet.pati@gmail.com",
   "instagram": "https://www.instagram.com/pati.mundopet/",
   "displayInstagram": "@pati.mundopet",
+  "collaborations": {
+    "title": "Projetos com os quais a Pati já colaborou",
+    "description": "Ao longo de sua atuação, a Pati já colaborou com iniciativas dedicadas à proteção e ao bem-estar animal. Conheça alguns desses projetos.",
+    "projects": [
+      {
+        "name": "Projeto CEL",
+        "instagram": "@projetocel",
+        "url": "https://www.instagram.com/projetocel"
+      },
+      {
+        "name": "Projeto Vira-Latas com Raça",
+        "instagram": "@projetoviralatascomraca.br",
+        "url": "https://www.instagram.com/projetoviralatascomraca.br"
+      },
+      {
+        "name": "Projeto Pérola",
+        "instagram": "@projetoperola.pp",
+        "url": "https://www.instagram.com/projetoperola.pp"
+      }
+    ]
+  },
   "serviceArea": "São Paulo",
   "footerYear": "2026",
   "contactsConfigured": true
