@@ -46,6 +46,37 @@ function validate(config) {
   if (typeof config.footerYear === 'string' && !/^\d{4}$/.test(config.footerYear)) {
     errors.push('"footerYear" deve conter quatro dígitos');
   }
+  if (!config.collaborations || typeof config.collaborations !== 'object' || Array.isArray(config.collaborations)) {
+    errors.push('"collaborations" deve ser um objeto');
+  } else {
+    ['title', 'description'].forEach((field) => {
+      if (typeof config.collaborations[field] !== 'string' || !config.collaborations[field].trim()) {
+        errors.push(`"collaborations.${field}" deve ser uma string não vazia`);
+      }
+    });
+    if (!Array.isArray(config.collaborations.projects) || !config.collaborations.projects.length) {
+      errors.push('"collaborations.projects" deve ser uma lista não vazia');
+    } else {
+      config.collaborations.projects.forEach((project, index) => {
+        ['name', 'instagram', 'url'].forEach((field) => {
+          if (typeof project?.[field] !== 'string' || !project[field].trim()) {
+            errors.push(`"collaborations.projects[${index}].${field}" deve ser uma string não vazia`);
+          }
+        });
+        if (typeof project?.instagram === 'string' && !/^@[a-z0-9._]+$/i.test(project.instagram)) {
+          errors.push(`"collaborations.projects[${index}].instagram" deve ser um perfil iniciado por @`);
+        }
+        if (typeof project?.url === 'string') {
+          try {
+            const url = new URL(project.url);
+            if (url.protocol !== 'https:' || url.hostname !== 'www.instagram.com' || url.username || url.password || url.search || url.hash) {
+              errors.push(`"collaborations.projects[${index}].url" deve ser uma URL HTTPS do Instagram`);
+            }
+          } catch { errors.push(`"collaborations.projects[${index}].url" deve ser uma URL válida`); }
+        }
+      });
+    }
+  }
   if (errors.length) throw new Error(`Configuração inválida em content/site.json:\n- ${errors.join('\n- ')}`);
 }
 
@@ -180,6 +211,19 @@ function renderFields(fields) {
   }).join('\n');
 }
 
+function renderCollaborations(projects) {
+  return projects.map((project) => `<article class="reveal bg-white/60 border border-stone-200 rounded-2xl p-7 flex flex-col">
+        <div class="w-11 h-11 rounded-xl bg-moss-800 text-brass-400 flex items-center justify-center mb-5">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+        </div>
+        <h3 class="font-display font-semibold text-lg mb-4 flex-1">${escapeHtml(project.name)}</h3>
+        <a href="${escapeHtml(project.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-sm font-semibold text-moss-700 hover:text-moss-800 transition-colors" aria-label="Instagram do ${escapeHtml(project.name)} (abre em nova aba)">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+          <span>Instagram ${escapeHtml(project.instagram)}</span>
+        </a>
+      </article>`).join('\n');
+}
+
 try {
   const [rawConfig, rawScheduling, rawIntegration, rawPrivacy, rawSeo, template, privacyTemplate] = await Promise.all([
     readFile(contentPath, 'utf8'),
@@ -234,6 +278,9 @@ try {
     EMAIL: htmlValues.email,
     INSTAGRAM_URL: escapeHtml(config.instagram),
     DISPLAY_INSTAGRAM: htmlValues.displayInstagram,
+    COLLABORATIONS_TITLE: escapeHtml(config.collaborations.title),
+    COLLABORATIONS_DESCRIPTION: escapeHtml(config.collaborations.description),
+    COLLABORATIONS_PROJECTS: renderCollaborations(config.collaborations.projects),
     SERVICE_AREA: htmlValues.serviceArea,
     FOOTER_YEAR: htmlValues.footerYear,
     PROJECT_NAME_URL: encodeURIComponent(config.projectName),
