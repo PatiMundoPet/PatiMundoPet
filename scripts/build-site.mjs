@@ -81,7 +81,7 @@ function validate(config) {
 }
 
 const schedulingStrings = ['title', 'description', 'availabilityNotice', 'inactiveMessage', 'noScriptMessage', 'reviewConfirmation', 'summaryTitle', 'commercialNotice', 'whatsappSubmitLabel', 'emailSubmitLabel'];
-const allowedServices = new Set(['Passeio Individual', 'Passeio em Pequeno Grupo', 'Planos Semanais']);
+const allowedServices = new Set(['Passeios', 'Dog sitter']);
 const allowedFieldTypes = new Set(['text', 'tel', 'email', 'textarea']);
 
 function validateScheduling(config) {

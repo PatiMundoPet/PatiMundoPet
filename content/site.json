@@ -9,8 +9,8 @@
   "instagram": "https://www.instagram.com/pati.mundopet/",
   "displayInstagram": "@pati.mundopet",
   "collaborations": {
-    "title": "Projetos com os quais a Pati já colaborou",
-    "description": "Ao longo de sua atuação, a Pati já colaborou com iniciativas dedicadas à proteção e ao bem-estar animal. Conheça alguns desses projetos.",
+    "title": "Projetos e colaborações",
+    "description": "Conheça as organizações reais ligadas à trajetória de proteção e bem-estar animal da Pati.",
     "projects": [
       {
         "name": "Projeto CEL",
@@ -29,7 +29,7 @@
       }
     ]
   },
-  "serviceArea": "São Paulo",
+  "serviceArea": "Mooca e Vila Prudente",
   "footerYear": "2026",
   "contactsConfigured": true
 }

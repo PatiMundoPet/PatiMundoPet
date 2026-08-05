@@ -1,21 +1,17 @@
 {
-  "title": "Pré-solicitação de atendimento",
-  "description": "Escolha um serviço e, quando a agenda online estiver disponível, envie uma pré-solicitação para análise.",
-  "availabilityNotice": "Escolher um horário disponível não garante o atendimento. A pré-solicitação será analisada pela Pati antes da confirmação.",
-  "inactiveMessage": "Agenda online em configuração. Para consultar horários agora, fale diretamente com a Pati.",
+  "title": "Enviar solicitação para a Pati",
+  "description": "Informe o serviço desejado e seu WhatsApp. A solicitação chega ao Painel Privado para análise da Pati.",
+  "availabilityNotice": "Enviar a solicitação não garante atendimento. Valores, local, duração, rotina, condições e confirmação final são combinados diretamente pelo WhatsApp.",
+  "inactiveMessage": "Agenda online em configuração. Para combinar valores, regiões e horários, fale diretamente com a Pati pelo WhatsApp.",
   "noScriptMessage": "A agenda online requer JavaScript. Use os canais de contato quando estiverem disponíveis.",
   "services": [
     {
       "id": "passeio-individual",
-      "label": "Passeio Individual"
+      "label": "Passeios"
     },
     {
-      "id": "passeio-grupo",
-      "label": "Passeio em Pequeno Grupo"
-    },
-    {
-      "id": "planos-semanais",
-      "label": "Planos Semanais"
+      "id": "dog-sitter",
+      "label": "Dog sitter"
     }
   ],
   "days": [],
@@ -36,9 +32,9 @@
     },
     {
       "id": "whatsapp",
-      "label": "WhatsApp (obrigatório para envio por WhatsApp)",
+      "label": "WhatsApp do cliente",
       "type": "tel",
-      "required": false,
+      "required": true,
       "autocomplete": "tel"
     },
     {
@@ -70,9 +66,9 @@
       "autocomplete": "off"
     }
   ],
-  "reviewConfirmation": "Confirmo que esta é uma pré-solicitação sujeita à análise e confirmação manual da Pati.",
+  "reviewConfirmation": "Confirmo que esta é uma solicitação sujeita à análise e confirmação manual da Pati pelo WhatsApp.",
   "summaryTitle": "Revise sua pré-solicitação",
-  "commercialNotice": "Escolher um horário disponível não garante o atendimento. A pré-solicitação será analisada pela Pati antes da confirmação.",
-  "whatsappSubmitLabel": "Registrar e enviar pelo WhatsApp",
+  "commercialNotice": "O site registra a solicitação e a envia ao Painel Privado. Não há contratação, pagamento ou confirmação automática; pagamentos são feitos via Pix, conforme combinado com a Pati.",
+  "whatsappSubmitLabel": "Registrar solicitação e avisar pelo WhatsApp",
   "emailSubmitLabel": "Registrar e enviar por e-mail"
 }

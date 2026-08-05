@@ -4,9 +4,7 @@
 
 O arquivo `content/site.json` centraliza o nome do projeto e da profissional, os
 dados de WhatsApp e telefone, a mensagem padrão, o e-mail, o Instagram, a área de
-atendimento e o ano do rodapé. **Os valores atuais são PLACEHOLDERS de
-pré-integração e devem ser substituídos antes da publicação oficial.** Não publique
-o site sem revisar todos esses campos.
+atendimento e o ano do rodapé. Os contatos públicos atuais foram confirmados pela responsável; não publique novas alterações sem revisar esses campos.
 
 `src/index.template.html` é o HTML-fonte e contém tokens preenchidos durante o
 build. O `index.html` na raiz é gerado, permanece versionado e é o arquivo estático
@@ -52,10 +50,7 @@ usuários autorizados e não devem ser publicadas. O POST usa parâmetros de
 formulário (`URLSearchParams`), não JSON. Depois do deploy, respostas e CORS ainda
 precisarão ser validados manualmente no navegador antes da ativação.
 
-Os IDs estáveis que deverão compor `ALLOWED_SERVICE_IDS_JSON` são
-`passeio-individual`, `passeio-grupo` e `planos-semanais`. Após uma
-resposta `REQUEST_CREATED`, o WhatsApp não abre sozinho: o cliente precisa clicar
-em **Avisar a Paty pelo WhatsApp**, e a Paty ainda revisará a solicitação.
+A Fase 11A revisou o conteúdo público para exibir somente os serviços reais: **Passeios** (`passeio-individual`) e **Dog sitter** (`dog-sitter`), exclusivamente para cães. A solicitação registra o WhatsApp do cliente, chega ao Painel Privado e não representa contratação, pagamento ou confirmação automática. Valores, local, duração, rotina, condições e pagamentos via Pix são combinados diretamente com a Pati pelo WhatsApp. Após uma resposta `REQUEST_CREATED`, o WhatsApp não abre sozinho: o cliente precisa clicar em **Avisar a Pati pelo WhatsApp**, e a Pati ainda revisará a solicitação.
 
 ## Backend preparado — Fase 6A
 
