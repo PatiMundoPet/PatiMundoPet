@@ -3,7 +3,8 @@ import { createRequire } from 'node:module';
 import { readFile } from 'node:fs/promises';
 const require = createRequire(import.meta.url);
 const Api = require('../assets/js/scheduling-api.js');
-const base = { mode: 'live', webAppUrl: 'https://script.google.com/macros/s/example/exec', requestTimeoutMs: 500, maxResponseBytes: 4096, maxFutureDays: 90, messages: { demo: 'demo' } };
+const operationalUrl = 'https://script.google.com/macros/s/AKfycbz9RyLNBWPGbq8xxfUKipwQ7CYKCwkvNYf0FajD7bX365w9NNFV9pd8Mc-qyeKNoKUQ/exec';
+const base = { mode: 'live', webAppUrl: operationalUrl, requestTimeoutMs: 500, maxResponseBytes: 4096, maxFutureDays: 90, messages: { demo: 'demo', loading: 'Consultando disponibilidade…', unavailable: 'Indisponível. Fale com a Pati.' } };
 const response = (value) => ({ text: async () => typeof value === 'string' ? value : JSON.stringify(value) });
 const uuid = { randomUUID: () => '123e4567-e89b-42d3-a456-426614174000' };
 let calls = [];
@@ -13,6 +14,8 @@ assert.equal(Api.validateWebAppUrl('javascript:alert(1)'), false);
 assert.equal(Api.validateWebAppUrl('/relative/exec'), false);
 assert.equal(Api.validateWebAppUrl('https://script.google.com/macros/s/x/dev'), false);
 assert.equal(Api.validateWebAppUrl('https://script.google.com/macros/s/x/exec'), true);
+assert.equal(Api.validateWebAppUrl(operationalUrl), true);
+assert.equal(JSON.parse(await readFile(new URL('../content/integration.json', import.meta.url), 'utf8')).webAppUrl, operationalUrl, 'configuração usa a URL operacional exata');
 
 assert.equal(Api.formatCalendarDate(new Date(2026, 0, 5, 23, 30)), '2026-01-05', 'preenche mês e dia com zero');
 assert.equal(Api.formatCalendarDate(Api.addCalendarDays(new Date(2026, 0, 31, 12), 1)), '2026-02-01', 'trata virada de mês');
@@ -54,6 +57,10 @@ await assert.rejects(client(() => response({ ...exactResponse, data: { ...exactR
 await assert.rejects(client(() => response({ ...exactResponse, data: { ...exactResponse.data, available: true, unavailable: true } })).availability('2026-08-01', '10:11', '11:37'), /INVALID_RESPONSE/, 'true/true é inconsistente');
 await assert.rejects(client(() => response({ ...exactResponse, data: { ...exactResponse.data, available: false, unavailable: false } })).availability('2026-08-01', '10:11', '11:37'), /INVALID_RESPONSE/, 'false/false é inconsistente');
 assert.equal((await client(() => response({ ...exactResponse, data: { ...exactResponse.data, available: false, unavailable: true } })).availability('2026-08-01', '10:11', '11:37')).data.available, false, 'false/true é aceito');
+
+const businessAvailabilityError = await client(() => response({ ok: false, code: 'SLOT_UNAVAILABLE', message: 'Período ocupado. Fale com a Pati.' })).availability('2026-08-01', '10:11', '11:37');
+assert.equal(businessAvailabilityError.ok, false, 'disponibilidade com ok false é preservada para a interface tratar explicitamente');
+assert.equal(businessAvailabilityError.message, 'Período ocupado. Fale com a Pati.');
 
 const requested = { sequence: 4, interval: '2026-08-01|10:11|11:37', date: '2026-08-01', startTime: '10:11', endTime: '11:37' };
 assert.equal(Api.canAcceptExactAvailability(requested, { ...requested }, exactResponse), true, 'resposta atual e exata pode ser aceita');
@@ -101,6 +108,15 @@ assert.match(source, /Selecione uma data para consultar os horários|schedule-av
 assert.match(source, /client\.availability\(requestedDate,requestedStart,requestedEnd\)/, 'disponibilidade usa os valores capturados');
 assert.match(source, /requestedInterval=intervalKey\(\)/, 'a chave exata é capturada antes da resposta');
 assert.match(source, /canAcceptExactAvailability\(requested,current,result\)/, 'resposta passa pela validação completa de estado');
+
+assert.match(source, /if\(result\.ok===false\)\{setAvailabilityMessage\(result\.message\|\|integration\.messages\.unavailable,true\);return;\}/, 'erro de negócio da disponibilidade aparece junto ao botão e oferece contato');
+assert.match(source, /verifiedInterval='';if\(result\.ok===false\)/, 'respostas de erro não validam o intervalo');
+assert.match(source, /if\(status\.textContent===integration\.messages\.loading\)setAvailabilityMessage\(integration\.messages\.unavailable,true\)/, 'estado de carregamento sempre termina quando a chamada atual finaliza');
+assert.match(source, /showFinalNotice\('Verifique a disponibilidade do período escolhido antes de enviar\.'\)/, 'envio bloqueado usa o aviso final junto aos botões');
+assert.match(source, /notice\.scrollIntoView\(\{ block: 'center', behavior: 'smooth' \}\)/, 'aviso final fica visível com rolagem');
+assert.match(source, /notice\.focus\(\{ preventScroll: true \}\)/, 'aviso final recebe foco');
+assert.match(source, /if\(requested\.sequence!==current\.sequence\|\|requested\.interval!==current\.interval/, 'proteção contra respostas antigas é preservada antes de tratar a resposta');
+assert.match(source, /finally \{sending=false;form\.querySelectorAll\('button\[type="submit"\]'\)/, 'botões de envio são reabilitados no finally');
 assert.match(source, /verifiedInterval=requestedInterval/, 'a confirmação usa apenas a chave capturada');
 assert.match(source, /function invalidateAvailability\(\) \{ availabilitySequence\+=1; verifiedInterval=''/, 'qualquer alteração invalida respostas pendentes');
 assert.match(await readFile(new URL('../assets/js/scheduling-api.js', import.meta.url), 'utf8'), /typeof result\.data\.available === 'boolean'/, 'interface exige booleano no resultado exato');
