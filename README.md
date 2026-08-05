@@ -89,3 +89,42 @@ npm run test:quality
 
 Os testes são locais, usam mocks para as integrações Google e não acessam contas
 reais.
+
+## Fase 11B — publicação controlada no GitHub Pages
+
+A hospedagem escolhida para o site público V2 é o GitHub Pages com GitHub
+Actions, mantendo custo zero para este repositório público e publicação
+exclusiva a partir da branch `main`. Pull requests continuam executando build,
+testes e validação do pacote público, mas não configuram Pages, não enviam
+artefato de implantação e não publicam o site.
+
+O pacote público é fechado e gerado em `.pages-dist` com exatamente nove
+arquivos: `index.html`, `privacy.html`, `robots.txt`, `assets/css/styles.css`,
+`assets/css/tailwind.min.css`, `assets/js/boot.js`, `assets/js/main.js`,
+`assets/js/scheduling-api.js` e `assets/js/scheduling.js`. Backend, Painel
+Privado, fontes, documentação, workflows, configurações internas e
+`sitemap.xml` não fazem parte do artefato.
+
+A integração pública com o Google Apps Script permanece preservada no modo
+`live`, com URL HTTPS de `script.google.com` terminada em `/exec`. A indexação
+continua desativada: `content/seo.json` mantém `indexingEnabled: false`,
+`siteUrl: ""` e `socialImage: ""`; `robots.txt` bloqueia rastreamento; as páginas
+mantêm `noindex, nofollow`; e não há `CNAME` nem domínio personalizado nesta
+fase. O endereço de produção deve ser obtido pelo `page_url` retornado pelo job
+do GitHub Pages depois de um merge futuro na `main`, e o link ainda não deve ser
+colocado na bio.
+
+Use os scripts abaixo para preparar e validar o mesmo pacote entregue ao Pages:
+
+```sh
+npm run pages:prepare
+npm run pages:test
+npm run build:pages
+```
+
+A ativação de SEO, indexação e divulgação do endereço pertence a uma fase
+posterior. O GitHub Pages também não deve ser usado para inventar configurações
+de cabeçalhos HTTP incompatíveis com a plataforma.
+
+Mais detalhes operacionais estão em
+[`docs/fase-11b-publicacao-controlada.md`](docs/fase-11b-publicacao-controlada.md).
