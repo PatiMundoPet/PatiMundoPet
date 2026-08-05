@@ -81,7 +81,7 @@ function validate(config) {
 }
 
 const schedulingStrings = ['title', 'description', 'availabilityNotice', 'inactiveMessage', 'noScriptMessage', 'reviewConfirmation', 'summaryTitle', 'commercialNotice', 'whatsappSubmitLabel', 'emailSubmitLabel'];
-const allowedServices = new Set(['Passeio Individual', 'Passeio em Pequeno Grupo', 'Planos Semanais']);
+const allowedSchedulingService = { id: 'passeio-individual', label: 'Passeios' };
 const allowedFieldTypes = new Set(['text', 'tel', 'email', 'textarea']);
 
 function validateScheduling(config) {
@@ -105,9 +105,13 @@ function validateScheduling(config) {
       if (!item || typeof item.label !== 'string' || item.label.trim() === '') errors.push(`"${collection}[${index}].label" deve ser uma string não vazia`);
     });
   });
-  if (Array.isArray(config.services)) config.services.forEach((item) => {
-    if (item && !allowedServices.has(item.label)) errors.push(`serviço não existente no site: "${item.label}"`);
-  });
+  if (Array.isArray(config.services)) {
+    if (config.services.length !== 1) errors.push('"services" deve conter exatamente um serviço nesta fase');
+    const [service] = config.services;
+    if (service?.id !== allowedSchedulingService.id || service?.label !== allowedSchedulingService.label) {
+      errors.push(`"services" deve conter somente { id: "${allowedSchedulingService.id}", label: "${allowedSchedulingService.label}" }`);
+    }
+  }
   if (Array.isArray(config.times)) config.times.forEach((item, index) => {
     if (typeof item.available !== 'boolean') errors.push(`"times[${index}].available" deve ser booleano`);
   });
@@ -116,7 +120,7 @@ function validateScheduling(config) {
     if (typeof item.required !== 'boolean') errors.push(`"fields[${index}].required" deve ser booleano`);
     if (typeof item.autocomplete !== 'string') errors.push(`"fields[${index}].autocomplete" deve ser uma string`);
   });
-  const requiredIds = ['responsavel', 'pet', 'regiao'];
+  const requiredIds = ['responsavel', 'whatsapp', 'pet', 'regiao'];
   requiredIds.forEach((id) => {
     if (!Array.isArray(config.fields) || !config.fields.some((field) => field.id === id && field.required)) errors.push(`o campo obrigatório "${id}" está ausente`);
   });
