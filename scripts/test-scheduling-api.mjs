@@ -15,7 +15,10 @@ assert.match(operationalConfig.messages.availabilityInvalidResponse, /Nenhuma so
 const response = (value) => ({ text: async () => typeof value === 'string' ? value : JSON.stringify(value) });
 const uuid = { randomUUID: () => '123e4567-e89b-42d3-a456-426614174000' };
 let calls = [];
-const client = (handler, config = base) => Api.createClient(config, { fetch: async (...args) => { calls.push(args); return handler(...args); }, crypto: uuid });
+const client = (handler, config = base, retry) => {
+  const created = Api.createClient(config, { fetch: async (...args) => { calls.push(args); return handler(...args); }, crypto: uuid });
+  return retry ? { ...created, availability: (date, startTime, endTime) => created.availability(date, startTime, endTime, retry) } : created;
+};
 
 assert.equal(Api.validateWebAppUrl('javascript:alert(1)'), false);
 assert.equal(Api.validateWebAppUrl('/relative/exec'), false);
@@ -79,7 +82,7 @@ const retryClient = client(() => {
   networkAttempts += 1;
   if (networkAttempts === 1) throw new Error('offline');
   return response(exactResponse);
-}, { ...base, onAvailabilityRetry: () => { retryNotices += 1; } });
+}, base, () => { retryNotices += 1; });
 assert.equal((await retryClient.availability('2026-08-01', '10:11', '11:37')).data.available, true, 'uma repetição após NETWORK_ERROR recupera a consulta');
 assert.equal(calls.length, 2, 'limite máximo de duas chamadas GET após NETWORK_ERROR');
 assert.equal(retryNotices, 1, 'aviso de repetição é emitido uma vez');
@@ -87,6 +90,7 @@ assert.equal(retryNotices, 1, 'aviso de repetição é emitido uma vez');
 for (const [name, handler, pattern] of [
   ['TIMEOUT', () => new Promise(() => {}), /TIMEOUT/],
   ['INVALID_RESPONSE', () => response({ what: 'ever' }), /INVALID_RESPONSE/],
+  ['RESPONSE_TOO_LARGE', () => response('x'.repeat(5000)), /RESPONSE_TOO_LARGE/],
   ['ok false', () => response({ ok: false, code: 'SLOT_UNAVAILABLE', message: 'ocupado' }), null]
 ]) {
   calls = [];
@@ -99,6 +103,28 @@ for (const [name, handler, pattern] of [
 calls = [];
 await assert.rejects(client(() => { throw new Error('offline'); }).availability('2026-08-01', '10:11', '11:37'), /NETWORK_ERROR/, 'segunda falha de rede propaga NETWORK_ERROR');
 assert.equal(calls.length, 2, 'mesmo com duas falhas de rede não passa de duas chamadas GET');
+
+
+
+calls = [];
+const pendingFetches = [];
+const overlappingClient = Api.createClient(base, { fetch: async (...args) => {
+  calls.push(args);
+  return new Promise((resolve, reject) => { pendingFetches.push({ resolve, reject }); });
+}, crypto: uuid });
+const retryCallbacks = [];
+const firstOverlapping = overlappingClient.availability('2026-08-01', '10:11', '11:37', () => { retryCallbacks.push('antiga'); });
+const secondOverlapping = overlappingClient.availability('2026-08-02', '12:00', '13:00', () => { retryCallbacks.push('nova'); });
+assert.equal(pendingFetches.length, 2, 'duas consultas sobrepostas iniciam duas chamadas independentes');
+pendingFetches[0].reject(new Error('offline'));
+while (pendingFetches.length < 3) await new Promise((resolve) => setTimeout(resolve, 0));
+assert.deepEqual(retryCallbacks, ['antiga'], 'a repetição da consulta antiga executa somente o callback antigo');
+pendingFetches[1].resolve(response({ ok: true, code: 'AVAILABILITY_OK', message: 'ok', data: { date: '2026-08-02', startTime: '12:00', endTime: '13:00', available: true, unavailable: false } }));
+pendingFetches[2].resolve(response(exactResponse));
+assert.equal((await secondOverlapping).data.date, '2026-08-02', 'a consulta nova mantém seu próprio resultado');
+assert.equal((await firstOverlapping).data.date, '2026-08-01', 'a consulta antiga mantém seu próprio resultado após repetir');
+assert.deepEqual(retryCallbacks, ['antiga'], 'a consulta antiga não executa o callback da consulta nova nem altera seu estado');
+assert.equal(calls.length, 3, 'sobreposição com uma falha de rede ainda limita a consulta antiga a uma repetição');
 
 const businessAvailabilityError = await client(() => response({ ok: false, code: 'SLOT_UNAVAILABLE', message: 'Período ocupado. Fale com a Pati.' })).availability('2026-08-01', '10:11', '11:37');
 assert.equal(businessAvailabilityError.ok, false, 'disponibilidade com ok false é preservada para a interface tratar explicitamente');
@@ -147,7 +173,7 @@ assert.match(source, /result\.code!=='REQUEST_CREATED'/);
 assert.match(source, /integration\.mode === 'live'/);
 assert.match(source, /privacyAccepted/);
 assert.match(source, /Selecione uma data para consultar os horários|schedule-availability-status/);
-assert.match(source, /client\.availability\(requestedDate,requestedStart,requestedEnd\)/, 'disponibilidade usa os valores capturados');
+assert.match(source, /client\.availability\(requestedDate,requestedStart,requestedEnd,onAvailabilityRetry\)/, 'disponibilidade usa os valores capturados e callback de retry por consulta');
 assert.doesNotMatch(source, /client\.request\([\s\S]*checkAvailability/, 'verificar disponibilidade não chama criação');
 assert.match(source, /slowAvailability/, 'mensagem de demora existe na interface');
 assert.match(source, /availabilityTimeout/, 'mensagem de timeout existe na interface');
@@ -156,10 +182,13 @@ assert.match(source, /availabilityInvalidResponse/, 'mensagem de resposta invál
 assert.match(source, /requestedInterval=intervalKey\(\)/, 'a chave exata é capturada antes da resposta');
 assert.match(source, /canAcceptExactAvailability\(requested,current,result\)/, 'resposta passa pela validação completa de estado');
 
-assert.match(source, /result\.ok===false[\s\S]*Nenhuma solicitação foi registrada/, 'erro de negócio da disponibilidade aparece junto ao botão, oferece contato e informa que nada foi registrado');
+assert.match(source, /result\.ok===false[\s\S]*ensureNoRequestNotice\(result\.message\|\|integration\.messages\.unavailable\)/, 'erro de negócio da disponibilidade aparece junto ao botão, oferece contato e informa que nada foi registrado');
 assert.match(source, /verifiedInterval='';if\(result\.ok===false\)/, 'respostas de erro não validam o intervalo');
 assert.match(source, /clearAvailabilityTimers\(\)/, 'timers são limpos nos caminhos de término e invalidação');
+assert.doesNotMatch(source, /integration\.onAvailabilityRetry/, 'callback de retry não é compartilhado no objeto de integração');
 assert.match(source, /availabilityFailureMessage\(error\)/, 'erros técnicos são diferenciados antes da mensagem pública');
+assert.match(source, /ensureNoRequestNotice\('Não foi possível consultar a agenda\.'\)/, 'fallback de erro desconhecido informa que nada foi registrado sem depender da mensagem unavailable');
+assert.match(source, /ensureNoRequestNotice\(result\.message\|\|integration\.messages\.unavailable\)/, 'erro de negócio também passa pela proteção contra mensagem duplicada');
 assert.match(source, /showFinalNotice\('Verifique a disponibilidade do período escolhido antes de enviar\.'\)/, 'envio bloqueado usa o aviso final junto aos botões');
 assert.match(source, /notice\.scrollIntoView\(\{ block: 'center', behavior: 'smooth' \}\)/, 'aviso final fica visível com rolagem');
 assert.match(source, /notice\.focus\(\{ preventScroll: true \}\)/, 'aviso final recebe foco');
