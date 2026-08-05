@@ -108,14 +108,22 @@
       }
     }
 
-    function get(action, date, kind, parameters, expectedInterval) {
-      if (config.mode === 'demo') return Promise.resolve({ ok: false, code: 'DEMO_MODE', message: config.messages.demo });
-      if (!checked.valid) return Promise.reject(new Error('CONFIGURATION_REQUIRED'));
+    async function get(action, date, kind, parameters, expectedInterval) {
+      if (config.mode === 'demo') return { ok: false, code: 'DEMO_MODE', message: config.messages.demo };
+      if (!checked.valid) throw new Error('CONFIGURATION_REQUIRED');
       var url = new URL(config.webAppUrl);
       url.searchParams.set('action', action);
       if (date) url.searchParams.set('date', date);
       Object.keys(parameters || {}).forEach(function (key) { url.searchParams.set(key, parameters[key]); });
-      return call(url.toString(), { method: 'GET', cache: 'no-store', redirect: 'follow' }, kind, expectedInterval);
+      var requestUrl = url.toString();
+      var options = { method: 'GET', cache: 'no-store', redirect: 'follow' };
+      try {
+        return await call(requestUrl, options, kind, expectedInterval);
+      } catch (error) {
+        if (kind !== 'availability' || !error || error.message !== 'NETWORK_ERROR') throw error;
+        if (typeof config.onAvailabilityRetry === 'function') config.onAvailabilityRetry();
+        return call(requestUrl, { method: 'GET', cache: 'no-store', redirect: 'follow' }, kind, expectedInterval);
+      }
     }
 
     function fingerprint(payload) {
