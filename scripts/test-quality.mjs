@@ -138,3 +138,7 @@ const schedulingSection = template.slice(template.indexOf('<section id="agendame
 assert.equal(count(schedulingSection, /<div\b/gi), count(schedulingSection, /<\/div>/gi), 'divs desbalanceadas no agendamento');
 
 console.log('Testes estáticos da Fase 11A, SEO, acessibilidade e performance aprovados.');
+
+const schedulingSuccess = template;
+for (const expected of ['Pré-solicitação registrada','Você pode continuar a conversa no WhatsApp ou copiar a ficha abaixo.','Continuar no WhatsApp','Ficha registrada','Copiar ficha']) assert(schedulingSuccess.includes(expected), `Ação de sucesso ausente: ${expected}`);
+assert(/id="schedule-copy-text"[^>]*readonly/.test(schedulingSuccess), 'Ficha registrada deve ser somente leitura.');

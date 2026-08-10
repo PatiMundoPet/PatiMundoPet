@@ -1,13 +1,26 @@
 # Fase 11D — diagnóstico seguro do Painel Privado
 
-## Resultado e limite da investigação
+## Resultado da investigação com a evidência da Versão 13
 
-O defeito observado em produção (uma solicitação real de Dog Day Care que não
-conclui a confirmação) **não é reproduzível apenas com os dados do repositório**.
-Os mocks confirmam de ponta a ponta uma linha `dog-day-care`, `PENDENTE`, canal
-`whatsapp`, horários futuros válidos, `NOT_REQUESTED` e Q:S vazias. Por isso esta
-entrega não atribui uma causa ao PR #41 e, conforme a regra de parada da fase,
-não implementa tela pública ou notificações antes de obter evidência de runtime.
+A execução da implantação Versão 13 retornou `PERSISTENCE_FAILED` com a mensagem
+“Não foi possível salvar o cliente”, mantendo a solicitação `PENDENTE`. Isso
+localiza a falha antes da criação do evento: `writeConfirmationClient_` gravou o
+cliente, executou `SpreadsheetApp.flush()` e não conseguiu comprovar a linha na
+releitura, ou a própria gravação/flush falhou.
+
+A condição foi reproduzida fazendo o mock se comportar como a Planilha: uma
+sequência numérica escrita no campo WhatsApp pode ser relida por `getValues()`
+como `Number`. O verificador anterior comparava toda a linha com igualdade estrita;
+portanto `"5500000000000" !== 5500000000000`, apesar de ambos representarem o
+mesmo WhatsApp normalizado. Ele tratava uma gravação válida como falha, removia o
+cliente pela compensação e retornava exatamente o erro observado na Versão 13.
+
+A correção mantém a releitura e a exigência de exatamente um UUID. A linha inteira
+continua validada, mas campos com representação legítima da Planilha são comparados
+pelo contrato: UUID aparado sem diferença de caixa, WhatsApp normalizado, e-mail
+normalizado, datas com precisão de segundos e demais campos integralmente como
+texto. UUID ausente/divergente, duplicado, coluna extra divergente ou qualquer
+outro dado alterado continuam falhando e acionando compensação/reconciliação.
 
 A comparação entre `723ad9b` (imediatamente anterior ao PR #41) e `f7e6ab8`
 encontrou somente quatro alterações no caminho de confirmação: rótulo do serviço
@@ -67,10 +80,10 @@ A validação de A:S também deixou de conferir apenas quantidade e quatro posi�
 ela agora compara explicitamente nome e posição de todos os 19 cabeçalhos. A
 estrutura não foi alterada; uma linha pública A:P com Q:S vazias continua aceita.
 
-## Evidência de runtime necessária
+## Verificação manual necessária após o merge
 
-Para fechar a causa real sem dados pessoais, é necessário executar a ação uma vez
-no ambiente autorizado e fornecer somente:
+Sem alterar dados manualmente, a nova versão deve ser implantada e a mesma ação
+deve ser executada uma vez no ambiente autorizado, conferindo somente:
 
 - o código seguro retornado pelo RPC;
 - se o painel mostrou a mensagem de “operação concluída, atualização falhou”;

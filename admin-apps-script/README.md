@@ -12,7 +12,7 @@ A Fase 10A é estritamente de **leitura**. O navegador conversa somente com fun�
 - `Index.html`: estrutura semântica das seis áreas.
 - `Styles.html`: identidade visual e responsividade.
 - `App.html`: navegação, estados, filtros locais e renderização segura.
-- `appsscript.json`: runtime V8 e os três escopos autorizados.
+- `appsscript.json`: runtime V8 e os quatro escopos autorizados.
 
 ## Escopos e autorização
 
@@ -64,7 +64,7 @@ A restrição da implantação é a primeira camada. Toda função de leitura ta
 - [ ] `ADMIN_EMAIL` definido apenas em Script Properties.
 - [ ] IDs definidos apenas em Script Properties.
 - [ ] Nenhuma propriedade ou URL privada inserida nos arquivos.
-- [ ] Manifesto contém exatamente `spreadsheets`, `calendar.readonly` e `userinfo.email`.
+- [ ] Manifesto contém exatamente `spreadsheets`, `calendar`, `userinfo.email` e `script.send_mail`.
 - [ ] Código administrativo permanece sem métodos de gravação, apesar do escopo `spreadsheets` exigido por `SpreadsheetApp.openById()`.
 - [ ] Implantação não permite acesso público ou anônimo.
 - [ ] Conta sem autorização recebe “Acesso negado”.
@@ -126,6 +126,8 @@ Antes da escrita, o servidor guarda período, tipo, título e descrição. Se um
 
 O módulo Clientes permite cadastrar e editar responsável, WhatsApp, e-mail, pets e observações. Cada criação recebe um UUID gerado no servidor e uma chave de operação por abertura do formulário, usada para tornar repetições idempotentes. Toda escrita exige a conta administrativa, adquire `LockService` e relê a aba completa dentro do lock antes de verificar identidade e duplicidades.
 
+Na confirmação, a releitura do cliente compara o contrato lógico de cada campo. Em particular, o WhatsApp é normalizado porque o Google Sheets pode devolver como número uma sequência gravada como texto; UUID, unicidade, largura integral, demais campos e colunas internas continuam verificados antes de criar qualquer evento.
+
 WhatsApp e e-mail são comparados em formato normalizado. Na edição, o próprio UUID é desconsiderado, enquanto `clienteId`, `dataCadastro`, `últimoAtendimento` e eventuais colunas internas permanecem inalterados. Textos e e-mails iniciados por caracteres interpretáveis como fórmula são neutralizados antes da gravação, sem exibir o marcador de segurança nem prejudicar o link de contato. Erros seguros aparecem dentro do formulário, preservando os valores para correção e nova tentativa. Após qualquer sucesso, o painel relê os dados iniciais, a agenda e os bloqueios antes de liberar novas escritas.
 
 Arquivamento, histórico detalhado, atendimentos manuais, pagamentos e recorrências permanecem fora do escopo.
@@ -144,6 +146,10 @@ Adicione manualmente `clienteId` em `Solicitações!S1`, imediatamente depois de
 Sob o lock administrativo, a confirmação compara WhatsApp e e-mail normalizados contra todos os clientes. Nenhuma correspondência cria um cliente; uma correspondência inequívoca reutiliza-o; contatos duplicados ou apontando para clientes diferentes exigem reconciliação antes de qualquer escrita. Cliente, evento marcado pelo `requestId` e solicitação confirmada são persistidos como uma unidade compensável: falhas removem o evento novo e restauram ou removem com verificação o cliente afetado.
 
 A tela principal **Cliente**, aberta pelo cartão, consulta todos os próximos horários confirmados. O vínculo por `clienteId` tem prioridade; registros antigos sem vínculo usam contatos somente quando há um único proprietário seguro. A resposta expõe apenas data, início, término, serviço e pet.
+
+## Notificações de decisão
+
+Depois de comprovar a persistência de `CONFIRMADO`, `RECUSADO` ou `CANCELADO`, o painel tenta enviar e-mail com `MailApp` e registra o resultado em `notificationStatus`, sem alterar A:S. Falha ou ausência de e-mail não desfaz a decisão. Um reenvio explícito só fica disponível para o último resultado `EMAIL_FALHOU`; envio concluído, estado não terminal e repetição são recusados. O link “Avisar também pelo WhatsApp” apenas abre `wa.me` com texto preparado e nunca marca envio automático.
 
 ## Fase 11C-2B — rótulos de serviço
 
