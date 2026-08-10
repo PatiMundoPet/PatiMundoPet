@@ -4,7 +4,7 @@
 var ADMIN = Object.freeze({
   properties: ['ADMIN_EMAIL', 'SPREADSHEET_ID', 'APPOINTMENTS_CALENDAR_ID', 'AVAILABILITY_CALENDAR_ID', 'TIMEZONE', 'WORKDAY_START_TIME', 'WORKDAY_END_TIME'],
   sheets: {
-    requests: { name: 'Solicitações', headers: ['requestId', 'dataRecebimento', 'submissionChannel', 'serviço', 'data', 'horário', 'responsável', 'WhatsApp', 'e-mail', 'pet', 'região', 'observações', 'status', 'notificationStatus', 'dataÚltimaAtualização', 'horárioTérmino'] },
+    requests: { name: 'Solicitações', headers: ['requestId', 'dataRecebimento', 'submissionChannel', 'serviço', 'data', 'horário', 'responsável', 'WhatsApp', 'e-mail', 'pet', 'região', 'observações', 'status', 'notificationStatus', 'dataÚltimaAtualização', 'horárioTérmino', 'eventIdAtendimento', 'observaçãoAdministrativa', 'clienteId'] },
     clients: { name: 'Clientes', headers: ['clienteId', 'responsável', 'WhatsApp', 'e-mail', 'pets', 'observações', 'dataCadastro', 'últimoAtendimento'] },
     payments: { name: 'Pagamentos', headers: ['requestId', 'cliente', 'serviço', 'valor', 'formaPagamento', 'vencimento', 'statusPagamento', 'dataPagamento', 'observações'] }
   },
@@ -466,14 +466,15 @@ function safelyWrite_(requestId, note, noteRequired, writer) {
 function validateUuid_(value) { if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim())) throw safeError_('INVALID_REQUEST', 'A solicitação informada é inválida.'); }
 function adminNote_(value, required) { var note = String(value || '').replace(/[\u0000-\u001F\u007F]/g, '').trim(); if (required && !note) throw safeError_('INVALID_REQUEST', 'Informe uma observação para concluir a ação.'); if (note.length > 500) throw safeError_('INVALID_REQUEST', 'A observação deve ter no máximo 500 caracteres.'); return /^[=+\-@]/.test(note) ? "'" + note : note; }
 function requestSheet_(config) { var sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName('Solicitações'); if (!sheet) throw safeError_('CONFIG_ERROR', 'A aba Solicitações não foi encontrada.'); var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function (x) { return String(x).trim(); }); return { sheet: sheet, headers: headers }; }
-function writesConfigured_(config) { try { var source = requestSheet_(config), h = source.headers; return h.length === 19 && h[15] === 'horárioTérmino' && h[16] === 'eventIdAtendimento' && h[17] === 'observaçãoAdministrativa' && h[18] === 'clienteId' && Boolean(CalendarApp.getCalendarById(config.APPOINTMENTS_CALENDAR_ID)) && Boolean(CalendarApp.getCalendarById(config.AVAILABILITY_CALENDAR_ID)); } catch (error) { return false; } }
+function requestHeadersMatch_(headers) { var expected = ADMIN.sheets.requests.headers; return headers.length === expected.length && expected.every(function (header, index) { return headers[index] === header; }); }
+function writesConfigured_(config) { try { var source = requestSheet_(config); return requestHeadersMatch_(source.headers) && Boolean(CalendarApp.getCalendarById(config.APPOINTMENTS_CALENDAR_ID)) && Boolean(CalendarApp.getCalendarById(config.AVAILABILITY_CALENDAR_ID)); } catch (error) { return false; } }
 function requestContext_(config, requestId, requireUnique) {
   var source = requestSheet_(config), idIndex = source.headers.indexOf('requestId');
   if (idIndex < 0) throw safeError_('CONFIG_ERROR', 'Os cabeçalhos precisam ser revisados.');
   var count = source.sheet.getLastRow() - 1, rows = count > 0 ? source.sheet.getRange(2, 1, count, source.headers.length).getValues() : [], match = null, matches = 0;
-  for (var i = 0; i < rows.length; i++) if (String(rows[i][idIndex]) === requestId) { matches++; if (!match) match = { rowNumber: i + 2, values: rows[i] }; if (!requireUnique) break; }
+  for (var i = 0; i < rows.length; i++) if (String(rows[i][idIndex]).trim() === requestId) { matches++; if (!match) match = { rowNumber: i + 2, values: rows[i] }; }
   if (!match) throw safeError_('NOT_FOUND', 'A solicitação não foi encontrada.');
-  if (requireUnique && matches !== 1) throw safeError_('RECONCILIATION_REQUIRED', 'Os dados da solicitação precisam de revisão antes da exclusão.');
+  if (matches !== 1) throw safeError_('RECONCILIATION_REQUIRED', 'Há mais de uma solicitação com o mesmo código. Nenhuma alteração foi realizada.');
   var record = {}; source.headers.forEach(function (header, index) { record[header] = match.values[index]; });
   return { config: config, sheet: source.sheet, headers: source.headers, rowNumber: match.rowNumber, values: match.values, record: record, requestId: requestId, appointments: CalendarApp.getCalendarById(config.APPOINTMENTS_CALENDAR_ID), availability: CalendarApp.getCalendarById(config.AVAILABILITY_CALENDAR_ID) };
 }
@@ -499,9 +500,10 @@ function confirmationRowsEqual_(left, right) {
 function resolveConfirmationClient_(context) {
   var source = clientSheet_(context.config), phone = String(context.record.WhatsApp || '').trim() ? normalizeClientWhatsapp_(context.record.WhatsApp) : '', email = String(context.record['e-mail'] || '').trim() ? normalizeClientEmail_(context.record['e-mail']) : '', phoneMatches = [], emailMatches = []; if (!phone && !email) throw safeError_('INVALID_CLIENT', 'A solicitação não possui contato válido.');
   source.rows.forEach(function (row, index) { var item = { values: row.slice(), rowNumber: index + 2, clientId: String(row[source.headers.indexOf('clienteId')] || '').trim() }; if (phone && normalizeStoredWhatsapp_(row[source.headers.indexOf('WhatsApp')]) === phone) phoneMatches.push(item); if (email && clientEmailKey_(row[source.headers.indexOf('e-mail')]) === email) emailMatches.push(item); });
-  if (phoneMatches.length > 1 || emailMatches.length > 1) throw safeError_('RECONCILIATION_REQUIRED', 'Os contatos do cliente precisam de revisão.');
+  if (phoneMatches.length > 1) throw safeError_('DUPLICATE_WHATSAPP', 'O WhatsApp está associado a mais de um cliente. Nenhuma alteração foi realizada.');
+  if (emailMatches.length > 1) throw safeError_('DUPLICATE_EMAIL', 'O e-mail está associado a mais de um cliente. Nenhuma alteração foi realizada.');
   var phoneClient = phoneMatches[0], emailClient = emailMatches[0];
-  if (phoneClient && emailClient && phoneClient.clientId !== emailClient.clientId) throw safeError_('RECONCILIATION_REQUIRED', 'Os contatos do cliente precisam de revisão.');
+  if (phoneClient && emailClient && phoneClient.clientId !== emailClient.clientId) throw safeError_('CLIENT_IDENTITY_CONFLICT', 'O WhatsApp e o e-mail pertencem a clientes diferentes. Nenhuma alteração foi realizada.');
   var target = phoneClient || emailClient || null; if (target) validateUuid_(target.clientId);
   return { source: source, target: target, phone: phone, email: email };
 }
