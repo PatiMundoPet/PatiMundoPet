@@ -20,9 +20,17 @@
   var endField = document.getElementById('schedule-end-time');
   var checkButton = document.getElementById('schedule-check-availability');
   var fallback = document.getElementById('schedule-whatsapp-fallback');
+  var continueWhatsapp = document.getElementById('schedule-continue-whatsapp');
+  var recoveryActions = document.getElementById('schedule-recovery-actions');
+  var retryStatus = document.getElementById('schedule-retry-status');
+  var submitButton = document.getElementById('schedule-submit');
   var availabilityContact = document.getElementById('schedule-availability-contact');
   var copyText = document.getElementById('schedule-copy-text');
   var sending = false;
+  var completed = false;
+  var recoveryBlocked = false;
+  var recoveryRequestId = '';
+  var recoveryPayload = null;
   var selectedDate = '';
   var availabilitySequence = 0;
   var verifiedInterval = '';
@@ -40,25 +48,24 @@
   function validEmail(email) { return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
   function validPhone(phone) { return /^\d{10,15}$/.test(phone.replace(/\D/g, '')); }
   function setError(name, message) { var field = form.elements[name]; var target = document.getElementById('error-' + name); if (field && field.setAttribute) field.setAttribute('aria-invalid', message ? 'true' : 'false'); if (target) target.textContent = message; }
-  function payload(channel) { return { serviceId: selectedValue('servico'), date: selectedDate, startTime: value('startTime'), endTime: value('endTime'), responsibleName: value('responsavel'), whatsapp: value('whatsapp'), email: value('email'), petName: value('pet'), region: value('regiao'), notes: value('observacoes'), submissionChannel: channel, reviewAccepted: form.elements.revisao.checked, privacyAccepted: form.elements.privacyAccepted.checked, privacyPolicyVersion: form.dataset.privacyPolicyVersion, honeypot: '' }; }
+  function payload() { return { serviceId: selectedValue('servico'), date: selectedDate, startTime: value('startTime'), endTime: value('endTime'), responsibleName: value('responsavel'), whatsapp: value('whatsapp'), email: value('email'), petName: value('pet'), region: value('regiao'), notes: value('observacoes'), submissionChannel: 'whatsapp', reviewAccepted: form.elements.revisao.checked, privacyAccepted: form.elements.privacyAccepted.checked, privacyPolicyVersion: form.dataset.privacyPolicyVersion, honeypot: '' }; }
   function validate(data) {
     var errors = [];
     ['serviceId','date','startTime','endTime','responsibleName','petName','region'].forEach(function (key) { if (!data[key]) errors.push(labels[key]); });
-    if (!data.whatsapp && !data.email) errors.push('pelo menos um contato');
+    if (!data.whatsapp) errors.push('WhatsApp obrigatório');
     if (data.whatsapp && !validPhone(data.whatsapp)) { errors.push('WhatsApp válido'); setError('whatsapp', 'Informe entre 10 e 15 dígitos.'); } else setError('whatsapp', '');
     if (data.email && !validEmail(data.email)) { errors.push('e-mail válido'); setError('email', 'Informe um endereço de e-mail válido.'); } else setError('email', '');
-    if (data.submissionChannel === 'whatsapp' && !validPhone(data.whatsapp)) errors.push('WhatsApp para o canal escolhido');
-    if (data.submissionChannel === 'email' && !validEmail(data.email)) errors.push('e-mail para o canal escolhido');
+    if (!validPhone(data.whatsapp)) errors.push('WhatsApp para contato');
     if (!data.reviewAccepted) errors.push('confirmação de revisão');
     if (!data.privacyAccepted) errors.push('consentimento de privacidade');
     validation.textContent = errors.length ? 'Revise: ' + Array.from(new Set(errors)).join(', ') + '.' : '';
     return !errors.length;
   }
-  function renderSummary(channel) {
-    var data = payload(channel || '');
-    var minimum = data.serviceId && data.date && data.startTime && data.endTime && data.responsibleName && data.petName && data.region && (validPhone(data.whatsapp) || validEmail(data.email));
+  function renderSummary() {
+    var data = payload();
+    var minimum = data.serviceId && data.date && data.startTime && data.endTime && data.responsibleName && data.petName && data.region && validPhone(data.whatsapp);
     summaryPanel.hidden = !minimum; if (!minimum) { summary.replaceChildren(); return; }
-    var values = { serviceId: selected('servico').dataset.label || data.serviceId, date: data.date, startTime: data.startTime, endTime: data.endTime, responsibleName: data.responsibleName, whatsapp: data.whatsapp, email: data.email, petName: data.petName, region: data.region, notes: data.notes, submissionChannel: channel === 'email' ? 'E-mail' : channel === 'whatsapp' ? 'WhatsApp' : '' };
+    var values = { serviceId: selected('servico').dataset.label || data.serviceId, date: data.date, startTime: data.startTime, endTime: data.endTime, responsibleName: data.responsibleName, whatsapp: data.whatsapp, email: data.email, petName: data.petName, region: data.region, notes: data.notes, submissionChannel: 'WhatsApp' };
     var list = document.createElement('dl'); list.className = 'schedule-summary-list';
     Object.keys(values).forEach(function (key) { if (!values[key]) return; var dt=document.createElement('dt'),dd=document.createElement('dd'); dt.textContent=labels[key]; dd.textContent=values[key]; list.append(dt,dd); }); summary.replaceChildren(list);
   }
@@ -83,19 +90,16 @@
     document.getElementById('schedule-previous-month').disabled=cursor<=new Date(today.getFullYear(),today.getMonth(),1);
     document.getElementById('schedule-next-month').disabled=new Date(cursor.getFullYear(),cursor.getMonth()+1,1)>maximum;
   }
-  dates.addEventListener('click',function(event){ if(event.target.tagName!=='BUTTON'||event.target.disabled)return; selectedDate=event.target.dataset.date; dates.querySelectorAll('button').forEach(function(button){button.setAttribute('aria-pressed',String(button===event.target));}); invalidateAvailability(); renderSummary(''); });
+  dates.addEventListener('click',function(event){ if(event.target.tagName!=='BUTTON'||event.target.disabled||completed||recoveryBlocked)return; selectedDate=event.target.dataset.date; dates.querySelectorAll('button').forEach(function(button){button.setAttribute('aria-pressed',String(button===event.target));}); invalidateAvailability(); renderSummary(); });
   document.getElementById('schedule-previous-month').addEventListener('click',function(){cursor=new Date(cursor.getFullYear(),cursor.getMonth()-1,1);prepareCalendar();});
   document.getElementById('schedule-next-month').addEventListener('click',function(){cursor=new Date(cursor.getFullYear(),cursor.getMonth()+1,1);prepareCalendar();});
   [startField,endField].forEach(function(field){field.addEventListener('input',invalidateAvailability);}); checkButton.addEventListener('click',checkAvailability);
-  form.addEventListener('input',function(){ validation.textContent=''; notice.classList.remove('is-visible'); renderSummary(''); });
-  function whatsappMessage(data, requestId) { var rows=[form.dataset.projectName,'Código: '+cleanText(requestId,36),'Status: PENDENTE','Responsável: '+cleanText(data.responsibleName,120),'Pet: '+cleanText(data.petName,80),'Serviço: '+cleanText(selected('servico').dataset.label||data.serviceId,80),'Data solicitada: '+cleanText(data.date,10),'Horário inicial: '+cleanText(data.startTime,5),'Horário final: '+cleanText(data.endTime,5),'Região: '+cleanText(data.region,120)]; if(data.notes)rows.push('Observações: '+cleanText(data.notes,500)); rows.push('Esta é uma pré-solicitação pendente e ainda depende da confirmação da '+form.dataset.professionalName+'.'); return rows.join('\n'); }
-  form.addEventListener('submit',async function(event){ event.preventDefault(); if(sending)return; var channel=event.submitter&&event.submitter.value; if(channel!=='whatsapp'&&channel!=='email')return; var data=payload(channel); renderSummary(channel); if(!validate(data)){showFinalNotice(validation.textContent||'Revise os dados antes de enviar.');return;}if(verifiedInterval!==intervalKey()){showFinalNotice('Verifique a disponibilidade do período escolhido antes de enviar.');return;} sending=true; form.querySelectorAll('button[type="submit"]').forEach(function(button){button.disabled=true;});
-    try { var result=await client.request(data); if(result.code!=='REQUEST_CREATED'){showFinalNotice(result.message||integration.messages.unavailable);return;} showFinalNotice(integration.messages.pendingCreated+' Código: '+result.requestId+'. Status: PENDENTE.');
-      if(channel==='whatsapp'){ var message=whatsappMessage(data,result.requestId),digits=form.dataset.whatsappNumber.replace(/\D/g,''); copyText.value=message; fallback.hidden=false; notice.textContent+=' O WhatsApp será aberto com a ficha preenchida; toque em Enviar dentro do aplicativo.'; if(digits) window.location.assign('https://wa.me/'+digits+'?text='+encodeURIComponent(message)); }
-      else if(result.notificationStatus==='SENT') notice.textContent+=' A notificação administrativa foi enviada.'; else if(result.notificationStatus==='FAILED') notice.textContent+=' '+integration.messages.emailFailed;
-    } catch(error){ showFinalNotice(integration.messages.unavailable); }
-    finally {sending=false;form.querySelectorAll('button[type="submit"]').forEach(function(button){button.disabled=false;});}
-  });
+  form.addEventListener('input',function(){ validation.textContent=''; if(!recoveryBlocked&&!completed)notice.classList.remove('is-visible'); renderSummary(); });
+  function whatsappMessage(data, requestId, requestStatus) { var service=form.querySelector('input[name="servico"][value="'+data.serviceId+'"]');var rows=[form.dataset.projectName,'Código: '+cleanText(requestId,36),'Status: '+cleanText(requestStatus||'PENDENTE',40),'Responsável: '+cleanText(data.responsibleName,120),'Pet: '+cleanText(data.petName,80),'Serviço: '+cleanText(service&&service.dataset.label||data.serviceId,80),'Data solicitada: '+cleanText(data.date,10),'Horário inicial: '+cleanText(data.startTime,5),'Horário final: '+cleanText(data.endTime,5),'Região: '+cleanText(data.region,120)]; if(data.notes)rows.push('Observações: '+cleanText(data.notes,500)); rows.push('Esta solicitação ainda depende da confirmação da '+form.dataset.professionalName+'.'); return rows.join('\n'); }
+  function confirmRegistration(data,requestId,requestStatus){completed=true;recoveryBlocked=false;recoveryActions.hidden=true;submitButton.disabled=true;var message=whatsappMessage(data,requestId,requestStatus),digits=form.dataset.whatsappNumber.replace(/\D/g,'');copyText.value=message;fallback.hidden=false;continueWhatsapp.href='https://wa.me/'+digits+'?text='+encodeURIComponent(message);showFinalNotice(integration.messages.pendingCreated+' Código: '+requestId+'. Status: '+requestStatus+'.');}
+  async function recover(){recoveryActions.hidden=true;try{var result=await client.requestStatus(recoveryRequestId);if(result.code==='REQUEST_FOUND'){confirmRegistration(recoveryPayload,recoveryRequestId,result.data.status);return;}if(result.code==='REQUEST_NOT_FOUND'){recoveryBlocked=false;submitButton.disabled=false;showFinalNotice(integration.messages.requestNotFound);return;}if(result.code==='INCONSISTENT_STATE'){recoveryBlocked=true;submitButton.disabled=true;showFinalNotice((integration.messages.inconsistentState||result.message)+' Código: '+recoveryRequestId+'.');return;}throw new Error('RECOVERY_UNAVAILABLE');}catch(error){recoveryBlocked=true;submitButton.disabled=true;recoveryActions.hidden=false;showFinalNotice((integration.messages.recoveryUnknown||'Não foi possível confirmar o registro.')+' Código: '+recoveryRequestId+'.');}}
+  form.addEventListener('submit',async function(event){event.preventDefault();if(sending||completed||recoveryBlocked)return;var data=payload();renderSummary();if(!validate(data)){showFinalNotice(validation.textContent||'Revise os dados antes de enviar.');return;}if(verifiedInterval!==intervalKey()){showFinalNotice('Verifique a disponibilidade do período escolhido antes de enviar.');return;}sending=true;submitButton.disabled=true;try{var result=await client.request(data);recoveryRequestId=result.requestId||'';recoveryPayload=data;if(result.code!=='REQUEST_CREATED'){if(result.code==='INCONSISTENT_STATE'){recoveryBlocked=true;showFinalNotice((integration.messages.inconsistentState||result.message)+' Código: '+recoveryRequestId+'.');}else{showFinalNotice(result.message||integration.messages.unavailable);submitButton.disabled=false;}return;}confirmRegistration(data,result.requestId,'PENDENTE');}catch(error){recoveryRequestId=client.pendingRequestId();recoveryPayload=data;recoveryBlocked=true;await recover();}finally{sending=false;if(!completed&&!recoveryBlocked)submitButton.disabled=false;}});
+  retryStatus.addEventListener('click',function(){if(!sending&&recoveryRequestId){sending=true;retryStatus.disabled=true;recover().finally(function(){sending=false;retryStatus.disabled=false;});}});
   document.getElementById('schedule-copy-button').addEventListener('click',function(){ navigator.clipboard.writeText(copyText.value).then(function(){notice.textContent='Ficha copiada.';}); });
   prepareCalendar();
 })();

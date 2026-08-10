@@ -1,6 +1,6 @@
 {
-  "title": "Pré-solicitação de passeio",
-  "description": "Consulte a disponibilidade e envie uma pré-solicitação de passeio para análise da Pati.",
+  "title": "Pré-solicitação de atendimento",
+  "description": "Consulte a disponibilidade e envie uma pré-solicitação de Passeios ou Dog Day Care para análise da Pati.",
   "availabilityNotice": "Escolher um horário disponível não garante o atendimento. A pré-solicitação será analisada pela Pati antes da confirmação.",
   "inactiveMessage": "Agenda online em configuração. Para consultar horários agora, fale diretamente com a Pati.",
   "noScriptMessage": "A agenda online requer JavaScript. Use os canais de contato quando estiverem disponíveis.",
@@ -8,6 +8,10 @@
     {
       "id": "passeio-individual",
       "label": "Passeios"
+    },
+    {
+      "id": "dog-day-care",
+      "label": "Dog Day Care"
     }
   ],
   "days": [],
@@ -35,7 +39,7 @@
     },
     {
       "id": "email",
-      "label": "E-mail (obrigatório para envio por e-mail)",
+      "label": "E-mail (opcional)",
       "type": "email",
       "required": false,
       "autocomplete": "email"
@@ -62,9 +66,8 @@
       "autocomplete": "off"
     }
   ],
-  "reviewConfirmation": "Confirmo que esta é uma pré-solicitação de passeio sujeita à análise e confirmação manual da Pati.",
+  "reviewConfirmation": "Confirmo que esta é uma pré-solicitação sujeita à análise e confirmação manual da Pati.",
   "summaryTitle": "Revise sua pré-solicitação",
-  "commercialNotice": "O envio não garante o atendimento. Disponibilidade, valor e pagamento via Pix serão combinados com a Pati antes da confirmação.",
-  "whatsappSubmitLabel": "Registrar e enviar pelo WhatsApp",
-  "emailSubmitLabel": "Registrar e enviar por e-mail"
+  "commercialNotice": "O envio não garante o atendimento. No Dog Day Care, detalhes adicionais, condições, disponibilidade final, valor e pagamento via Pix serão combinados com a Pati pelo WhatsApp.",
+  "submitLabel": "Enviar pré-solicitação"
 }

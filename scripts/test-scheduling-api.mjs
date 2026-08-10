@@ -153,6 +153,11 @@ assert.ok(calls[0][1].body instanceof URLSearchParams); assert.equal(calls[0][1]
 assert.equal(calls[0][1].redirect, 'follow'); assert.equal('credentials' in calls[0][1], false); assert.equal('headers' in calls[0][1], false);
 const firstId = calls[0][1].body.get('requestId');
 await createdClient.request(payload); assert.equal(calls[1][1].body.get('requestId'), firstId, 'reutiliza requestId após repetição');
+calls=[];const foundClient=client(()=>response({ok:true,code:'REQUEST_FOUND',message:'encontrada',requestId:firstId,data:{requestId:firstId,status:'PENDENTE'}}));
+assert.equal((await foundClient.requestStatus(firstId)).data.status,'PENDENTE');
+const statusUrl=new URL(calls[0][0]);assert.deepEqual([...statusUrl.searchParams.keys()].sort(),['action','requestId']);assert.equal(statusUrl.searchParams.get('requestId'),firstId);assert.equal(calls[0][1].method,'GET');
+assert.equal((await client(()=>response({ok:false,code:'REQUEST_NOT_FOUND',message:'ausente',requestId:firstId})).requestStatus(firstId)).code,'REQUEST_NOT_FOUND');
+assert.equal((await client(()=>response({ok:false,code:'CONFIGURATION_REQUIRED',message:'indisponível'})).requestStatus(firstId)).code,'CONFIGURATION_REQUIRED');
 let sequence = 0;
 const rotating = Api.createClient(base, { fetch: async (...args) => { calls.push(args); return response({ ok: false, code: 'LOCK_TIMEOUT', message: 'tente' }); }, crypto: { randomUUID: () => `123e4567-e89b-42d3-a456-42661417400${sequence++}` } });
 calls = []; assert.equal((await rotating.request(payload)).code, 'LOCK_TIMEOUT');
@@ -193,7 +198,7 @@ assert.match(source, /showFinalNotice\('Verifique a disponibilidade do período 
 assert.match(source, /notice\.scrollIntoView\(\{ block: 'center', behavior: 'smooth' \}\)/, 'aviso final fica visível com rolagem');
 assert.match(source, /notice\.focus\(\{ preventScroll: true \}\)/, 'aviso final recebe foco');
 assert.match(source, /if\(requested\.sequence!==current\.sequence\|\|requested\.interval!==current\.interval/, 'proteção contra respostas antigas é preservada antes de tratar a resposta');
-assert.match(source, /finally \{sending=false;form\.querySelectorAll\('button\[type="submit"\]'\)/, 'botões de envio são reabilitados no finally');
+assert.match(source, /if\(sending\|\|completed\|\|recoveryBlocked\)return/, 'envios concorrentes e posteriores ao sucesso são bloqueados');
 assert.match(source, /verifiedInterval=requestedInterval/, 'a confirmação usa apenas a chave capturada');
 assert.match(source, /function invalidateAvailability\(\) \{ availabilitySequence\+=1; verifiedInterval=''/, 'qualquer alteração invalida respostas pendentes');
 assert.match(await readFile(new URL('../assets/js/scheduling-api.js', import.meta.url), 'utf8'), /typeof result\.data\.available === 'boolean'/, 'interface exige booleano no resultado exato');
@@ -201,4 +206,7 @@ assert.doesNotMatch(source, /role=['"]radiogroup['"]/, 'fluxo novo não usa radi
 assert.match(source, /verifiedInterval!==intervalKey/, 'envio exige verificação ainda válida');
 assert.equal((source.match(/client\.request\(/g) || []).length, 1, 'a criação existe somente no envio explícito do formulário');
 assert.match(source, /form\.addEventListener\('submit',[\s\S]*client\.request\(data\)/, 'a criação depende do envio explícito do formulário');
+assert.match(source, /submissionChannel: 'whatsapp'/, 'payload usa exclusivamente WhatsApp');
+assert.match(source, /client\.requestStatus\(recoveryRequestId\)/, 'falha ambígua consulta o mesmo requestId');
+assert.doesNotMatch(source, /window\.location\.assign/, 'WhatsApp nunca abre automaticamente');
 console.log('Scheduling API: todos os testes locais passaram.');
