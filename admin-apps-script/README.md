@@ -154,3 +154,11 @@ Depois de comprovar a persistência de `CONFIRMADO`, `RECUSADO` ou `CANCELADO`, 
 ## Fase 11C-2B — rótulos de serviço
 
 O Painel preserva os IDs técnicos na planilha e apresenta `Passeios` e `Dog Day Care` nas telas e nos eventos confirmados. Valores desconhecidos são mantidos como texto. A descrição do evento conserva o `requestId` e o `serviceId` para rastreabilidade; solicitações pendentes continuam sem evento.
+
+## Correção — clientes recorrentes e pagamentos manuais
+
+Antes de copiar esta versão para o projeto privado, adicione ao fim da aba `Clientes` o cabeçalho `observaçõesAdministrativas` (coluna I). Migre para essa coluna qualquer anotação manual que esteja hoje misturada em `observações`; a coluna `observações` passa a representar exclusivamente a observação da solicitação mais recentemente confirmada. Não é necessária nenhuma coluna nova em `Pagamentos`: o contrato continua exatamente `requestId`, `cliente`, `serviço`, `valor`, `formaPagamento`, `vencimento`, `statusPagamento`, `dataPagamento` e `observações`.
+
+Uma confirmação com `clienteId` válido reutiliza esse UUID. Sem o vínculo, WhatsApp e e-mail normalizados só são aceitos quando indicam inequivocamente o mesmo cadastro. Responsável e contatos são atualizados, enquanto pets e observação da solicitação são substituídos (inclusive por observação vazia); cadastro, último atendimento, campos internos e `observaçõesAdministrativas` permanecem intactos.
+
+A confirmação também cria, sob o mesmo lock e com releitura, um único pagamento `PIX`/`PENDENTE`, sem valor nem data de pagamento e com vencimento inicial na data do atendimento. O painel permite editar manualmente valor, vencimento, status e observações, sem editar `requestId`. `PAGO` registra a data da transição e `PENDENTE` a limpa. Os lembretes de vencimento usam `America/Sao_Paulo` e não enviam mensagens. Ao cancelar, `PENDENTE` vira `CANCELADO`, `ISENTO` é preservado e `PAGO` é preservado com sinalização para revisão; nenhum histórico é excluído.

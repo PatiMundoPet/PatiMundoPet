@@ -65,8 +65,9 @@
         </section>
 
         <section class="view" id="view-pagamentos" aria-labelledby="title-pagamentos" hidden>
-          <header class="page-head"><div><h1 tabindex="-1" id="title-pagamentos">Pagamentos</h1><p>Controle financeiro real, em modo de leitura.</p></div><button class="btn btn-primary" disabled>Registrar pagamento · próxima fase</button></header>
-          <div class="toolbar"><label class="grow">Buscar pagamentos<input class="input" id="paymentSearch" type="search" placeholder="Cliente, solicitação ou serviço"></label><label>Status<select id="paymentStatus"><option value="TODOS">Todos</option><option>PENDENTE</option><option>PAGO</option><option>ATRASADO</option><option>CANCELADO</option><option>ISENTO</option></select></label></div><div class="list" id="paymentList"></div>
+          <header class="page-head"><div><h1 tabindex="-1" id="title-pagamentos">Pagamentos</h1><p>Controle simples e manual dos pagamentos combinados pelo WhatsApp.</p></div></header>
+          <div class="payment-reminders" aria-label="Lembretes de pagamentos"><article class="card stat due-today"><span>Vencem hoje</span><strong id="paymentsDueToday">0</strong></article><article class="card stat overdue"><span>Atrasados</span><strong id="paymentsOverdue">0</strong></article></div>
+          <div class="toolbar"><label class="grow">Buscar pagamentos<input class="input" id="paymentSearch" type="search" placeholder="Cliente, solicitação ou serviço"></label><label>Status<select id="paymentStatus"><option value="TODOS">Todos</option><option>PENDENTE</option><option>PAGO</option><option>ISENTO</option><option>CANCELADO</option></select></label></div><div class="list" id="paymentList"></div>
         </section>
       </main>
     </div>
