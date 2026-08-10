@@ -108,14 +108,22 @@
       }
     }
 
-    function get(action, date, kind, parameters, expectedInterval) {
-      if (config.mode === 'demo') return Promise.resolve({ ok: false, code: 'DEMO_MODE', message: config.messages.demo });
-      if (!checked.valid) return Promise.reject(new Error('CONFIGURATION_REQUIRED'));
+    async function get(action, date, kind, parameters, expectedInterval, onRetry) {
+      if (config.mode === 'demo') return { ok: false, code: 'DEMO_MODE', message: config.messages.demo };
+      if (!checked.valid) throw new Error('CONFIGURATION_REQUIRED');
       var url = new URL(config.webAppUrl);
       url.searchParams.set('action', action);
       if (date) url.searchParams.set('date', date);
       Object.keys(parameters || {}).forEach(function (key) { url.searchParams.set(key, parameters[key]); });
-      return call(url.toString(), { method: 'GET', cache: 'no-store', redirect: 'follow' }, kind, expectedInterval);
+      var requestUrl = url.toString();
+      var options = { method: 'GET', cache: 'no-store', redirect: 'follow' };
+      try {
+        return await call(requestUrl, options, kind, expectedInterval);
+      } catch (error) {
+        if (kind !== 'availability' || !error || error.message !== 'NETWORK_ERROR') throw error;
+        if (typeof onRetry === 'function') onRetry();
+        return call(requestUrl, { method: 'GET', cache: 'no-store', redirect: 'follow' }, kind, expectedInterval);
+      }
     }
 
     function fingerprint(payload) {
@@ -126,11 +134,11 @@
     return {
       configStatus: checked,
       health: function () { return get('health', '', 'health'); },
-      availability: function (date, startTime, endTime) {
+      availability: function (date, startTime, endTime, onRetry) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return Promise.reject(new Error('INVALID_REQUEST'));
         if ((startTime || endTime) && (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(startTime || '') || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(endTime || ''))) return Promise.reject(new Error('INVALID_REQUEST'));
         var interval = startTime ? { date: date, startTime: startTime, endTime: endTime } : null;
-        return get('availability', date, 'availability', interval || {}, interval);
+        return get('availability', date, 'availability', interval || {}, interval, onRetry);
       },
       request: function (payload) {
         if (config.mode === 'demo') return Promise.resolve({ ok: false, code: 'DEMO_MODE', message: config.messages.demo });
