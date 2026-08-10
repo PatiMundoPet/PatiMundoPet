@@ -138,3 +138,10 @@ const schedulingSection = template.slice(template.indexOf('<section id="agendame
 assert.equal(count(schedulingSection, /<div\b/gi), count(schedulingSection, /<\/div>/gi), 'divs desbalanceadas no agendamento');
 
 console.log('Testes estáticos da Fase 11A, SEO, acessibilidade e performance aprovados.');
+
+const schedulingSuccess = template;
+for (const expected of ['Pré-solicitação registrada','Você pode continuar a conversa no WhatsApp ou copiar a ficha abaixo.','Continuar no WhatsApp','Ficha registrada','Copiar ficha']) assert(schedulingSuccess.includes(expected), `Ação de sucesso ausente: ${expected}`);
+assert(/id="schedule-copy-text"[^>]*readonly/.test(schedulingSuccess), 'Ficha registrada deve ser somente leitura.');
+for (const id of ['schedule-whatsapp-fallback','schedule-continue-whatsapp','schedule-copy-text','schedule-copy-button','schedule-final-notice','schedule-recovery-actions','schedule-retry-status']) assert.equal(count(schedulingSection,new RegExp(`id="${id}"`,'g')),1,`${id} deve ser preservado exatamente uma vez`);
+assert.match(schedulingSection,/<a id="schedule-continue-whatsapp"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/,'Continuar no WhatsApp permanece link seguro separado');
+assert.match(schedulingSection,/id="schedule-final-notice"[^>]*tabindex="-1"[^>]*aria-live="polite"/,'aviso final preserva foco programático e aria-live');

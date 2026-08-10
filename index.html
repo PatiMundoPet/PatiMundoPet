@@ -214,7 +214,7 @@
         <div class="schedule-channel-actions"><button id="schedule-submit" class="schedule-submit" type="submit">Enviar pré-solicitação</button></div>
         <p class="schedule-final-notice" id="schedule-final-notice" tabindex="-1" aria-live="polite"></p>
         <div id="schedule-recovery-actions" hidden><button id="schedule-retry-status" type="button">Verificar novamente</button></div>
-        <div id="schedule-whatsapp-fallback" hidden><a id="schedule-continue-whatsapp" target="_blank" rel="noopener noreferrer">Continuar no WhatsApp</a><label for="schedule-copy-text">Ficha registrada para copiar</label><textarea id="schedule-copy-text" readonly aria-label="Ficha para copiar"></textarea><button id="schedule-copy-button" type="button">Copiar ficha</button></div>
+        <div id="schedule-whatsapp-fallback" class="schedule-success-actions" hidden><h3>Pré-solicitação registrada</h3><p>Você pode continuar a conversa no WhatsApp ou copiar a ficha abaixo.</p><a id="schedule-continue-whatsapp" class="schedule-submit" target="_blank" rel="noopener noreferrer">Continuar no WhatsApp</a><section class="schedule-copy-card" aria-labelledby="schedule-copy-label"><label id="schedule-copy-label" for="schedule-copy-text">Ficha registrada</label><textarea id="schedule-copy-text" readonly aria-label="Ficha registrada"></textarea><button id="schedule-copy-button" type="button">Copiar ficha</button></section></div>
       </form>
     </div>
   </section>

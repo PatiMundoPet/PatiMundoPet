@@ -295,6 +295,12 @@
 .schedule-live-only input[type="date"] { border: 1px solid #a89f91; border-radius: .65rem; background: #fff; padding: .75rem .85rem; }
 .schedule-whatsapp-success { justify-self: start; border-radius: 999px; padding: .8rem 1.25rem; background: #496653; color: #fff; font-weight: 800; }
 .schedule-whatsapp-success[hidden], .schedule-live-only[hidden] { display: none; }
+.schedule-success-actions { display: grid; gap: 1rem; padding: 1.25rem; border: 1px solid #d9d2c3; border-radius: 1rem; background: #fffdf8; }
+.schedule-success-actions .schedule-submit { justify-self: start; text-decoration: none; }
+.schedule-copy-card { display: grid; gap: .65rem; padding: 1rem; border: 1px solid #d9d2c3; border-radius: .8rem; background: #f7f3e9; }
+.schedule-copy-card label { font-weight: 800; }
+.schedule-copy-card textarea { min-height: 10rem; width: 100%; resize: vertical; border: 1px solid #9c9588; border-radius: .55rem; padding: .75rem; background: #fff; color: #20251f; }
+.schedule-copy-card button { justify-self: start; border-radius: 999px; padding: .7rem 1rem; border: 1px solid #496653; color: #334b3b; font-weight: 800; }
 .js .schedule-final-notice { display: none; }
 .js .schedule-final-notice.is-visible { display: block; padding: 1rem; border-radius: .75rem; background: #e7eee8; }
 @media (max-width: 639px) { .schedule-section { padding: 3.5rem 1.25rem; } .schedule-fields { grid-template-columns: 1fr; } .schedule-field:last-child { grid-column: auto; } .schedule-submit { width: 100%; } }
