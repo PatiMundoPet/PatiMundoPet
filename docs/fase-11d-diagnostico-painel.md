@@ -2,18 +2,7 @@
 
 ## Resultado da investigação com a evidência da Versão 13
 
-A execução da implantação Versão 13 retornou `PERSISTENCE_FAILED` com a mensagem
-“Não foi possível salvar o cliente”, mantendo a solicitação `PENDENTE`. Isso
-localiza a falha antes da criação do evento: `writeConfirmationClient_` gravou o
-cliente, executou `SpreadsheetApp.flush()` e não conseguiu comprovar a linha na
-releitura, ou a própria gravação/flush falhou.
-
-A condição foi reproduzida fazendo o mock se comportar como a Planilha: uma
-sequência numérica escrita no campo WhatsApp pode ser relida por `getValues()`
-como `Number`. O verificador anterior comparava toda a linha com igualdade estrita;
-portanto `"5500000000000" !== 5500000000000`, apesar de ambos representarem o
-mesmo WhatsApp normalizado. Ele tratava uma gravação válida como falha, removia o
-cliente pela compensação e retornava exatamente o erro observado na Versão 13.
+A execução real comprovou falha na verificação posterior à gravação do cliente. Foi reproduzida uma causa compatível: serialização numérica do WhatsApp pela Planilha. A comparação semântica corrige essa representação equivalente sem enfraquecer UUID, largura ou unicidade.
 
 A correção mantém a releitura e a exigência de exatamente um UUID. A linha inteira
 continua validada, mas campos com representação legítima da Planilha são comparados

@@ -615,13 +615,20 @@ function decisionContent_(context, status) {
   return { subject: subject, body: body, htmlBody: html };
 }
 function notifyDecision_(context, decision) {
-  var email = validDecisionEmail_(context.record['e-mail']), value, content;
-  if (!email) { value = notificationStatus_('EMAIL_NAO_INFORMADO', decision, context.config); try { persistNotification_(context, value); } catch (ignored) {} return { status: value, sent: false }; }
+  var email = validDecisionEmail_(context.record['e-mail']), value, content, started;
+  if (!email) {
+    value = notificationStatus_('EMAIL_NAO_INFORMADO', decision, context.config);
+    try { persistNotification_(context, value); return { status: value, persisted: true, sent: false, uncertain: false, retryAllowed: false }; }
+    catch (error) { console.error('ADMIN_NOTIFICATION_STATUS_UNCERTAIN decision=%s mailAttempted=false', decision); return { status: 'EMAIL_RESULTADO_INCERTO', persisted: false, sent: false, uncertain: true, retryAllowed: false, mailAttempted: false }; }
+  }
+  started = notificationStatus_('EMAIL_EM_PROCESSAMENTO', decision, context.config);
+  try { persistNotification_(context, started); }
+  catch (error) { console.error('ADMIN_NOTIFICATION_STATUS_UNCERTAIN decision=%s mailAttempted=false', decision); return { status: 'EMAIL_RESULTADO_INCERTO', persisted: false, sent: false, uncertain: true, retryAllowed: false, mailAttempted: false }; }
   try {
     content = decisionContent_(context, decision); var options = { to: email, subject: content.subject, body: content.body, htmlBody: content.htmlBody, name: 'Pati MundoPet' }, replyTo = validDecisionEmail_(context.config.ADMIN_EMAIL); if (replyTo) options.replyTo = replyTo; MailApp.sendEmail(options); value = notificationStatus_('EMAIL_ENVIADO', decision, context.config);
   } catch (error) { value = notificationStatus_('EMAIL_FALHOU', decision, context.config); }
-  try { persistNotification_(context, value); } catch (ignored) { value = notificationStatus_('EMAIL_FALHOU', decision, context.config); }
-  return { status: value, sent: value.indexOf('EMAIL_ENVIADO|') === 0 };
+  try { persistNotification_(context, value); return { status: value, persisted: true, sent: value.indexOf('EMAIL_ENVIADO|') === 0, uncertain: false, retryAllowed: value.indexOf('EMAIL_FALHOU|') === 0, mailAttempted: true }; }
+  catch (error) { console.error('ADMIN_NOTIFICATION_STATUS_UNCERTAIN decision=%s mailAttempted=true', decision); return { status: 'EMAIL_RESULTADO_INCERTO', persisted: false, sent: false, uncertain: true, retryAllowed: false, mailAttempted: true, persistedStatus: started }; }
 }
 function decisionWhatsappUrl_(context, status) { var phone; try { phone = normalizeClientWhatsapp_(context.record.WhatsApp); } catch (error) { return ''; } var r = context.record, note = text_(r['observaçãoAdministrativa']), decision = status === 'CONFIRMADO' ? 'confirmada' : status === 'RECUSADO' ? 'recusada' : 'cancelada', message = 'Olá, ' + text_(r['responsável']) + '. A solicitação de ' + serviceLabel_(r['serviço']) + ' para ' + text_(r.pet) + ', em ' + text_(r.data) + ' das ' + text_(r['horário']) + ' às ' + text_(r['horárioTérmino']) + ', foi ' + decision + '. Código: ' + context.requestId + (note && status !== 'CONFIRMADO' ? '. Observação: ' + note.replace(/^'(?=[=+\-@])/, '') : ''); return 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message); }
 

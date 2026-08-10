@@ -149,7 +149,7 @@ A tela principal **Cliente**, aberta pelo cartão, consulta todos os próximos h
 
 ## Notificações de decisão
 
-Depois de comprovar a persistência de `CONFIRMADO`, `RECUSADO` ou `CANCELADO`, o painel tenta enviar e-mail com `MailApp` e registra o resultado em `notificationStatus`, sem alterar A:S. Falha ou ausência de e-mail não desfaz a decisão. Um reenvio explícito só fica disponível para o último resultado `EMAIL_FALHOU`; envio concluído, estado não terminal e repetição são recusados. O link “Avisar também pelo WhatsApp” apenas abre `wa.me` com texto preparado e nunca marca envio automático.
+Depois de comprovar a persistência de `CONFIRMADO`, `RECUSADO` ou `CANCELADO`, o painel grava `EMAIL_EM_PROCESSAMENTO`, comprova essa gravação e só então tenta enviar com `MailApp`. Em seguida registra e relê o resultado em `notificationStatus`, sem alterar A:S. `EMAIL_ENVIADO`, `EMAIL_FALHOU` e `EMAIL_NAO_INFORMADO` só são retornados como persistidos depois da releitura. Se o resultado final não puder ser comprovado, o estado intermediário bloqueia qualquer reenvio e o painel exige revisão administrativa. Falha ou ausência de e-mail nunca desfaz a decisão. Um reenvio explícito só fica disponível para o último resultado comprovado `EMAIL_FALHOU`; envio concluído, estado incerto, estado não terminal e repetição são recusados. O link “Avisar também pelo WhatsApp” apenas abre `wa.me` com texto preparado e nunca marca envio automático.
 
 ## Fase 11C-2B — rótulos de serviço
 
