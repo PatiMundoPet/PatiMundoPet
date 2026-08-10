@@ -1,31 +1,31 @@
-# Backend público de agendamento — Fase 9B-3
+# Backend público de agendamento — Fase 11C-2A
 
-Backend com implantação configurada externamente para consultar duas agendas e persistir pré-solicitações na planilha administrativa. O site usa a integração `live`; IDs, credenciais, URL `/exec`, propriedades e contatos reais permanecem configurados fora do repositório e desta documentação.
+Backend público para consultar disponibilidade, registrar pré-solicitações na planilha administrativa e recuperar o resultado de um envio pelo `requestId`. A implantação, os IDs, as credenciais, a URL `/exec`, os contatos e todos os demais valores reais são administrados fora do repositório.
 
 ## Script Properties
 
-As propriedades obrigatórias são `AVAILABILITY_CALENDAR_ID`, `APPOINTMENTS_CALENDAR_ID`, `SPREADSHEET_ID`, `TIMEZONE`, `WORKDAY_START_TIME`, `WORKDAY_END_TIME`, `SLOT_INTERVAL_MINUTES`, `ALLOWED_SERVICE_IDS_JSON`, `WHATSAPP_NUMBER`, `PRIVACY_POLICY_VERSION`, `MAX_REQUEST_BYTES`, `RATE_LIMIT_WINDOW_MINUTES`, `RATE_LIMIT_MAX_REQUESTS`, `RATE_LIMIT_SALT`, `NOTIFICATION_EMAIL` e `EMAIL_NOTIFICATIONS_ENABLED`. Use exclusivamente Script Properties; veja `script-properties.example.json`, que contém apenas placeholders.
+São obrigatórias `AVAILABILITY_CALENDAR_ID`, `APPOINTMENTS_CALENDAR_ID`, `SPREADSHEET_ID`, `TIMEZONE`, `WORKDAY_START_TIME`, `WORKDAY_END_TIME`, `SLOT_INTERVAL_MINUTES`, `ALLOWED_SERVICE_IDS_JSON`, `WHATSAPP_NUMBER`, `PRIVACY_POLICY_VERSION`, `MAX_REQUEST_BYTES`, `RATE_LIMIT_WINDOW_MINUTES`, `RATE_LIMIT_MAX_REQUESTS`, `RATE_LIMIT_SALT`, `NOTIFICATION_EMAIL` e `EMAIL_NOTIFICATIONS_ENABLED`. Use exclusivamente Script Properties e placeholders como os de `script-properties.example.json`.
 
-`WORKDAY_START_TIME=08:30` é inclusivo e `WORKDAY_END_TIME=18:00` é apenas o encerramento: 18:00 nunca é oferecido como início. A jornada automática vale de segunda-feira a domingo. `SLOT_INTERVAL_MINUTES=30` existe apenas para a compatibilidade temporária do contrato legado baseado em `time`; o contrato novo usa `startTime` e `endTime` literais e não depende dessa propriedade. `AVAILABILITY_EVENT_PREFIX`, `SLOT_DURATION_MINUTES`, `CALENDAR_ID`, `PENDING_EVENT_PREFIX`, `PENDING_RETENTION_DAYS` e `ALLOWED_START_TIMES_JSON` não fazem parte deste contrato.
+O `SPREADSHEET_ID` do Backend Público deve apontar para a mesma planilha administrativa usada pelo Painel Privado. Não registre o ID real no repositório. `WORKDAY_START_TIME=08:30` é inclusivo e `WORKDAY_END_TIME=18:00` é somente o encerramento. `SLOT_INTERVAL_MINUTES=30` mantém o contrato legado com `time`; o contrato moderno usa os valores literais `startTime` e `endTime`. O exemplo de `ALLOWED_SERVICE_IDS_JSON` pode preparar `passeio-individual` e `dog-day-care`, mas isso não publica nem configura o serviço no site.
 
-## Superfície pública
+## Operações públicas e prontidão
 
-- `GET action=health`: flags booleanas de configuração, sem valores.
-- `GET action=availability&date=YYYY-MM-DD&startTime=HH:mm&endTime=HH:mm`: valida o intervalo exato. A consulta somente com `date` permanece temporariamente compatível com o site legado.
-- `POST action=request`: grava uma linha `PENDENTE`, atualiza `Clientes` e, quando habilitado, notifica por e-mail.
+As três responsabilidades são independentes:
 
-O `requestId` da linha controla a idempotência. Em um replay, o payload recebido é ignorado: nenhuma informação original ou de cliente é alterada e uma eventual recuperação de notificação usa exclusivamente os dados persistidos em `Solicitações`. Solicitações distintas podem compartilhar data e horário. Linhas `PENDENTE` não criam eventos e não participam da disponibilidade. Eventos não cancelados em `APPOINTMENTS_CALENDAR_ID` (atendimentos reais) e em `AVAILABILITY_CALENDAR_ID` (bloqueios e exceções operacionais) retiram qualquer slot sobreposto, inclusive eventos recorrentes e de dia inteiro. Eventos `[DISPONÍVEL]` não são mais usados; se ainda existirem, bloqueiam como qualquer outro evento. O futuro painel privado controlará esses bloqueios no calendário de disponibilidade. O POST mantém verificação antes e depois do lock, rate limit, validação e respostas compatíveis e nunca toca em `Pagamentos`.
+- `GET action=availability&date=YYYY-MM-DD&startTime=HH:mm&endTime=HH:mm` consulta os dois calendários. A forma temporariamente legada apenas com `date` continua aceita. Não reserva, confirma, persiste ou cria eventos.
+- `POST action=request` exige calendários acessíveis e uma aba `Solicitações` válida com `horárioTérmino` para o contrato moderno. Grava exclusivamente uma linha `PENDENTE`; nunca cria clientes, pagamentos ou eventos de Calendar.
+- `GET action=request-status&requestId=<UUID>` consulta somente `Solicitações`. Uma ocorrência retorna `REQUEST_FOUND` com apenas `requestId` e `status`; zero retorna `REQUEST_NOT_FOUND`; duplicidade retorna `INCONSISTENT_STATE`. A operação não escreve, notifica, limita taxa nem acessa Calendar.
 
-Não há operação administrativa em `doGet` ou `doPost`. A implantação e seus valores reais são administrados externamente; ao atualizar o código, revise permissões Calendar/Sheets/Mail e faça testes restritos sem registrar dados privados no Git.
+`GET action=health` preserva as flags anteriores. `configured` significa somente que as Script Properties são válidas. `availabilityReady` também exige acesso aos dois calendários; `requestSheetReady` exige acesso à planilha e estrutura válida de `Solicitações`; `requestEndTimeReady` exige `horárioTérmino` na posição correta; e `requestReady` reúne o necessário para o POST moderno. As verificações são somente leitura e não expõem valores, cabeçalhos recebidos, dados pessoais ou detalhes técnicos.
 
-A aba `Solicitações` aceita durante a migração os 15 cabeçalhos atuais ou uma 16ª coluna `horárioTérmino`, exclusivamente no final. Solicitações no contrato novo só são gravadas quando essa coluna final existe; assim, uma implantação intermediária não produz linha parcial. O campo `horário` preserva o início e `horárioTérmino` preserva o término literal.
+## Contrato da aba Solicitações
 
-A consulta pública é apenas informativa e reflete os eventos reais dos dois calendários no instante da consulta: não reserva, não confirma, não cria evento e não bloqueia a agenda. O POST também nunca cria eventos; grava exclusivamente uma pré-solicitação `PENDENTE`, e pedidos distintos podem solicitar o mesmo intervalo enquanto permanecem pendentes. A segunda consulta sob `LockService` apenas evita registrar um pedido depois que um evento real passou a ocupar o período.
+A validação de `Solicitações` é estrita. A base A:O mantém os cabeçalhos documentados; as formas operacionais A:P, A:Q, A:R e A:S acrescentam, nesta ordem, `horárioTérmino`, `eventIdAtendimento`, `observaçãoAdministrativa` e `clienteId`. O início permanece em `horário`, o término literal em `horárioTérmino`, e Q:S ficam vazias na criação pública.
 
-## Compatibilidade e segurança da Fase 10B
+As abas `Clientes` e `Pagamentos` **não são dependências do Backend Público**. Elas não são abertas, validadas, lidas ou escritas por disponibilidade, criação ou recuperação. Cabeçalhos ausentes, diferentes ou adicionais nessas abas não podem bloquear uma pré-solicitação.
 
-O backend público aceita a aba `Solicitações` com A:P, A:Q, A:R ou A:S, desde que as colunas opcionais finais sejam, nessa ordem, `eventIdAtendimento`, `observaçãoAdministrativa` e `clienteId`. Pré-solicitações permanecem `PENDENTE`, escrevem somente dados públicos em A:P e deixam Q:S vazias; em particular, `clienteId` nasce vazio. Textos controlados pelo usuário são neutralizados antes da escrita quando começam com `=`, `+`, `-` ou `@`.
+O `requestId` controla idempotência. Exatamente uma linha existente preserva integralmente o conteúdo gravado e permite recuperar uma notificação pendente; mais de uma linha retorna `INCONSISTENT_STATE` sem efeitos colaterais. Solicitações distintas podem compartilhar período enquanto estão pendentes. Textos iniciados por `=`, `+`, `-` ou `@` são neutralizados antes da escrita.
 
-O backend público não cria, atualiza nem remove clientes, inclusive em repetições idempotentes, e não cria eventos de calendário.
+Eventos não cancelados de `APPOINTMENTS_CALENDAR_ID` e `AVAILABILITY_CALENDAR_ID` bloqueiam qualquer intervalo sobreposto, inclusive recorrências e eventos de dia inteiro. Linhas `PENDENTE` não participam da disponibilidade. O backend nunca cria eventos de Calendar; a confirmação continua sendo administrativa.
 
-A versão pública `2.4.0` identifica o endurecimento de persistência e a compatibilidade A:P/A:Q/A:R/A:S desta revisão.
+A versão pública `2.5.0` identifica a prontidão operacional separada, o desacoplamento de Clientes/Pagamentos e a recuperação segura por `requestId`.
