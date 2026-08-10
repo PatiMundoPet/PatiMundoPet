@@ -15,33 +15,24 @@ artefatos gerados e permanecem versionados.
 agendamento já existente. Credenciais e IDs privados não devem ser incluídos
 nesses arquivos.
 
-## Fase 11A — verdade do site público
+## Fase 11C-2B — fluxo público definitivo
 
-O site apresenta somente os serviços confirmados:
+O site apresenta os três serviços confirmados:
 
-- **Passeios**, com pré-solicitação pelo formulário integrado;
+- **Passeios** e **Dog Day Care**, com pré-solicitação pelo formulário integrado;
 - **Dog sitter**, combinado diretamente com a Pati pelo WhatsApp.
 
-O formulário envia exclusivamente o serviço estável
-`passeio-individual` com o rótulo público `Passeios`. Dog sitter permanece
-visível no site, mas não é uma opção do formulário e ainda não integra o
-contrato funcional do backend.
+O formulário envia os IDs técnicos `passeio-individual` e `dog-day-care` em
+um único canal de registro. A continuação pelo WhatsApp aparece somente após a
+confirmação do registro, e falhas ambíguas acionam a recuperação somente leitura
+por `requestId`, sem repetir o POST automaticamente. Dog sitter permanece
+visível, mas fora do formulário e do contrato do backend.
 
 Toda solicitação está sujeita à análise e à confirmação manual da Pati. Valores
 e disponibilidade são combinados diretamente, e o pagamento é feito via Pix;
 o site não possui checkout nem pagamento automático.
 
-A Fase 11A altera somente conteúdo, estrutura, validações de build, testes
-estáticos e artefatos gerados do site público. Ela não modifica:
-
-- `apps-script/` ou o contrato do backend;
-- `admin-apps-script/` ou o Painel Privado;
-- `assets/js/scheduling.js` e `assets/js/scheduling-api.js`;
-- `content/integration.json`, APIs, payloads, autenticação ou autorização;
-- Google Sheets, Google Calendar ou workflows.
-
-Os detalhes e limites funcionais estão registrados em
-[`docs/fase-11a-verdade-site-publico.md`](docs/fase-11a-verdade-site-publico.md).
+Nenhum evento é criado enquanto a solicitação está `PENDENTE`; a criação continua exclusiva da confirmação manual no Painel Privado.
 
 ## Build
 

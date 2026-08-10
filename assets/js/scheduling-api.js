@@ -6,7 +6,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var CODES = new Set(['HEALTH_OK', 'AVAILABILITY_OK', 'REQUEST_CREATED', 'SLOT_UNAVAILABLE', 'INTERVAL_UNAVAILABLE', 'LOCK_TIMEOUT', 'INVALID_REQUEST', 'CONFIGURATION_REQUIRED', 'INTERNAL_ERROR', 'RATE_LIMITED', 'INCONSISTENT_STATE', 'PERSISTENCE_FAILED']);
+  var CODES = new Set(['HEALTH_OK', 'AVAILABILITY_OK', 'REQUEST_CREATED', 'REQUEST_FOUND', 'REQUEST_NOT_FOUND', 'SLOT_UNAVAILABLE', 'INTERVAL_UNAVAILABLE', 'LOCK_TIMEOUT', 'INVALID_REQUEST', 'CONFIGURATION_REQUIRED', 'INTERNAL_ERROR', 'RATE_LIMITED', 'INCONSISTENT_STATE', 'PERSISTENCE_FAILED']);
 
   function formatCalendarDate(date) {
     if (!(date instanceof Date) || !Number.isFinite(date.getTime())) throw new TypeError('Data inválida.');
@@ -56,6 +56,12 @@
       if (!exact && !legacy) throw new Error('INVALID_RESPONSE');
     }
     if (kind === 'request' && value.ok && (value.code !== 'REQUEST_CREATED' || !value.requestId)) throw new Error('INVALID_RESPONSE');
+    if (kind === 'request-status') {
+      if (['REQUEST_FOUND', 'REQUEST_NOT_FOUND', 'INCONSISTENT_STATE', 'CONFIGURATION_REQUIRED', 'INTERNAL_ERROR'].indexOf(value.code) < 0) throw new Error('INVALID_RESPONSE');
+      if (value.code === 'REQUEST_FOUND') {
+        if (!value.ok || !value.data || value.data.requestId !== value.requestId || typeof value.data.status !== 'string' || !value.data.status || value.data.status.length > 40) throw new Error('INVALID_RESPONSE');
+      } else if (value.ok || (['REQUEST_NOT_FOUND', 'INCONSISTENT_STATE'].indexOf(value.code) >= 0 && !value.requestId)) throw new Error('INVALID_RESPONSE');
+    }
     return value;
   }
 
@@ -133,12 +139,17 @@
 
     return {
       configStatus: checked,
+      pendingRequestId: function () { return pendingRequestId; },
       health: function () { return get('health', '', 'health'); },
       availability: function (date, startTime, endTime, onRetry) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return Promise.reject(new Error('INVALID_REQUEST'));
         if ((startTime || endTime) && (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(startTime || '') || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(endTime || ''))) return Promise.reject(new Error('INVALID_REQUEST'));
         var interval = startTime ? { date: date, startTime: startTime, endTime: endTime } : null;
         return get('availability', date, 'availability', interval || {}, interval, onRetry);
+      },
+      requestStatus: function (requestId) {
+        if (typeof requestId !== 'string' || !/^[0-9a-f-]{36}$/i.test(requestId)) return Promise.reject(new Error('INVALID_REQUEST'));
+        return get('request-status', '', 'request-status', { requestId: requestId });
       },
       request: function (payload) {
         if (config.mode === 'demo') return Promise.resolve({ ok: false, code: 'DEMO_MODE', message: config.messages.demo });

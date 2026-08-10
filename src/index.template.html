@@ -112,12 +112,17 @@
     <div class="max-w-6xl mx-auto px-5 sm:px-8">
       <div class="reveal max-w-2xl">
         <span class="tag-chip inline-block bg-stone-50 text-brass-700 text-xs font-semibold uppercase tracking-wider pl-6 pr-4 py-1.5 rounded-full">Serviços</span>
-        <h2 id="titulo-servicos" class="mt-5 font-display font-semibold text-3xl sm:text-4xl leading-tight">Duas formas de cuidar da rotina do seu cão.</h2>
+        <h2 id="titulo-servicos" class="mt-5 font-display font-semibold text-3xl sm:text-4xl leading-tight">Três formas de cuidar da rotina do seu cão.</h2>
       </div>
-      <div class="mt-14 grid md:grid-cols-2 gap-6">
+      <div class="mt-14 grid md:grid-cols-3 gap-6">
         <article class="reveal bg-stone-50 rounded-2xl p-7 flex flex-col">
           <h3 class="font-display font-semibold text-2xl mb-3">Passeios</h3>
           <p class="text-ink-700 leading-relaxed flex-1">Passeio individual, pensado conforme o ritmo, o comportamento e as necessidades do cão.</p>
+          <a href="#agendamento" class="mt-6 inline-flex items-center text-sm font-semibold text-moss-700 hover:text-moss-800">Solicitar pelo formulário</a>
+        </article>
+        <article class="reveal bg-stone-50 rounded-2xl p-7 flex flex-col">
+          <h3 class="font-display font-semibold text-2xl mb-3">Dog Day Care</h3>
+          <p class="text-ink-700 leading-relaxed flex-1">Cuidado durante o dia. Detalhes, condições, disponibilidade final, valor e pagamento via Pix são combinados com a Pati pelo WhatsApp.</p>
           <a href="#agendamento" class="mt-6 inline-flex items-center text-sm font-semibold text-moss-700 hover:text-moss-800">Solicitar pelo formulário</a>
         </article>
         <article class="reveal bg-moss-800 text-stone-50 rounded-2xl p-7 flex flex-col">
@@ -132,11 +137,11 @@
   <section id="caminho-passeio" class="bg-moss-900 py-24 sm:py-28" aria-labelledby="titulo-caminho-passeio">
     <div class="max-w-6xl mx-auto px-5 sm:px-8">
       <div class="reveal max-w-2xl">
-        <span class="tag-chip inline-block bg-moss-700/60 text-brass-300 text-xs font-semibold uppercase tracking-wider pl-6 pr-4 py-1.5 rounded-full">O caminho do passeio</span>
+        <span class="tag-chip inline-block bg-moss-700/60 text-brass-300 text-xs font-semibold uppercase tracking-wider pl-6 pr-4 py-1.5 rounded-full">O caminho do atendimento</span>
         <h2 id="titulo-caminho-passeio" class="mt-5 font-display font-semibold text-3xl sm:text-4xl leading-tight text-stone-50">Da solicitação à confirmação da Pati.</h2>
       </div>
       <div class="mt-16 grid sm:grid-cols-2 lg:grid-cols-4 gap-y-12 gap-x-8">
-        <div class="leash-line reveal relative"><div class="step-tag w-14 h-14 rounded-2xl bg-brass-500 text-ink-900 flex items-center justify-center font-display font-semibold text-lg">01</div><h3 class="mt-6 font-display font-semibold text-stone-50 text-lg mb-2">Solicite</h3><p class="text-stone-50/70 text-[15px] leading-relaxed pr-4">Envie a pré-solicitação de passeio pelo formulário.</p></div>
+        <div class="leash-line reveal relative"><div class="step-tag w-14 h-14 rounded-2xl bg-brass-500 text-ink-900 flex items-center justify-center font-display font-semibold text-lg">01</div><h3 class="mt-6 font-display font-semibold text-stone-50 text-lg mb-2">Solicite</h3><p class="text-stone-50/70 text-[15px] leading-relaxed pr-4">Envie a pré-solicitação pelo formulário.</p></div>
         <div class="leash-line reveal relative"><div class="step-tag w-14 h-14 rounded-2xl bg-brass-500 text-ink-900 flex items-center justify-center font-display font-semibold text-lg">02</div><h3 class="mt-6 font-display font-semibold text-stone-50 text-lg mb-2">Converse</h3><p class="text-stone-50/70 text-[15px] leading-relaxed pr-4">A Pati analisa os dados e conversa com você pelo canal informado.</p></div>
         <div class="leash-line reveal relative"><div class="step-tag w-14 h-14 rounded-2xl bg-brass-500 text-ink-900 flex items-center justify-center font-display font-semibold text-lg">03</div><h3 class="mt-6 font-display font-semibold text-stone-50 text-lg mb-2">Combine</h3><p class="text-stone-50/70 text-[15px] leading-relaxed pr-4">Disponibilidade, valor e pagamento via Pix são combinados diretamente.</p></div>
         <div class="leash-line reveal relative"><div class="step-tag w-14 h-14 rounded-2xl bg-brass-500 text-ink-900 flex items-center justify-center font-display font-semibold text-lg">04</div><h3 class="mt-6 font-display font-semibold text-stone-50 text-lg mb-2">Confirme</h3><p class="text-stone-50/70 text-[15px] leading-relaxed pr-4">O atendimento só fica confirmado depois da resposta da Pati.</p></div>
@@ -171,9 +176,10 @@
         <label class="schedule-confirmation" for="schedule-privacy-confirmation"><input id="schedule-privacy-confirmation" name="privacyAccepted" type="checkbox" required aria-required="true" aria-describedby="error-privacidade"><span>Li o <a class="underline" href="privacy.html">aviso de privacidade</a> e autorizo o uso dos dados para analisar esta pré-solicitação.</span></label><span class="schedule-error" id="error-privacidade"></span>
         <label class="schedule-confirmation" for="schedule-review-confirmation"><input id="schedule-review-confirmation" name="revisao" type="checkbox" required aria-required="true" aria-describedby="error-revisao"><span>{{SCHEDULING_REVIEW}}</span></label><span class="schedule-error" id="error-revisao"></span>
         <p class="schedule-notice"><strong>Atenção:</strong> {{SCHEDULING_COMMERCIAL_NOTICE}}</p>
-        <div class="schedule-channel-actions"><button class="schedule-submit" type="submit" name="submissionChannel" value="whatsapp">{{SCHEDULING_WHATSAPP_SUBMIT}}</button><button class="schedule-submit" type="submit" name="submissionChannel" value="email">{{SCHEDULING_EMAIL_SUBMIT}}</button></div>
+        <div class="schedule-channel-actions"><button id="schedule-submit" class="schedule-submit" type="submit">{{SCHEDULING_SUBMIT}}</button></div>
         <p class="schedule-final-notice" id="schedule-final-notice" tabindex="-1" aria-live="polite"></p>
-        <div id="schedule-whatsapp-fallback" hidden><label for="schedule-copy-text">Ficha registrada para copiar</label><textarea id="schedule-copy-text" readonly aria-label="Ficha para copiar"></textarea><button id="schedule-copy-button" type="button">Copiar ficha</button></div>
+        <div id="schedule-recovery-actions" hidden><button id="schedule-retry-status" type="button">Verificar novamente</button></div>
+        <div id="schedule-whatsapp-fallback" hidden><a id="schedule-continue-whatsapp" target="_blank" rel="noopener noreferrer">Continuar no WhatsApp</a><label for="schedule-copy-text">Ficha registrada para copiar</label><textarea id="schedule-copy-text" readonly aria-label="Ficha para copiar"></textarea><button id="schedule-copy-button" type="button">Copiar ficha</button></div>
       </form>
     </div>
   </section>

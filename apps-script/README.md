@@ -8,6 +8,8 @@ São obrigatórias `AVAILABILITY_CALENDAR_ID`, `APPOINTMENTS_CALENDAR_ID`, `SPRE
 
 O `SPREADSHEET_ID` do Backend Público deve apontar para a mesma planilha administrativa usada pelo Painel Privado. Não registre o ID real no repositório. `WORKDAY_START_TIME=08:30` é inclusivo e `WORKDAY_END_TIME=18:00` é somente o encerramento. `SLOT_INTERVAL_MINUTES=30` mantém o contrato legado com `time`; o contrato moderno usa os valores literais `startTime` e `endTime`. O exemplo de `ALLOWED_SERVICE_IDS_JSON` pode preparar `passeio-individual` e `dog-day-care`, mas isso não publica nem configura o serviço no site.
 
+A ativação operacional do Dog Day Care deve ocorrer somente depois da aprovação e publicação coordenada do cliente, por atualização manual da propriedade de serviços permitidos. Nenhum valor real deve ser versionado e nenhuma alteração do código 2.5.0 é necessária.
+
 ## Operações públicas e prontidão
 
 As três responsabilidades são independentes:

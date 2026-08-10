@@ -72,7 +72,7 @@ function listarProximosAgendamentosCliente(clientId) {
         date: Utilities.formatDate(link.interval.start, config.TIMEZONE, 'yyyy-MM-dd'),
         startTime: Utilities.formatDate(link.interval.start, config.TIMEZONE, 'HH:mm'),
         endTime: Utilities.formatDate(link.interval.end, config.TIMEZONE, 'HH:mm'),
-        service: text_(link.values[link.headers.indexOf('serviço')]),
+        service: serviceLabel_(link.values[link.headers.indexOf('serviço')]),
         pet: text_(link.values[link.headers.indexOf('pet')])
       };
     }).sort(function (a, b) { return (a.date + 'T' + a.startTime).localeCompare(b.date + 'T' + b.startTime); }) };
@@ -330,7 +330,7 @@ function readSheet_(config, schema, mapper) {
 function mapRequest_(row, timezone) {
   return {
     requestId: text_(row.requestId), receivedAt: dateTime_(row.dataRecebimento, timezone), channel: text_(row.submissionChannel),
-    service: text_(row['serviço']), date: date_(row.data, timezone), time: time_(row['horário'], timezone), endTime: time_(row['horárioTérmino'], timezone), responsible: text_(row['responsável']),
+    service: serviceLabel_(row['serviço']), date: date_(row.data, timezone), time: time_(row['horário'], timezone), endTime: time_(row['horárioTérmino'], timezone), responsible: text_(row['responsável']),
     whatsapp: text_(row.WhatsApp), email: text_(row['e-mail']), pet: text_(row.pet), region: text_(row['região']), notes: text_(row['observações']),
     status: officialStatus_(row.status, ADMIN.requestStatuses), notificationStatus: text_(row.notificationStatus), updatedAt: dateTime_(row['dataÚltimaAtualização'], timezone), adminNote: text_(row['observaçãoAdministrativa'])
   };
@@ -341,8 +341,10 @@ function mapClient_(row, timezone) {
 }
 
 function mapPayment_(row, timezone) {
-  return { requestId: text_(row.requestId), client: text_(row.cliente), service: text_(row['serviço']), amount: number_(row.valor), paymentMethod: text_(row.formaPagamento), dueDate: date_(row.vencimento, timezone), status: officialStatus_(row.statusPagamento, ADMIN.paymentStatuses), paidAt: dateTime_(row.dataPagamento, timezone), notes: text_(row['observações']) };
+  return { requestId: text_(row.requestId), client: text_(row.cliente), service: serviceLabel_(row['serviço']), amount: number_(row.valor), paymentMethod: text_(row.formaPagamento), dueDate: date_(row.vencimento, timezone), status: officialStatus_(row.statusPagamento, ADMIN.paymentStatuses), paidAt: dateTime_(row.dataPagamento, timezone), notes: text_(row['observações']) };
 }
+
+function serviceLabel_(value) { var id = text_(value); return ({ 'passeio-individual': 'Passeios', 'dog-day-care': 'Dog Day Care' })[id] || id; }
 
 function officialStatus_(value, allowed) {
   var status = text_(value).toUpperCase();
@@ -547,8 +549,8 @@ function confirmRequest_(context) {
   if (eventId || linkedId) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); if (['PENDENTE', 'MAIS_INFORMACOES'].indexOf(current) < 0) throw safeError_('INVALID_TRANSITION', 'Esta ação não é permitida para o status atual.');
   var snapshot = context.values.slice(), resolution = resolveConfirmationClient_(context); resolution.config = context.config; var plan = prepareConfirmationClient_(context, resolution), interval = interval_(context); if (hasConflict_(context.appointments, interval) || hasConflict_(context.availability, interval)) throw safeError_('INTERVAL_UNAVAILABLE', 'O período solicitado não está disponível.');
   try { writeConfirmationClient_(resolution, plan); } catch (error) { var clientFailure = compensateConfirmation_(context, snapshot, resolution, plan, null); if (!clientFailure.ok) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); throw safeError_('PERSISTENCE_FAILED', 'Não foi possível salvar o cliente.'); }
-  var event, description = marker_(context.requestId) + '\nserviço: ' + text_(context.record['serviço']) + '\nresponsável: ' + text_(context.record['responsável']) + '\npet: ' + text_(context.record.pet) + '\nWhatsApp: ' + text_(context.record.WhatsApp) + '\ne-mail: ' + text_(context.record['e-mail']) + '\nregião: ' + text_(context.record['região']) + '\nobservações: ' + text_(context.record['observações']);
-  try { event = context.appointments.createEvent('Atendimento — ' + text_(context.record.pet) + ' — ' + text_(context.record['responsável']), interval.start, interval.end, { description: description }); if (!eventMatches_(event, context.requestId)) throw new Error('marker'); }
+  var event, serviceId = text_(context.record['serviço']), serviceLabel = serviceLabel_(serviceId), description = marker_(context.requestId) + '\nserviço: ' + serviceLabel + '\nserviceId: ' + serviceId + '\nresponsável: ' + text_(context.record['responsável']) + '\npet: ' + text_(context.record.pet) + '\nWhatsApp: ' + text_(context.record.WhatsApp) + '\ne-mail: ' + text_(context.record['e-mail']) + '\nregião: ' + text_(context.record['região']) + '\nobservações: ' + text_(context.record['observações']);
+  try { event = context.appointments.createEvent(serviceLabel + ' — ' + text_(context.record.pet) + ' — ' + text_(context.record['responsável']), interval.start, interval.end, { description: description }); if (!eventMatches_(event, context.requestId)) throw new Error('marker'); }
   catch (error) { var eventFailure = compensateConfirmation_(context, snapshot, resolution, plan, event); if (!eventFailure.ok) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); throw safeError_('PERSISTENCE_FAILED', 'Não foi possível criar o agendamento.'); }
   try { var result = persist_(context, 'CONFIRMADO', event.getId(), plan.clientId); if (!confirmationRequestMatches_(context, plan.clientId, event.getId()) || !eventMatches_(context.appointments.getEventById(event.getId()), context.requestId) || !clientPlanMatches_(resolution, plan, plan.expected)) throw new Error('confirmation not verified'); return result; }
   catch (error) { var persistFailure = compensateConfirmation_(context, snapshot, resolution, plan, event); if (!persistFailure.ok) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); throw safeError_('PERSISTENCE_FAILED', 'Não foi possível salvar a confirmação.'); }

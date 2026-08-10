@@ -144,3 +144,7 @@ Adicione manualmente `clienteId` em `Solicitações!S1`, imediatamente depois de
 Sob o lock administrativo, a confirmação compara WhatsApp e e-mail normalizados contra todos os clientes. Nenhuma correspondência cria um cliente; uma correspondência inequívoca reutiliza-o; contatos duplicados ou apontando para clientes diferentes exigem reconciliação antes de qualquer escrita. Cliente, evento marcado pelo `requestId` e solicitação confirmada são persistidos como uma unidade compensável: falhas removem o evento novo e restauram ou removem com verificação o cliente afetado.
 
 A tela principal **Cliente**, aberta pelo cartão, consulta todos os próximos horários confirmados. O vínculo por `clienteId` tem prioridade; registros antigos sem vínculo usam contatos somente quando há um único proprietário seguro. A resposta expõe apenas data, início, término, serviço e pet.
+
+## Fase 11C-2B — rótulos de serviço
+
+O Painel preserva os IDs técnicos na planilha e apresenta `Passeios` e `Dog Day Care` nas telas e nos eventos confirmados. Valores desconhecidos são mantidos como texto. A descrição do evento conserva o `requestId` e o `serviceId` para rastreabilidade; solicitações pendentes continuam sem evento.

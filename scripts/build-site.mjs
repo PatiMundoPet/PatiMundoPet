@@ -80,8 +80,8 @@ function validate(config) {
   if (errors.length) throw new Error(`Configuração inválida em content/site.json:\n- ${errors.join('\n- ')}`);
 }
 
-const schedulingStrings = ['title', 'description', 'availabilityNotice', 'inactiveMessage', 'noScriptMessage', 'reviewConfirmation', 'summaryTitle', 'commercialNotice', 'whatsappSubmitLabel', 'emailSubmitLabel'];
-const allowedSchedulingService = { id: 'passeio-individual', label: 'Passeios' };
+const schedulingStrings = ['title', 'description', 'availabilityNotice', 'inactiveMessage', 'noScriptMessage', 'reviewConfirmation', 'summaryTitle', 'commercialNotice', 'submitLabel'];
+const allowedSchedulingServices = [{ id: 'passeio-individual', label: 'Passeios' }, { id: 'dog-day-care', label: 'Dog Day Care' }];
 const allowedFieldTypes = new Set(['text', 'tel', 'email', 'textarea']);
 
 function validateScheduling(config) {
@@ -106,11 +106,7 @@ function validateScheduling(config) {
     });
   });
   if (Array.isArray(config.services)) {
-    if (config.services.length !== 1) errors.push('"services" deve conter exatamente um serviço nesta fase');
-    const [service] = config.services;
-    if (service?.id !== allowedSchedulingService.id || service?.label !== allowedSchedulingService.label) {
-      errors.push(`"services" deve conter somente { id: "${allowedSchedulingService.id}", label: "${allowedSchedulingService.label}" }`);
-    }
+    if (JSON.stringify(config.services) !== JSON.stringify(allowedSchedulingServices)) errors.push('"services" deve conter exatamente Passeios e Dog Day Care, nesta ordem');
   }
   if (Array.isArray(config.times)) config.times.forEach((item, index) => {
     if (typeof item.available !== 'boolean') errors.push(`"times[${index}].available" deve ser booleano`);
@@ -301,8 +297,7 @@ try {
     SCHEDULING_TIMES: '',
     SCHEDULING_FIELDS: renderFields(scheduling.fields),
     SCHEDULING_REVIEW: escapeHtml(scheduling.reviewConfirmation),
-    SCHEDULING_WHATSAPP_SUBMIT: escapeHtml(scheduling.whatsappSubmitLabel),
-    SCHEDULING_EMAIL_SUBMIT: escapeHtml(scheduling.emailSubmitLabel),
+    SCHEDULING_SUBMIT: escapeHtml(scheduling.submitLabel),
     SCHEDULING_COMMERCIAL_NOTICE: escapeHtml(scheduling.commercialNotice.replaceAll('Pati', config.professionalName)),
     SCHEDULING_SUMMARY_TITLE: escapeHtml(scheduling.summaryTitle),
     SCHEDULING_NOT_SENT: escapeHtml(scheduling.states.notSent),
