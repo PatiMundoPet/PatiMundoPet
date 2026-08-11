@@ -70,6 +70,62 @@
     });
   })();
 
+  // ---------- Galeria: visualizador de fotos ----------
+  (function () {
+    var items = Array.prototype.slice.call(document.querySelectorAll('.gallery-item'));
+    var dialog = document.getElementById('gallery-lightbox');
+    var image = document.getElementById('gallery-lightbox-image');
+    var closeButton = document.getElementById('gallery-close');
+    var prevButton = document.getElementById('gallery-prev');
+    var nextButton = document.getElementById('gallery-next');
+    if (!items.length || !dialog || !image || !closeButton || !prevButton || !nextButton) return;
+    if (typeof dialog.showModal !== 'function') return; // sem suporte: fotos continuam visíveis na grade, só não ampliam
+
+    var current = -1;
+    var trigger = null;
+
+    function show(index) {
+      current = (index + items.length) % items.length;
+      var item = items[current];
+      var thumb = item.querySelector('img');
+      image.src = item.getAttribute('data-full');
+      image.alt = thumb ? thumb.getAttribute('alt') : '';
+    }
+
+    function open(index, originButton) {
+      trigger = originButton || null;
+      show(index);
+      if (!dialog.open) dialog.showModal();
+    }
+
+    function close() {
+      if (dialog.open) dialog.close();
+    }
+
+    items.forEach(function (item, index) {
+      item.addEventListener('click', function () { open(index, item); });
+    });
+
+    closeButton.addEventListener('click', close);
+    prevButton.addEventListener('click', function () { show(current - 1); });
+    nextButton.addEventListener('click', function () { show(current + 1); });
+
+    // Clique fora da foto (no backdrop) fecha; clique na própria foto ou nos controles, não.
+    dialog.addEventListener('click', function (event) {
+      if (event.target === dialog) close();
+    });
+
+    dialog.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowLeft') { event.preventDefault(); show(current - 1); }
+      else if (event.key === 'ArrowRight') { event.preventDefault(); show(current + 1); }
+    });
+
+    // Esc já fecha nativamente (evento "cancel" do <dialog>); aqui só devolvemos o foco.
+    dialog.addEventListener('close', function () {
+      if (trigger) { trigger.focus(); trigger = null; }
+    });
+  })();
+
   // ---------- Loader (tela de abertura) ----------
   (function () {
     var loader = document.getElementById('site-loader');
