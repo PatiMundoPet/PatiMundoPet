@@ -83,8 +83,8 @@
 
 <main id="conteudo-principal" tabindex="-1">
   <section id="inicio" class="relative bg-moss-800 pt-32 pb-24 sm:pt-40 sm:pb-32 overflow-hidden" aria-labelledby="titulo-inicio">
-    <div class="pointer-events-none absolute -top-24 -left-24 w-80 h-80 rounded-full bg-brass-500/10 blur-3xl"></div>
-    <div class="pointer-events-none absolute bottom-0 right-0 w-96 h-96 rounded-full bg-cognac-500/10 blur-3xl"></div>
+    <div class="pointer-events-none absolute -top-24 -left-24 w-80 h-80 rounded-full bg-brass-500/10 blur-3xl" data-parallax="0.12"></div>
+    <div class="pointer-events-none absolute bottom-0 right-0 w-96 h-96 rounded-full bg-cognac-500/10 blur-3xl" data-parallax="-0.08"></div>
     <div class="relative max-w-5xl mx-auto px-5 sm:px-8 text-center">
       <span class="tag-chip inline-block bg-moss-700/70 text-brass-300 text-xs font-semibold uppercase tracking-wider pl-6 pr-4 py-1.5 rounded-full reveal">Cuidado pessoal para cães</span>
       <h1 id="titulo-inicio" class="reveal mt-6 font-display font-semibold text-4xl sm:text-5xl md:text-6xl leading-[1.08] text-stone-50 text-balance">Passeios e dog sitter com atenção ao <span class="italic text-brass-400">ritmo de cada cão.</span></h1>
@@ -98,7 +98,7 @@
 
   <section id="quem-e-a-pati" class="bg-stone-50 py-24 sm:py-28" aria-labelledby="titulo-quem-e-a-pati">
     <div class="max-w-6xl mx-auto px-5 sm:px-8 grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16 items-center">
-      <div class="reveal rounded-[2rem] overflow-hidden shadow-soft">
+      <div class="reveal section-curtain rounded-[2rem] overflow-hidden shadow-soft">
         <img src="assets/img/galeria/pati-retrato-thumb.jpg" srcset="assets/img/galeria/pati-retrato-thumb.jpg 640w, assets/img/galeria/pati-retrato-full.jpg 1440w" sizes="(min-width: 1024px) 480px, 90vw" alt="Pati sorrindo, agachada ao lado de dois cães pretos" width="640" height="640" loading="lazy" decoding="async" class="w-full h-full object-cover">
       </div>
       <div class="reveal">
@@ -111,23 +111,23 @@
   </section>
 
   <section id="servicos" class="bg-stone-100 py-24 sm:py-28" aria-labelledby="titulo-servicos">
-    <div class="max-w-6xl mx-auto px-5 sm:px-8">
+    <div class="reveal section-curtain max-w-6xl mx-auto px-5 sm:px-8">
       <div class="reveal max-w-2xl">
         <span class="tag-chip inline-block bg-stone-50 text-brass-700 text-xs font-semibold uppercase tracking-wider pl-6 pr-4 py-1.5 rounded-full">Serviços</span>
         <h2 id="titulo-servicos" class="mt-5 font-display font-semibold text-3xl sm:text-4xl leading-tight">Três formas de cuidar da rotina do seu cão.</h2>
       </div>
       <div class="mt-14 grid md:grid-cols-3 gap-6">
-        <article class="reveal bg-stone-50 rounded-2xl p-7 flex flex-col">
+        <article class="reveal tilt-card bg-stone-50 rounded-2xl p-7 flex flex-col">
           <h3 class="font-display font-semibold text-2xl mb-3">Passeios</h3>
           <p class="text-ink-700 leading-relaxed flex-1">Passeio individual, pensado conforme o ritmo, o comportamento e as necessidades do cão.</p>
           <a href="#agendamento" class="mt-6 inline-flex items-center text-sm font-semibold text-moss-700 hover:text-moss-800">Solicitar pelo formulário</a>
         </article>
-        <article class="reveal bg-stone-50 rounded-2xl p-7 flex flex-col">
+        <article class="reveal tilt-card bg-stone-50 rounded-2xl p-7 flex flex-col">
           <h3 class="font-display font-semibold text-2xl mb-3">Dog Day Care</h3>
           <p class="text-ink-700 leading-relaxed flex-1">Cuidado durante o dia. Detalhes, condições, disponibilidade final, valor e pagamento via Pix são combinados com a Pati pelo WhatsApp.</p>
           <a href="#agendamento" class="mt-6 inline-flex items-center text-sm font-semibold text-moss-700 hover:text-moss-800">Solicitar pelo formulário</a>
         </article>
-        <article class="reveal bg-moss-800 text-stone-50 rounded-2xl p-7 flex flex-col">
+        <article class="reveal tilt-card bg-moss-800 text-stone-50 rounded-2xl p-7 flex flex-col">
           <h3 class="font-display font-semibold text-2xl mb-3">Dog sitter</h3>
           <p class="text-stone-50/75 leading-relaxed flex-1">Cuidado combinado diretamente com a Pati. Detalhes, disponibilidade e valores são definidos pelo WhatsApp.</p>
           <a href="https://wa.me/5511999365433" target="_blank" rel="noopener noreferrer" aria-label="Combinar Dog sitter com a Pati pelo WhatsApp" class="mt-6 inline-flex items-center text-sm font-semibold text-brass-300 hover:text-brass-400">Combinar pelo WhatsApp</a>
@@ -136,8 +136,10 @@
     </div>
   </section>
 
-  <section id="caminho-passeio" class="bg-moss-900 py-24 sm:py-28" aria-labelledby="titulo-caminho-passeio">
-    <div class="max-w-6xl mx-auto px-5 sm:px-8">
+  <section id="caminho-passeio" class="relative overflow-hidden bg-moss-900 py-24 sm:py-28" aria-labelledby="titulo-caminho-passeio">
+    <div class="pointer-events-none absolute -top-16 right-0 w-72 h-72 rounded-full bg-brass-500/10 blur-3xl" data-parallax="0.1"></div>
+    <div class="pointer-events-none absolute bottom-0 -left-16 w-72 h-72 rounded-full bg-cognac-500/10 blur-3xl" data-parallax="-0.1"></div>
+    <div class="relative max-w-6xl mx-auto px-5 sm:px-8">
       <div class="reveal max-w-2xl">
         <span class="tag-chip inline-block bg-moss-700/60 text-brass-300 text-xs font-semibold uppercase tracking-wider pl-6 pr-4 py-1.5 rounded-full">O caminho do atendimento</span>
         <h2 id="titulo-caminho-passeio" class="mt-5 font-display font-semibold text-3xl sm:text-4xl leading-tight text-stone-50">Da solicitação à confirmação da Pati.</h2>
@@ -152,7 +154,7 @@
   </section>
 
   <section id="galeria" class="bg-stone-100 py-24 sm:py-28" aria-labelledby="titulo-galeria">
-    <div class="max-w-6xl mx-auto px-5 sm:px-8">
+    <div class="reveal section-curtain max-w-6xl mx-auto px-5 sm:px-8">
       <div class="reveal max-w-2xl">
         <span class="tag-chip inline-block bg-stone-200 text-brass-700 text-xs font-semibold uppercase tracking-wider pl-6 pr-4 py-1.5 rounded-full">Galeria</span>
         <h2 id="titulo-galeria" class="mt-5 font-display font-semibold text-3xl sm:text-4xl leading-tight">Momentos reais de passeio.</h2>
@@ -209,13 +211,13 @@
   </section>
 
   <section id="projetos-colaboradores" class="bg-stone-50 py-24 sm:py-28" aria-labelledby="projetos-colaboradores-titulo">
-    <div class="max-w-6xl mx-auto px-5 sm:px-8">
+    <div class="reveal section-curtain max-w-6xl mx-auto px-5 sm:px-8">
       <div class="reveal max-w-3xl">
         <span class="tag-chip inline-block bg-stone-200 text-brass-700 text-xs font-semibold uppercase tracking-wider pl-6 pr-4 py-1.5 rounded-full">Projetos e colaborações</span>
         <h2 id="projetos-colaboradores-titulo" class="mt-5 font-display font-semibold text-3xl sm:text-4xl leading-tight">Projetos com os quais a Pati já colaborou</h2>
         <p class="mt-5 text-ink-700 leading-relaxed max-w-2xl">Ao longo de sua atuação, a Pati já colaborou com iniciativas dedicadas à proteção e ao bem-estar animal. Conheça alguns desses projetos.</p>
       </div>
-      <div class="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-6"><article class="reveal bg-white/60 border border-stone-200 rounded-2xl p-7 flex flex-col">
+      <div class="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-6"><article class="reveal tilt-card bg-white/60 border border-stone-200 rounded-2xl p-7 flex flex-col">
         <div class="w-11 h-11 rounded-xl bg-moss-800 text-brass-400 flex items-center justify-center mb-5">
           <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
         </div>
@@ -225,7 +227,7 @@
           <span>Instagram @projetocel</span>
         </a>
       </article>
-<article class="reveal bg-white/60 border border-stone-200 rounded-2xl p-7 flex flex-col">
+<article class="reveal tilt-card bg-white/60 border border-stone-200 rounded-2xl p-7 flex flex-col">
         <div class="w-11 h-11 rounded-xl bg-moss-800 text-brass-400 flex items-center justify-center mb-5">
           <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
         </div>
@@ -235,7 +237,7 @@
           <span>Instagram @projetoviralatascomraca.br</span>
         </a>
       </article>
-<article class="reveal bg-white/60 border border-stone-200 rounded-2xl p-7 flex flex-col">
+<article class="reveal tilt-card bg-white/60 border border-stone-200 rounded-2xl p-7 flex flex-col">
         <div class="w-11 h-11 rounded-xl bg-moss-800 text-brass-400 flex items-center justify-center mb-5">
           <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
         </div>
@@ -278,8 +280,9 @@
     </div>
   </section>
 
-  <section class="bg-moss-950 py-24 sm:py-28 text-center" aria-labelledby="titulo-cta-final">
-    <div class="reveal max-w-2xl mx-auto px-5 sm:px-8">
+  <section class="relative overflow-hidden bg-moss-950 py-24 sm:py-28 text-center" aria-labelledby="titulo-cta-final">
+    <div class="pointer-events-none absolute top-0 left-1/4 w-72 h-72 rounded-full bg-brass-500/10 blur-3xl" data-parallax="0.1"></div>
+    <div class="reveal relative max-w-2xl mx-auto px-5 sm:px-8">
       <h2 id="titulo-cta-final" class="font-display font-semibold text-3xl sm:text-4xl leading-tight text-stone-50">Vamos combinar o cuidado ideal para o seu cão?</h2>
       <p class="mt-4 text-stone-50/70 text-lg">Fale diretamente com a Pati para tirar dúvidas sobre passeios ou dog sitter.</p>
       <a href="https://wa.me/5511999365433" target="_blank" rel="noopener noreferrer" class="mt-8 inline-flex items-center justify-center rounded-full bg-brass-500 hover:bg-brass-400 text-ink-900 font-semibold px-8 py-4 transition-colors">Falar no WhatsApp</a>
@@ -323,6 +326,7 @@
 </footer>
 
 <a href="https://wa.me/5511999365433" target="_blank" rel="noopener noreferrer" aria-label="Falar no WhatsApp" class="fixed bottom-6 right-6 z-40 flex items-center justify-center w-14 h-14 rounded-full bg-[#25D366] text-white shadow-soft hover:scale-105 transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-800"><span aria-hidden="true">💬</span></a>
+<div id="cursor-paw" aria-hidden="true" class="cursor-paw">🐾</div>
 
 <script id="scheduling-integration-config" type="application/json">{"_notice":"Trava interna de segurança: integração inativa até configuração manual futura.","mode":"live","webAppUrl":"https://script.google.com/macros/s/AKfycbz9RyLNBWPGbq8xxfUKipwQ7CYKCwkvNYf0FajD7bX365w9NNFV9pd8Mc-qyeKNoKUQ/exec","requestTimeoutMs":30000,"maxResponseBytes":32768,"maxFutureDays":90,"messages":{"liveWithoutUrl":"A integração de agendamento está indisponível porque nenhuma URL do Web App foi configurada.","unavailable":"A integração com a agenda ainda não está disponível. Use os canais de contato do site.","loading":"Consultando disponibilidade…","processing":"Enviando solicitação pendente…","noAvailability":"Não há horários disponíveis nesta data. Escolha outro dia ou fale com a Pati pelo WhatsApp.","invalidResponse":"A agenda retornou uma resposta inválida. Nenhuma solicitação foi registrada.","pendingCreated":"Pré-solicitação registrada com sucesso. A Pati analisará as informações e entrará em contato para confirmar, pedir mais informações ou informar que não poderá atender.","recoveryUnknown":"Não foi possível confirmar se a pré-solicitação foi registrada. Não envie novamente agora; use Verificar novamente.","requestNotFound":"O código não foi encontrado. Nenhum sucesso foi confirmado; você pode tentar enviar novamente a mesma ficha.","inconsistentState":"Há um estado inconsistente para este código. Não envie novamente esta ficha e entre em contato com a Pati.","inactive":"Agenda online em configuração. Para consultar horários agora, fale diretamente com a Pati.","emailFailed":"A pré-solicitação foi registrada, mas a notificação por e-mail falhou. Você pode usar o WhatsApp como alternativa sem criar outra solicitação.","slowAvailability":"A agenda está demorando um pouco, mas a consulta continua. Aguarde.","availabilityRetry":"A conexão oscilou. Estamos repetindo a consulta automaticamente; nenhuma solicitação foi registrada.","availabilityTimeout":"A consulta de disponibilidade demorou mais que o esperado e foi interrompida. Nenhuma solicitação foi registrada.","availabilityNetworkError":"Não foi possível consultar a agenda por falha de conexão. Nenhuma solicitação foi registrada.","availabilityInvalidResponse":"A agenda retornou uma resposta inválida. Nenhuma solicitação foi registrada."}}</script>
 <script src="assets/js/main.js" defer></script>

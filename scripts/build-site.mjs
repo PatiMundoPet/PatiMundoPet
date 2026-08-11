@@ -212,7 +212,7 @@ function renderFields(fields) {
 }
 
 function renderCollaborations(projects) {
-  return projects.map((project) => `<article class="reveal bg-white/60 border border-stone-200 rounded-2xl p-7 flex flex-col">
+  return projects.map((project) => `<article class="reveal tilt-card bg-white/60 border border-stone-200 rounded-2xl p-7 flex flex-col">
         <div class="w-11 h-11 rounded-xl bg-moss-800 text-brass-400 flex items-center justify-center mb-5">
           <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
         </div>
