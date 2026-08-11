@@ -42,8 +42,6 @@ const allowedFiles = [
   'assets/img/galeria/pati-sao-bernardo-full.jpg',
   'assets/img/galeria/pati-dupla-preta-thumb.jpg',
   'assets/img/galeria/pati-dupla-preta-full.jpg',
-  'assets/img/galeria/pati-banho-thumb.jpg',
-  'assets/img/galeria/pati-banho-full.jpg',
 ];
 
 function resolveInsideRoot(relativePath) {
