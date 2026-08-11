@@ -4,8 +4,8 @@
 var ADMIN = Object.freeze({
   properties: ['ADMIN_EMAIL', 'SPREADSHEET_ID', 'APPOINTMENTS_CALENDAR_ID', 'AVAILABILITY_CALENDAR_ID', 'TIMEZONE', 'WORKDAY_START_TIME', 'WORKDAY_END_TIME'],
   sheets: {
-    requests: { name: 'Solicitações', headers: ['requestId', 'dataRecebimento', 'submissionChannel', 'serviço', 'data', 'horário', 'responsável', 'WhatsApp', 'e-mail', 'pet', 'região', 'observações', 'status', 'notificationStatus', 'dataÚltimaAtualização', 'horárioTérmino', 'eventIdAtendimento', 'observaçãoAdministrativa', 'clienteId'] },
-    clients: { name: 'Clientes', headers: ['clienteId', 'responsável', 'WhatsApp', 'e-mail', 'pets', 'observações', 'dataCadastro', 'últimoAtendimento', 'observaçõesAdministrativas'] },
+    requests: { name: 'Solicitações', headers: ['requestId', 'dataRecebimento', 'submissionChannel', 'serviço', 'data', 'horário', 'responsável', 'WhatsApp', 'e-mail', 'pet', 'região', 'observações', 'status', 'notificationStatus', 'dataÚltimaAtualização', 'horárioTérmino', 'eventIdAtendimento', 'observaçãoAdministrativa', 'clienteId', 'endereço'] },
+    clients: { name: 'Clientes', headers: ['clienteId', 'responsável', 'WhatsApp', 'e-mail', 'pets', 'observações', 'dataCadastro', 'últimoAtendimento', 'observaçõesAdministrativas', 'endereço', 'horáriosHabituais'] },
     payments: { name: 'Pagamentos', headers: ['requestId', 'cliente', 'serviço', 'valor', 'formaPagamento', 'vencimento', 'statusPagamento', 'dataPagamento', 'observações'] }
   },
   requestStatuses: ['PENDENTE', 'CONFIRMADO', 'RECUSADO', 'CANCELADO', 'MAIS_INFORMACOES'],
@@ -232,7 +232,7 @@ function validateClientInput_(payload, editing) {
   if (!Array.isArray(payload.pets) || !payload.pets.length || payload.pets.length > 20) throw safeError_('INVALID_CLIENT', 'Informe ao menos um pet válido.');
   var pets = payload.pets.map(function (pet) { var clean = cleanClientText_(pet, 80, true, 'pet'); if (clean.indexOf(',') >= 0) throw safeError_('INVALID_CLIENT', 'Os nomes dos pets não podem conter vírgulas.'); return clean; });
   var seen = {}; pets = pets.filter(function (pet) { var key = comparisonText_(pet); if (seen[key]) return false; seen[key] = true; return true; });
-  return { operationId: operationId, clientId: clientId, responsible: responsible, whatsapp: whatsapp, email: email, pets: pets, notes: cleanClientText_(payload.notes, 1000, false, 'observações') };
+  return { operationId: operationId, clientId: clientId, responsible: responsible, whatsapp: whatsapp, email: email, pets: pets, notes: cleanClientText_(payload.notes, 1000, false, 'observações'), address: cleanClientText_(payload.address, 250, false, 'endereço'), schedule: cleanClientText_(payload.schedule, 200, false, 'horários habituais') };
 }
 function cleanClientText_(value, limit, required, label) { var clean = String(value || '').replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\s+/g, ' ').trim(); if (required && !clean) throw safeError_('INVALID_CLIENT', 'Informe ' + label + '.'); if (clean.length > limit) throw safeError_('INVALID_CLIENT', 'Revise o tamanho dos campos informados.'); return /^[=+\-@]/.test(clean) ? "'" + clean : clean; }
 function comparisonText_(value) { return String(value || '').replace(/^'/, '').trim().toLocaleLowerCase('pt-BR'); }
@@ -245,7 +245,7 @@ function clientSheet_(config) { var sheet = SpreadsheetApp.openById(config.SPREA
 function clientMatches_(source, input) { var id = source.headers.indexOf('clienteId'), phone = source.headers.indexOf('WhatsApp'), email = source.headers.indexOf('e-mail'), result = { byId: null, idCount: 0, phoneDuplicate: null, emailDuplicate: null, rows: [] }; source.rows.forEach(function (row, index) { var item = { values: row, rowNumber: index + 2, clientId: String(row[id] || '').trim() }; result.rows.push(item); if (input.clientId && item.clientId === input.clientId) { result.idCount++; if (!result.byId) result.byId = item; } var own = input.clientId && item.clientId === input.clientId; if (!own && input.whatsapp && normalizeStoredWhatsapp_(row[phone]) === input.whatsapp) result.phoneDuplicate = item; if (!own && input.email && clientEmailKey_(row[email]) === clientEmailKey_(input.email)) result.emailDuplicate = item; }); return result; }
 function normalizeStoredWhatsapp_(value) { var digits = String(value || '').replace(/\D/g, ''); return digits && digits.length <= 11 ? '55' + digits : digits; }
 function clientOperationKey_(operationId) { return 'CLIENT_CREATE_' + operationId; }
-function setClientFormFields_(row, headers, input) { row[headers.indexOf('responsável')] = input.responsible; row[headers.indexOf('WhatsApp')] = input.whatsapp; row[headers.indexOf('e-mail')] = safeClientEmail_(input.email); row[headers.indexOf('pets')] = input.pets.join(', '); row[headers.indexOf('observaçõesAdministrativas')] = input.notes; }
+function setClientFormFields_(row, headers, input) { row[headers.indexOf('responsável')] = input.responsible; row[headers.indexOf('WhatsApp')] = input.whatsapp; row[headers.indexOf('e-mail')] = safeClientEmail_(input.email); row[headers.indexOf('pets')] = input.pets.join(', '); row[headers.indexOf('observaçõesAdministrativas')] = input.notes; row[headers.indexOf('endereço')] = input.address; row[headers.indexOf('horáriosHabituais')] = input.schedule; }
 
 function listarPagamentos() {
   return safelyRead_(function (config) { return readSheet_(config, ADMIN.sheets.payments, mapPayment_); });
@@ -274,6 +274,68 @@ function editarPagamento(payload) {
     }
     return { ok: true, data: mapPaymentRecord_(h, updated, config.TIMEZONE) };
   } finally { lock.releaseLock(); }
+}
+
+// Pagamento avulso: lançado diretamente para um cliente já cadastrado, sem vínculo com uma
+// solicitação real. A aba Pagamentos continua com exatamente 9 colunas (contrato inalterado);
+// o "requestId" passa a ser apenas um identificador único gerado aqui, nunca reaproveitado
+// por confirmarSolicitacao/cancelarSolicitacao/excluirSolicitacao, que só agem sobre pagamentos
+// cujo requestId corresponda a uma linha real de Solicitações.
+function criarPagamento(payload) {
+  var config, input;
+  try { config = getConfig_(); authorize_(config); input = validateStandalonePaymentInput_(payload); }
+  catch (error) { if (error && error.safeCode) throw error; throw safeError_('INVALID_PAYMENT', 'Revise os dados do pagamento.'); }
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) throw safeError_('LOCK_TIMEOUT', 'O painel está ocupado. Tente novamente.');
+  try {
+    var clientSource = clientSheet_(config), clientMatch = clientMatches_(clientSource, { clientId: input.clientId, whatsapp: '', email: '' });
+    if (!clientMatch.byId) throw safeError_('CLIENT_NOT_FOUND', 'O cliente não foi encontrado. Atualize os dados e tente novamente.');
+    if (clientMatch.idCount !== 1) throw safeError_('RECONCILIATION_REQUIRED', 'O cadastro precisa de revisão antes de continuar.');
+    var clientName = cleanClientText_(clientMatch.byId.values[clientSource.headers.indexOf('responsável')], 120, true, 'responsável');
+    var plan = prepareStandalonePayment_(config, input, clientName);
+    plan.source.pendingRequestId = plan.requestId;
+    try { writeAndVerifyPayment_(plan.source, plan.rowNumber, plan.expected); }
+    catch (writeError) {
+      if (!restorePayment_(plan.source, plan.rowNumber, null)) throw safeError_('RECONCILIATION_REQUIRED', 'O pagamento precisa de revisão administrativa.');
+      throw safeError_('WRITE_ERROR', 'Não foi possível criar o pagamento. Nenhuma alteração foi realizada.');
+    }
+    return { ok: true, data: mapPaymentRecord_(plan.source.headers, plan.expected, config.TIMEZONE) };
+  } catch (error) {
+    if (error && error.safeCode) throw error;
+    console.error('ADMIN_PAYMENT_CREATE_FAILED');
+    throw safeError_('WRITE_ERROR', 'Não foi possível criar o pagamento. Nenhuma alteração foi realizada.');
+  } finally { lock.releaseLock(); }
+}
+
+function prepareStandalonePayment_(config, input, clientName) {
+  var source = paymentSheet_(config), requestId = Utilities.getUuid();
+  if (paymentMatches_(source, requestId).length) throw safeError_('RECONCILIATION_REQUIRED', 'Não foi possível gerar um identificador único para o pagamento. Tente novamente.');
+  var h = source.headers, row = new Array(h.length).fill('');
+  row[h.indexOf('requestId')] = requestId;
+  row[h.indexOf('cliente')] = clientName;
+  row[h.indexOf('serviço')] = input.service;
+  row[h.indexOf('valor')] = input.amount;
+  row[h.indexOf('formaPagamento')] = input.paymentMethod;
+  row[h.indexOf('vencimento')] = input.dueDate;
+  row[h.indexOf('statusPagamento')] = input.status;
+  row[h.indexOf('observações')] = input.notes;
+  if (input.status === 'PAGO') row[h.indexOf('dataPagamento')] = new Date();
+  return { source: source, rowNumber: source.rows.length + 2, expected: row, requestId: requestId };
+}
+
+function validateStandalonePaymentInput_(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw safeError_('INVALID_PAYMENT', 'Revise os dados do pagamento.');
+  var clientId = String(payload.clientId || '').trim();
+  try { validateUuid_(clientId); } catch (error) { throw safeError_('INVALID_CLIENT', 'O cliente informado é inválido.'); }
+  var status = String(payload.status || '').trim().toUpperCase();
+  if (ADMIN.paymentStatuses.indexOf(status) < 0) throw safeError_('INVALID_PAYMENT', 'Selecione um status de pagamento válido.');
+  var amount = '';
+  if (payload.amount !== '' && payload.amount !== null && payload.amount !== undefined) { amount = Number(String(payload.amount).replace(',', '.')); if (!isFinite(amount) || amount < 0 || amount > 9999999.99) throw safeError_('INVALID_PAYMENT', 'Informe um valor válido.'); amount = Math.round(amount * 100) / 100; }
+  var dueDate = validateIsoDate_(payload.dueDate);
+  var notes = cleanClientText_(payload.notes, 1000, false, 'observações');
+  var service = cleanClientText_(payload.service, 80, false, 'serviço');
+  var paymentMethod = cleanClientText_(payload.paymentMethod, 40, false, 'forma de pagamento') || 'PIX';
+  return { clientId: clientId, status: status, amount: amount, dueDate: dueDate, notes: notes, service: service, paymentMethod: paymentMethod };
 }
 
 function validatePaymentInput_(payload) {
@@ -370,13 +432,13 @@ function mapRequest_(row, timezone) {
   return {
     requestId: text_(row.requestId), receivedAt: dateTime_(row.dataRecebimento, timezone), channel: text_(row.submissionChannel),
     service: serviceLabel_(row['serviço']), date: date_(row.data, timezone), time: time_(row['horário'], timezone), endTime: time_(row['horárioTérmino'], timezone), responsible: text_(row['responsável']),
-    whatsapp: text_(row.WhatsApp), email: text_(row['e-mail']), pet: text_(row.pet), region: text_(row['região']), notes: text_(row['observações']),
+    whatsapp: text_(row.WhatsApp), email: text_(row['e-mail']), pet: text_(row.pet), region: text_(row['região']), address: text_(row['endereço']), notes: text_(row['observações']),
     status: officialStatus_(row.status, ADMIN.requestStatuses), notificationStatus: text_(row.notificationStatus), updatedAt: dateTime_(row['dataÚltimaAtualização'], timezone), adminNote: text_(row['observaçãoAdministrativa'])
   };
 }
 
 function mapClient_(row, timezone) {
-  return { clientId: text_(row.clienteId), responsible: text_(row['responsável']), whatsapp: text_(row.WhatsApp), email: displayClientEmail_(row['e-mail']), pets: text_(row.pets), notes: text_(row['observações']), adminNotes: text_(row['observaçõesAdministrativas']), registeredAt: dateTime_(row.dataCadastro, timezone), lastAppointment: dateTime_(row['últimoAtendimento'], timezone) };
+  return { clientId: text_(row.clienteId), responsible: text_(row['responsável']), whatsapp: text_(row.WhatsApp), email: displayClientEmail_(row['e-mail']), pets: text_(row.pets), notes: text_(row['observações']), adminNotes: text_(row['observaçõesAdministrativas']), address: text_(row['endereço']), schedule: text_(row['horáriosHabituais']), registeredAt: dateTime_(row.dataCadastro, timezone), lastAppointment: dateTime_(row['últimoAtendimento'], timezone) };
 }
 
 function mapPayment_(row, timezone) {
@@ -501,7 +563,9 @@ function excluirSolicitacao(requestId) {
   try {
     if (!writesConfigured_(config)) throw safeError_('CONFIG_ERROR', 'As ações aguardam a configuração administrativa.');
     var context = requestContext_(config, requestId, true), current = status_(context);
-    if (['PENDENTE', 'CANCELADO'].indexOf(current) < 0) throw safeError_('INVALID_TRANSITION', 'Esta solicitação precisa ser cancelada antes da exclusão.');
+    // RECUSADO é um estado final (não pode ser confirmada nem cancelada a partir dele — ver
+    // cancelRequest_) e nunca tem evento na agenda, então a exclusão direta é segura aqui.
+    if (['PENDENTE', 'CANCELADO', 'RECUSADO'].indexOf(current) < 0) throw safeError_('INVALID_TRANSITION', 'Esta solicitação precisa ser cancelada antes da exclusão.');
     if (String(context.record.eventIdAtendimento || '').trim() || hasRequestCalendarLink_(context)) throw safeError_('CALENDAR_LINKED', 'Existe vínculo com a agenda e ele precisa ser revisado.');
     // A administradora é a única usuária do painel e a decisão de excluir é dela: um pagamento
     // vinculado não bloqueia mais a exclusão, apenas é removido junto (Fase 12A). Duplicidade de

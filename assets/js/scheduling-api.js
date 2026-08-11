@@ -133,7 +133,7 @@
     }
 
     function fingerprint(payload) {
-      return ['serviceId', 'date', 'time', 'startTime', 'endTime', 'responsibleName', 'whatsapp', 'email', 'submissionChannel', 'petName', 'region', 'notes', 'reviewAccepted', 'privacyAccepted', 'privacyPolicyVersion', 'honeypot']
+      return ['serviceId', 'date', 'time', 'startTime', 'endTime', 'responsibleName', 'whatsapp', 'email', 'submissionChannel', 'petName', 'region', 'address', 'notes', 'reviewAccepted', 'privacyAccepted', 'privacyPolicyVersion', 'honeypot']
         .map(function (key) { return key + '=' + String(payload[key] == null ? '' : payload[key]); }).join('&');
     }
 

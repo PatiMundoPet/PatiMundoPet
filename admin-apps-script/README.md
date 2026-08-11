@@ -88,13 +88,15 @@ A restrição da implantação é a primeira camada. Toda função de leitura ta
 - [ ] Sem Q:S, confirmar que as ações permanecem desativadas.
 - [ ] Com Q:S corretas e os calendários disponíveis, confirmar que as ações permitidas pelo status ficam habilitadas.
 - [ ] Confirmar que solicitações RECUSADAS e CANCELADAS não exibem ações de escrita.
+- [ ] Confirmar que solicitações PENDENTES, CANCELADAS e RECUSADAS exibem o botão "Excluir solicitação".
+- [ ] Cadastrar e editar um cliente com endereço e horários habituais preenchidos; conferir que aparecem na ficha do cliente.
+- [ ] Lançar um pagamento avulso para um cliente já cadastrado (menu Pagamentos → "Novo pagamento") e conferir que ele aparece na lista sem estar vinculado a nenhuma solicitação.
 
 ## Limitações preservadas após a Fase 10D-2
 
 - Não cria, edita, pausa ou exclui bloqueios manualmente. Eventos de atendimento são criados ou removidos somente pelas ações explícitas de confirmar e cancelar.
 - Não existe criação manual de atendimento nesta fase; confirmar uma solicitação cria somente o evento vinculado, e recorrências continuam fora de escopo.
 - Não arquiva clientes e não cria atendimentos a partir do cadastro.
-- Não registra, edita ou altera pagamentos.
 - Não envia mensagens, e-mails ou cobranças automaticamente; links de contato dependem de clique explícito.
 - Não oferece gateway de pagamento.
 - Relações avançadas de histórico permanecem reservadas para evolução posterior.
@@ -162,3 +164,16 @@ Antes de copiar esta versão para o projeto privado, adicione ao fim da aba `Cli
 Uma confirmação com `clienteId` válido reutiliza esse UUID. Sem o vínculo, WhatsApp e e-mail normalizados só são aceitos quando indicam inequivocamente o mesmo cadastro. Responsável e contatos são atualizados, enquanto pets e observação da solicitação são substituídos (inclusive por observação vazia); cadastro, último atendimento, campos internos e `observaçõesAdministrativas` permanecem intactos.
 
 A confirmação também cria, sob o mesmo lock e com releitura, um único pagamento `PIX`/`PENDENTE`, sem valor nem data de pagamento e com vencimento inicial na data do atendimento. O painel permite editar manualmente valor, vencimento, status e observações, sem editar `requestId`. `PAGO` registra a data da transição e `PENDENTE` a limpa. Os lembretes de vencimento usam `America/Sao_Paulo` e não enviam mensagens. Ao cancelar, `PENDENTE` vira `CANCELADO`, `ISENTO` é preservado e `PAGO` é preservado com sinalização para revisão; nenhum histórico é excluído.
+
+## Correção — endereço completo, exclusão de recusadas e pagamento avulso
+
+Antes de copiar esta versão para o projeto privado, faça duas migrações manuais na planilha (mesmo procedimento de sempre: adicionar o cabeçalho de texto antes de colar o código novo, sem reordenar ou remover colunas existentes):
+
+1. Em `Solicitações`, adicione `endereço` na coluna **T** (imediatamente depois de `clienteId`, em S). A aba passa a ter 20 colunas (A:T). O backend público (`apps-script/Code.gs`) passa a aceitar e gravar esse campo automaticamente quando a coluna existir; enquanto ela não existir, o valor enviado pelo formulário é apenas descartado com segurança, sem quebrar o registro da pré-solicitação.
+2. Em `Clientes`, adicione `endereço` na coluna **J** e `horáriosHabituais` na coluna **K** (depois de `observaçõesAdministrativas`, em I). A aba passa a ter 11 colunas (A:K). Ambos os campos são opcionais e editáveis a qualquer momento pelo formulário de cliente; não há sincronização automática entre o endereço da pré-ficha e o endereço do cadastro de cliente — a Pati decide se e quando quer levar um endereço recebido numa solicitação para a ficha do cliente.
+
+Três correções de comportamento administrativo, sem mudança nos demais contratos:
+
+- **Solicitações recusadas voltam a ser excluíveis.** `excluirSolicitacao` aceita `RECUSADO` junto de `PENDENTE` e `CANCELADO`; um pagamento vinculado (se existir) é removido junto, do mesmo jeito que já acontecia para os outros dois status.
+- **Exclusão de cliente, de recusada e de qualquer solicitação continua sem depender de pagamento.** Isso já era verdade desde a Fase 12A (a exclusão de solicitação remove o pagamento vinculado em vez de bloquear) e desde a Fase 10D-2 (a exclusão de cliente nunca consultou pagamentos); nenhuma mudança adicional foi necessária além do item anterior.
+- **Pagamento avulso.** A nova função `criarPagamento` lança um pagamento para qualquer cliente já cadastrado, sem depender de uma solicitação confirmada. Ela reutiliza o contrato de 9 colunas de `Pagamentos` sem alterá-lo: gera um identificador único no lugar de `requestId` (nunca reaproveitado pelas ações de confirmar, cancelar ou excluir solicitação, que só agem quando esse identificador corresponde a uma linha real de `Solicitações`) e copia o nome do responsável do cadastro selecionado para a coluna `cliente`, do mesmo jeito que a confirmação automática já faz hoje. Forma de pagamento é opcional e assume `PIX` quando não informada; valor, vencimento, status e observações seguem as mesmas regras de `editarPagamento`.
