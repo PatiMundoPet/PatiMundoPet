@@ -149,10 +149,11 @@
   .gallery-carousel-control { display: none; }
   .js .gallery-carousel-control { display: inline-flex; }
 
-  .js .gallery-carousel-viewport { perspective: 1600px; }
+  .js .gallery-carousel-viewport { perspective: 1900px; }
 
   .gallery-carousel-track { scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
   .gallery-carousel-face { background: #e4d7bb; }
+  .gallery-carousel-face img { display: block; }
 
   .gallery-carousel-track.is-enhanced {
     position: relative;
@@ -184,17 +185,18 @@
     transition: transform .4s cubic-bezier(.22,1,.36,1), box-shadow .4s ease;
   }
   /* A foto de frente ganha destaque (maior, nítida); as demais ficam um pouco
-     menores e escurecidas — é isso que dá a sensação real de giro em 3D, em vez
-     de uma fileira de fotos soltas do mesmo tamanho. */
+     menores e suavemente escurecidas — é isso que dá a sensação real de giro em
+     3D, em vez de uma fileira de fotos soltas do mesmo tamanho. O contraste é
+     sutil de propósito: um visual limpo, não um efeito chamativo. */
   .gallery-carousel-track.is-enhanced .gallery-carousel-slide:not(.is-front) {
-    filter: brightness(.68) saturate(.85);
+    filter: brightness(.82) saturate(.92);
   }
   .gallery-carousel-track.is-enhanced .gallery-carousel-slide:not(.is-front) .gallery-carousel-face {
-    transform: scale(.82);
+    transform: scale(.88);
   }
   .gallery-carousel-track.is-enhanced .gallery-carousel-slide.is-front .gallery-carousel-face {
-    transform: scale(1.08);
-    box-shadow: 0 24px 55px -18px rgba(16,22,15,.4);
+    transform: scale(1.04);
+    box-shadow: 0 30px 60px -20px rgba(16,22,15,.32);
   }
 
   @media (prefers-reduced-motion: reduce) {

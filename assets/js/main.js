@@ -158,14 +158,15 @@
     var pressedFace = null; // guardado no pointerdown, antes do setPointerCapture redirecionar o click pra track
 
     function faceWidthFor(viewportWidth) {
-      if (viewportWidth < 480) return 150;
-      if (viewportWidth < 768) return 190;
-      return 250;
+      if (viewportWidth < 480) return 210;
+      if (viewportWidth < 768) return 270;
+      if (viewportWidth < 1024) return 300;
+      return 340;
     }
 
     function layout() {
       var viewportWidth = viewport.clientWidth || carousel.clientWidth || 320;
-      var faceWidth = Math.min(faceWidthFor(viewportWidth), Math.round(viewportWidth * 0.62));
+      var faceWidth = Math.min(faceWidthFor(viewportWidth), Math.round(viewportWidth * 0.68));
       var radius = Math.round((faceWidth / 2) / Math.tan(Math.PI / count));
       track.style.setProperty('--face-width', faceWidth + 'px');
       track.style.setProperty('--face-radius', radius + 'px');
