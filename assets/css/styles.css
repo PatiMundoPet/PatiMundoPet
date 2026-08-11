@@ -379,51 +379,7 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .reveal, .is-reveal-pending { opacity: 1 !important; transform: none !important; }
-  .section-curtain { clip-path: none !important; }
-  .tilt-card { transform: none !important; }
-  [data-parallax] { transform: none !important; }
-  .cursor-paw { display: none !important; }
 }
-
-/* ---------- Profundidade no scroll (parallax discreto) ---------- */
-[data-parallax] { will-change: transform; }
-
-/* ---------- Entrada cinematográfica de seções (complementa o .reveal) ---------- */
-.section-curtain { clip-path: inset(0 0 0 0); }
-.section-curtain.is-reveal-pending { clip-path: inset(0 100% 0 0); transition: clip-path 1s cubic-bezier(.65,0,.35,1); }
-.section-curtain.is-reveal-pending.is-visible { clip-path: inset(0 0 0 0); }
-
-/* ---------- Cards com brilho/inclinação que seguem o mouse (desktop) ---------- */
-@media (hover: hover) and (pointer: fine) {
-  .tilt-card { position: relative; transition: transform .2s ease; transform-style: preserve-3d; will-change: transform; }
-  .tilt-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: radial-gradient(circle at var(--glow-x, 50%) var(--glow-y, 50%), rgba(199, 165, 101, .45), transparent 60%);
-    opacity: 0;
-    transition: opacity .3s ease;
-    pointer-events: none;
-  }
-  .tilt-card:hover::before, .tilt-card:focus-within::before { opacity: 1; }
-}
-
-/* ---------- Cursor personalizado: pegadinha que acompanha o mouse (desktop) ---------- */
-.cursor-paw {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 60;
-  pointer-events: none;
-  font-size: 1.15rem;
-  opacity: 0;
-  transform: translate3d(-100px, -100px, 0) translate(-50%, -50%);
-  transition: opacity .3s ease;
-  filter: drop-shadow(0 1px 2px rgba(20, 24, 20, .35));
-}
-.cursor-paw.is-active { opacity: .8; }
-@media (hover: none), (pointer: coarse) { .cursor-paw { display: none; } }
 .schedule-time-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 1rem 0; }
 .schedule-time-fields label { color: #31473a; font-weight: 700; }
 .schedule-time-fields input { display: block; width: 100%; margin-top: .35rem; padding: .75rem; border: 2px solid #d8d0c1; border-radius: .8rem; background: #fff; }
