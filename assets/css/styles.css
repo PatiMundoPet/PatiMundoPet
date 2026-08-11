@@ -43,7 +43,7 @@
     }
     .hero-cta-wrap:hover .hero-pet-phone-wave,
     .hero-cta-wrap:focus-within .hero-pet-phone-wave {
-      transform-origin: 128px 66px;
+      transform-origin: 122px 55px;
       animation: hero-pet-phone-pulse 1.1s ease-in-out .3s infinite;
     }
   }
