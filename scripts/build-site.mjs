@@ -116,7 +116,7 @@ function validateScheduling(config) {
     if (typeof item.required !== 'boolean') errors.push(`"fields[${index}].required" deve ser booleano`);
     if (typeof item.autocomplete !== 'string') errors.push(`"fields[${index}].autocomplete" deve ser uma string`);
   });
-  const requiredIds = ['responsavel', 'whatsapp', 'pet', 'regiao'];
+  const requiredIds = ['responsavel', 'whatsapp', 'pet', 'regiao', 'endereco'];
   requiredIds.forEach((id) => {
     if (!Array.isArray(config.fields) || !config.fields.some((field) => field.id === id && field.required)) errors.push(`o campo obrigatório "${id}" está ausente`);
   });

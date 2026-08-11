@@ -59,6 +59,13 @@
       "autocomplete": "address-level3"
     },
     {
+      "id": "endereco",
+      "label": "Endereço completo (rua, número, complemento)",
+      "type": "text",
+      "required": true,
+      "autocomplete": "street-address"
+    },
+    {
       "id": "observacoes",
       "label": "Observações (opcional)",
       "type": "textarea",
