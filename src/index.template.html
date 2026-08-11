@@ -111,6 +111,20 @@
               <g clip-path="url(#heroPetLeashClip)"><ellipse cx="96" cy="70" rx="30" ry="46" fill="#000" opacity=".08"/></g>
               <ellipse cx="46" cy="82" rx="8" ry="5.5" fill="#c98b6b" opacity=".35"/>
               <ellipse cx="94" cy="82" rx="8" ry="5.5" fill="#c98b6b" opacity=".35"/>
+              <!-- coleira DE VERDADE atravessando a boca: desenhada ANTES do focinho, então
+                   o focinho cobre o trecho do meio — dá a impressão de que ele está
+                   mordendo/segurando a coleira, com as pontas e a fivela pra fora. -->
+              <g class="hero-pet-leash-strap">
+                <path d="M46 87Q56 107 70 109Q84 107 94 87" fill="none" stroke="#8a3324" stroke-width="9.5" stroke-linecap="round"/>
+                <path d="M46 87Q56 107 70 109Q84 107 94 87" fill="none" stroke="#c0392b" stroke-width="6.2" stroke-linecap="round"/>
+                <circle cx="55" cy="99" r="1.6" fill="#7a2c1e"/>
+                <circle cx="63" cy="106" r="1.6" fill="#7a2c1e"/>
+                <circle cx="70" cy="108" r="1.6" fill="#7a2c1e"/>
+                <circle cx="77" cy="106" r="1.6" fill="#7a2c1e"/>
+                <circle cx="85" cy="99" r="1.6" fill="#7a2c1e"/>
+                <rect x="90" y="78" width="9" height="12.5" rx="2" fill="none" stroke="#7a2c1e" stroke-width="2.6"/>
+                <line x1="94.5" y1="78" x2="94.5" y2="90.5" stroke="#7a2c1e" stroke-width="2"/>
+              </g>
               <ellipse cx="70" cy="90" rx="20" ry="15" fill="#fbf4e4" stroke="#1d1912" stroke-width="2.5"/>
               <path d="M62 78C64 76 76 76 78 78" stroke="#1d1912" stroke-width="2" fill="none" stroke-linecap="round" opacity=".5"/>
               <path d="M70 78C63 78 60 83 61 86C62 90 66 92 70 90C74 92 78 90 79 86C80 83 77 78 70 78Z" fill="#1d1912"/>
@@ -122,17 +136,6 @@
               <circle cx="85" cy="60" r="1.8" fill="#fff"/>
               <path d="M48 54C52 50 60 50 63 53" stroke="#1d1912" stroke-width="2" fill="none" stroke-linecap="round" opacity=".55"/>
               <path d="M92 54C88 50 80 50 77 53" stroke="#1d1912" stroke-width="2" fill="none" stroke-linecap="round" opacity=".55"/>
-              <!-- coleira/guia realista: tira dupla (com costura central) presa numa presilha metálica -->
-              <g class="hero-pet-leash-strap">
-                <path d="M64 91C59 99 56 106 56 113" stroke="#c0392b" stroke-width="7" fill="none" stroke-linecap="round"/>
-                <path d="M64 91C59 99 56 106 56 113" stroke="#e74c3c" stroke-width="3.2" fill="none" stroke-linecap="round"/>
-                <path d="M64 91.5C59.5 99 56.5 105.5 56.3 112" stroke="#f5b7ae" stroke-width=".9" fill="none" stroke-linecap="round" opacity=".8"/>
-                <path d="M50 116C50 111 53 108 58 108C63 108 66 111 66 116L66 130C66 137 63 141 58 141C53 141 50 137 50 130Z" fill="#d7dade" stroke="#1d1912" stroke-width="2.4" stroke-linejoin="round"/>
-                <path d="M58 112L58 136" stroke="#9aa0a6" stroke-width="2" stroke-linecap="round"/>
-                <path d="M53 116C53 122 53 126 53 132" stroke="#fff" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>
-                <circle cx="58" cy="112" r="3.6" fill="none" stroke="#1d1912" stroke-width="2.2"/>
-              </g>
-              <rect x="60" y="87" width="7" height="9" rx="2" fill="#c98a3f" stroke="#1d1912" stroke-width="2"/>
             </svg>
           </div>
         </div>
@@ -155,12 +158,13 @@
               <path d="M58 73C52 73 49 77 50 80C51 83 54 85 58 83C62 85 65 83 66 80C67 77 64 73 58 73Z" fill="#1d1912"/>
               <ellipse cx="54" cy="76.5" rx="1.5" ry="1" fill="#fff" opacity=".8"/>
               <path d="M58 83Q58 89 52 91M58 83Q58 89 64 91" stroke="#1d1912" stroke-width="2" stroke-linecap="round" fill="none"/>
-              <!-- olho direito fica sobre a mancha preta: precisa de contraste próprio -->
-              <path d="M40 59C44 53 53 53 54 60C53 66 44 66 40 59Z" fill="#1d1912"/>
+              <!-- os dois olhos são idênticos (mesmo preenchimento e brilho); o rim
+                   claro e fino é só pra não sumir em cima da mancha preta, sem
+                   quebrar a simetria entre os dois lados -->
+              <path d="M40 59C44 53 53 53 54 60C53 66 44 66 40 59Z" fill="#1d1912" stroke="#fbf8f2" stroke-width="1.3"/>
               <circle cx="45" cy="57" r="1.7" fill="#fff"/>
-              <path d="M76 59C72 53 63 53 62 60C63 66 72 66 76 59Z" fill="#fbf8f2" stroke="#1d1912" stroke-width="1.6"/>
-              <circle cx="71" cy="59" r="2.6" fill="#1d1912"/>
-              <circle cx="71.8" cy="57.8" r=".9" fill="#fff"/>
+              <path d="M76 59C72 53 63 53 62 60C63 66 72 66 76 59Z" fill="#1d1912" stroke="#fbf8f2" stroke-width="1.3"/>
+              <circle cx="71" cy="57" r="1.7" fill="#fff"/>
               <path d="M38 51C42 47 49 47 52 50" stroke="#1d1912" stroke-width="2" fill="none" stroke-linecap="round" opacity=".5"/>
               <!-- telefone clássico vermelho -->
               <g class="hero-pet-phone-body" transform="rotate(-8 102 71)">
