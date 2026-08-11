@@ -503,9 +503,30 @@ function excluirSolicitacao(requestId) {
     var context = requestContext_(config, requestId, true), current = status_(context);
     if (['PENDENTE', 'CANCELADO'].indexOf(current) < 0) throw safeError_('INVALID_TRANSITION', 'Esta solicitação precisa ser cancelada antes da exclusão.');
     if (String(context.record.eventIdAtendimento || '').trim() || hasRequestCalendarLink_(context)) throw safeError_('CALENDAR_LINKED', 'Existe vínculo com a agenda e ele precisa ser revisado.');
-    if (hasPaymentForRequest_(config, requestId)) throw safeError_('PAYMENT_LINKED', 'Existe um pagamento vinculado e a solicitação não pode ser excluída.');
-    context.sheet.deleteRow(context.rowNumber);
-    return { ok: true, data: { requestId: requestId, deleted: true } };
+    // A administradora é a única usuária do painel e a decisão de excluir é dela: um pagamento
+    // vinculado não bloqueia mais a exclusão, apenas é removido junto (Fase 12A). Duplicidade de
+    // pagamento continua exigindo revisão, para não escolher qual linha apagar arbitrariamente.
+    var paymentSource = paymentSheet_(config), paymentMatches = paymentMatches_(paymentSource, requestId);
+    if (paymentMatches.length > 1) throw safeError_('RECONCILIATION_REQUIRED', 'Há pagamentos duplicados para esta solicitação. Nenhuma alteração foi realizada.');
+    var payment = paymentMatches[0] || null, paymentDeleted = false;
+    if (payment) {
+      try {
+        paymentSource.sheet.deleteRow(payment.rowNumber);
+        SpreadsheetApp.flush();
+        if (paymentMatches_(paymentSheet_(config), requestId).length) throw new Error('payment delete not verified');
+        paymentDeleted = true;
+      } catch (paymentError) {
+        console.error('ADMIN_REQUEST_DELETE_PAYMENT_FAILED requestId=%s', requestId);
+        throw safeError_('WRITE_ERROR', 'Não foi possível excluir o pagamento vinculado. A solicitação não foi excluída.');
+      }
+    }
+    try {
+      context.sheet.deleteRow(context.rowNumber);
+    } catch (requestError) {
+      console.error('ADMIN_REQUEST_DELETE_FAILED requestId=%s', requestId);
+      throw safeError_('WRITE_ERROR', paymentDeleted ? 'O pagamento vinculado foi excluído, mas a solicitação não pôde ser excluída. Tente excluir novamente.' : 'Não foi possível excluir a solicitação. Os dados foram preservados.');
+    }
+    return { ok: true, data: { requestId: requestId, deleted: true, paymentDeleted: paymentDeleted } };
   } catch (error) {
     if (error && error.safeCode) throw error;
     console.error('ADMIN_REQUEST_DELETE_FAILED requestId=%s', requestId);
@@ -561,7 +582,6 @@ function prepareConfirmationPayment_(context) { var source = paymentSheet_(conte
 function writeConfirmationPayment_(plan) { if (plan.created) { plan.source.pendingRequestId = String(plan.expected[plan.source.headers.indexOf('requestId')]); writeAndVerifyPayment_(plan.source, plan.rowNumber, plan.expected); } }
 function compensateConfirmationPayment_(plan) { if (!plan) return true; if (!plan.created) return true; plan.source.pendingRequestId = String(plan.expected[plan.source.headers.indexOf('requestId')]); return restorePayment_(plan.source, plan.rowNumber, null); }
 function confirmationPaymentMatches_(plan) { var source = paymentSheet_(plan.source.config), matches = paymentMatches_(source, String(plan.expected[plan.source.headers.indexOf('requestId')])); return matches.length === 1 && paymentRowsEqual_(matches[0].values, plan.expected, plan.source.config.TIMEZONE); }
-function hasPaymentForRequest_(config, requestId) { return paymentMatches_(paymentSheet_(config), requestId).length > 0; }
 function assertNoUnexpectedEvent_(context, current) { if (current !== 'CONFIRMADO' && String(context.record.eventIdAtendimento || '').trim()) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); }
 function nativeDate_(value) { return Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime()); }
 function strictSheetDate_(value, timezone) { if (nativeDate_(value)) return Utilities.formatDate(value, timezone, 'yyyy-MM-dd'); if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value; throw safeError_('INVALID_INTERVAL', 'O horário da solicitação é inválido ou legado.'); }
