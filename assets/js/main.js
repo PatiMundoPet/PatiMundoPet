@@ -170,7 +170,7 @@
       var radius = Math.round((faceWidth / 2) / Math.tan(Math.PI / count));
       track.style.setProperty('--face-width', faceWidth + 'px');
       track.style.setProperty('--face-radius', radius + 'px');
-      viewport.style.height = faceWidth + 'px';
+      // Cada foto mantém a proporção real dela (sem recorte forçado em quadrado).
       slides.forEach(function (slide, index) {
         slide.style.setProperty('--face-angle', (index * step) + 'deg');
       });
@@ -195,6 +195,34 @@
     function applyRotation() {
       track.style.transform = 'rotateY(' + angle + 'deg)';
       updateFrontFace();
+    }
+
+    // A perspectiva 3D projeta a foto da frente (mais perto da câmera, com
+    // translateZ) visivelmente maior do que o tamanho "plano" dela — e ainda
+    // por cima ela ganha um scale(1.08) extra. Em vez de calcular isso na mão
+    // (frágil, muda se o CSS mudar), medimos o fator de ampliação real numa
+    // foto e aplicamos na mais alta de todas (cada foto na proporção real
+    // dela) — assim a viewport nunca corta nenhuma foto, seja qual for a que
+    // estiver de frente durante o giro.
+    function syncViewportHeight() {
+      var faceWidth = parseFloat(track.style.getPropertyValue('--face-width')) || 300;
+      function flatHeightOf(slide) {
+        var img = slide.querySelector('img');
+        var w = img && Number(img.getAttribute('width'));
+        var h = img && Number(img.getAttribute('height'));
+        return (w && h) ? faceWidth * (h / w) : faceWidth;
+      }
+      var tallestFlat = faceWidth;
+      slides.forEach(function (slide) {
+        var flat = flatHeightOf(slide);
+        if (flat > tallestFlat) tallestFlat = flat;
+      });
+      var frontSlide = track.querySelector('.gallery-carousel-slide.is-front') || slides[0];
+      var measured = frontSlide.getBoundingClientRect().height;
+      var frontFlat = flatHeightOf(frontSlide);
+      var magnification = measured && frontFlat ? measured / frontFlat : 1;
+      if (!isFinite(magnification) || magnification <= 0) magnification = 1;
+      viewport.style.height = Math.round(tallestFlat * magnification + 56) + 'px';
     }
 
     function stopAutoplay() {
@@ -295,13 +323,14 @@
     var resizeTimer = null;
     window.addEventListener('resize', function () {
       window.clearTimeout(resizeTimer);
-      resizeTimer = window.setTimeout(function () { layout(); applyRotation(); }, 150);
+      resizeTimer = window.setTimeout(function () { layout(); applyRotation(); syncViewportHeight(); }, 150);
     });
 
     try {
       track.classList.add('is-enhanced');
       layout();
       applyRotation();
+      syncViewportHeight();
       scheduleAutoplay();
     } catch (error) {
       // Qualquer falha aqui e a faixa comum (rolagem por toque, clique abre a

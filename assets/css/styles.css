@@ -141,7 +141,9 @@
   /* ---------- Galeria: carrossel giratório em 3D (melhoria progressiva) ----------
      Único componente da galeria (substituiu a grade solta). Base (sem JS, ou antes
      do boot.js rodar): faixa horizontal comum, com rolagem por toque/scroll e
-     snap — 100% utilizável sozinha.
+     snap — 100% utilizável sozinha. As fotos usam srcset (thumb/full em HD) e
+     mantêm a proporção real de cada uma (largura fixa, altura conforme os
+     atributos width/height do próprio <img> — sem recorte forçado em quadrado).
      Com JS: assets/js/main.js calcula as posições e adiciona "is-enhanced" ao
      track; os slides passam a orbitar em 3D a partir de variáveis CSS
      (--face-width/--face-radius no track, --face-angle em cada slide), com a
@@ -149,14 +151,18 @@
   .gallery-carousel-control { display: none; }
   .js .gallery-carousel-control { display: inline-flex; }
 
-  .js .gallery-carousel-viewport { perspective: 1900px; }
+  .js .gallery-carousel-viewport { perspective: 1500px; }
 
   .gallery-carousel-track { scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
-  .gallery-carousel-face { background: #e4d7bb; }
+  .gallery-carousel-face { background: #e4d7bb; box-shadow: 0 14px 34px -16px rgba(16,22,15,.4); }
   .gallery-carousel-face img { display: block; }
 
   .gallery-carousel-track.is-enhanced {
     position: relative;
+    /* Todos os slides viram position:absolute (linha abaixo), então o track,
+       sozinho, colapsaria pra altura 0 — o que quebraria a centralização
+       vertical deles (top:50% precisa de uma altura de referência real). */
+    height: 100%;
     flex-wrap: nowrap;
     overflow: visible;
     justify-content: center;
@@ -169,7 +175,7 @@
   .gallery-carousel-track.is-enhanced:active { cursor: grabbing; }
   .gallery-carousel-track.is-enhanced .gallery-carousel-slide {
     position: absolute;
-    top: 0;
+    top: 50%;
     left: 50%;
     width: var(--face-width, 220px);
     margin-left: calc(var(--face-width, 220px) / -2);
@@ -179,24 +185,27 @@
        o clique dela. */
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    transform: rotateY(var(--face-angle, 0deg)) translateZ(var(--face-radius, 260px));
+    /* translateY(-50%) centraliza verticalmente qualquer altura (fotos verticais,
+       quadradas ou horizontais) — é relativo à própria altura do elemento, não
+       muda com o giro em Y. */
+    transform: translateY(-50%) rotateY(var(--face-angle, 0deg)) translateZ(var(--face-radius, 260px));
   }
   .gallery-carousel-track.is-enhanced .gallery-carousel-face {
     transition: transform .4s cubic-bezier(.22,1,.36,1), box-shadow .4s ease;
   }
-  /* A foto de frente ganha destaque (maior, nítida); as demais ficam um pouco
-     menores e suavemente escurecidas — é isso que dá a sensação real de giro em
-     3D, em vez de uma fileira de fotos soltas do mesmo tamanho. O contraste é
-     sutil de propósito: um visual limpo, não um efeito chamativo. */
+  /* A foto de frente ganha destaque (maior, nítida, sombra mais funda); as
+     demais ficam um pouco menores e suavemente escurecidas — é isso que dá a
+     sensação real de giro em 3D, em vez de uma fileira de fotos soltas do
+     mesmo tamanho. */
   .gallery-carousel-track.is-enhanced .gallery-carousel-slide:not(.is-front) {
-    filter: brightness(.82) saturate(.92);
+    filter: brightness(.78) saturate(.9);
   }
   .gallery-carousel-track.is-enhanced .gallery-carousel-slide:not(.is-front) .gallery-carousel-face {
-    transform: scale(.88);
+    transform: scale(.85);
   }
   .gallery-carousel-track.is-enhanced .gallery-carousel-slide.is-front .gallery-carousel-face {
-    transform: scale(1.04);
-    box-shadow: 0 30px 60px -20px rgba(16,22,15,.32);
+    transform: scale(1.08);
+    box-shadow: 0 40px 80px -24px rgba(16,22,15,.5);
   }
 
   @media (prefers-reduced-motion: reduce) {
