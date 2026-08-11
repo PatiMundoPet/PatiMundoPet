@@ -70,19 +70,24 @@
     });
   })();
 
-  // ---------- Galeria: visualizador de fotos ----------
+  // ---------- Galeria: carrossel giratório em 3D + visualizador de fotos ----------
+  // Um único componente: cada foto é ao mesmo tempo uma face do carrossel e o
+  // gatilho da ampliação (lightbox). Sem JS, ou antes do boot.js rodar, é uma
+  // faixa horizontal comum com rolagem por toque/scroll — 100% utilizável
+  // sozinha; o giro 3D é só a melhoria por cima.
   (function () {
-    var items = Array.prototype.slice.call(document.querySelectorAll('.gallery-item'));
+    var items = Array.prototype.slice.call(document.querySelectorAll('.gallery-carousel-face'));
     var dialog = document.getElementById('gallery-lightbox');
     var image = document.getElementById('gallery-lightbox-image');
     var closeButton = document.getElementById('gallery-close');
-    var prevButton = document.getElementById('gallery-prev');
-    var nextButton = document.getElementById('gallery-next');
-    if (!items.length || !dialog || !image || !closeButton || !prevButton || !nextButton) return;
-    if (typeof dialog.showModal !== 'function') return; // sem suporte: fotos continuam visíveis na grade, só não ampliam
+    var lightboxPrev = document.getElementById('gallery-prev');
+    var lightboxNext = document.getElementById('gallery-next');
+    if (!items.length || !dialog || !image || !closeButton || !lightboxPrev || !lightboxNext) return;
 
+    // ---- Ampliação (lightbox) ----
     var current = -1;
     var trigger = null;
+    var lightboxSupported = typeof dialog.showModal === 'function';
 
     function show(index) {
       current = (index + items.length) % items.length;
@@ -92,27 +97,24 @@
       image.alt = thumb ? thumb.getAttribute('alt') : '';
     }
 
-    function open(index, originButton) {
+    function openLightbox(index, originButton) {
+      if (!lightboxSupported) return; // sem suporte: fotos continuam visíveis, só não ampliam
       trigger = originButton || null;
       show(index);
       if (!dialog.open) dialog.showModal();
     }
 
-    function close() {
+    function closeLightbox() {
       if (dialog.open) dialog.close();
     }
 
-    items.forEach(function (item, index) {
-      item.addEventListener('click', function () { open(index, item); });
-    });
-
-    closeButton.addEventListener('click', close);
-    prevButton.addEventListener('click', function () { show(current - 1); });
-    nextButton.addEventListener('click', function () { show(current + 1); });
+    closeButton.addEventListener('click', closeLightbox);
+    lightboxPrev.addEventListener('click', function () { show(current - 1); });
+    lightboxNext.addEventListener('click', function () { show(current + 1); });
 
     // Clique fora da foto (no backdrop) fecha; clique na própria foto ou nos controles, não.
     dialog.addEventListener('click', function (event) {
-      if (event.target === dialog) close();
+      if (event.target === dialog) closeLightbox();
     });
 
     dialog.addEventListener('keydown', function (event) {
@@ -124,21 +126,23 @@
     dialog.addEventListener('close', function () {
       if (trigger) { trigger.focus(); trigger = null; }
     });
-  })();
 
-  // ---------- Galeria: carrossel giratório de destaques (melhoria progressiva) ----------
-  // Sem JS a faixa já rola normalmente por toque/scroll (ver CSS). Aqui só
-  // acrescentamos o giro 3D por cima; qualquer falha cai de volta pra faixa comum.
-  (function () {
+    // ---- Carrossel 3D ----
     var carousel = document.getElementById('gallery-carousel');
     var track = document.getElementById('gallery-carousel-track');
     var viewport = track ? track.closest('.gallery-carousel-viewport') : null;
-    var prevButton = document.getElementById('gallery-carousel-prev');
-    var nextButton = document.getElementById('gallery-carousel-next');
-    if (!carousel || !track || !viewport || !prevButton || !nextButton) return;
+    var rotatePrev = document.getElementById('gallery-carousel-prev');
+    var rotateNext = document.getElementById('gallery-carousel-next');
+    var slides = track ? Array.prototype.slice.call(track.querySelectorAll('.gallery-carousel-slide')) : [];
 
-    var slides = Array.prototype.slice.call(track.querySelectorAll('.gallery-carousel-slide'));
-    if (slides.length < 3) return; // giro só faz sentido com um mínimo de fotos
+    if (!carousel || !track || !viewport || !rotatePrev || !rotateNext || slides.length < 3) {
+      // Sem os elementos do carrossel (ou fotos de menos pro giro fazer sentido):
+      // cada foto ainda abre a ampliação normalmente, na faixa comum.
+      items.forEach(function (item, index) {
+        item.addEventListener('click', function () { openLightbox(index, item); });
+      });
+      return;
+    }
 
     var reduceMotion = false;
     try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (error) { reduceMotion = false; }
@@ -154,9 +158,9 @@
     var pressedFace = null; // guardado no pointerdown, antes do setPointerCapture redirecionar o click pra track
 
     function faceWidthFor(viewportWidth) {
-      if (viewportWidth < 480) return 130;
-      if (viewportWidth < 768) return 160;
-      return 210;
+      if (viewportWidth < 480) return 150;
+      if (viewportWidth < 768) return 190;
+      return 250;
     }
 
     function layout() {
@@ -171,8 +175,25 @@
       });
     }
 
+    // Marca qual foto está de frente (mais perto do ângulo 0) pra ela ganhar
+    // destaque visual — é o que faz o giro parecer 3D de verdade, e não uma
+    // fileira de fotos do mesmo tamanho passando na frente da câmera.
+    function updateFrontFace() {
+      var normalized = ((angle % 360) + 360) % 360;
+      var bestIndex = 0, bestDistance = Infinity;
+      slides.forEach(function (slide, index) {
+        var effective = (normalized + index * step) % 360;
+        var distance = Math.min(effective, 360 - effective);
+        if (distance < bestDistance) { bestDistance = distance; bestIndex = index; }
+      });
+      slides.forEach(function (slide, index) {
+        slide.classList.toggle('is-front', index === bestIndex);
+      });
+    }
+
     function applyRotation() {
       track.style.transform = 'rotateY(' + angle + 'deg)';
+      updateFrontFace();
     }
 
     function stopAutoplay() {
@@ -198,8 +219,8 @@
       scheduleAutoplay();
     }
 
-    prevButton.addEventListener('click', function () { goToStep(1); });
-    nextButton.addEventListener('click', function () { goToStep(-1); });
+    rotatePrev.addEventListener('click', function () { goToStep(1); });
+    rotateNext.addEventListener('click', function () { goToStep(-1); });
 
     // Arrastar (mouse/toque) para girar
     track.addEventListener('pointerdown', function (event) {
@@ -246,19 +267,17 @@
     track.addEventListener('pointerup', endDrag);
     track.addEventListener('pointercancel', endDrag);
 
-    // Clique numa foto do carrossel: reaproveita a mesma lightbox da grade abaixo,
-    // sem duplicar a lógica de ampliação (main.js já cuida disso para ".gallery-item").
-    // Delegado no track (e não em cada botão): o setPointerCapture do arrasto
-    // redireciona o "click" pro elemento capturado, então guardamos em pressedFace,
-    // no pointerdown, qual foto foi realmente pressionada, antes disso acontecer.
+    // Clique numa foto do carrossel abre a ampliação. Resolvido por índice (não
+    // por listener em cada botão): o setPointerCapture do arrasto redireciona o
+    // alvo do "click" pro track, então guardamos em pressedFace, no pointerdown,
+    // qual foto foi realmente pressionada, antes disso acontecer.
     track.addEventListener('click', function (event) {
       var face = pressedFace;
       pressedFace = null;
       if (moved) { event.preventDefault(); return; } // era um arraste, não um clique
       if (!face) return; // clique fora de uma foto (ex.: espaço entre elas)
-      var full = face.getAttribute('data-full');
-      var match = full && document.querySelector('.gallery-item[data-full="' + full + '"]');
-      if (match) match.click();
+      var index = items.indexOf(face);
+      if (index >= 0) openLightbox(index, face);
     });
 
     // Girar com as setas do teclado quando o foco está dentro do carrossel
@@ -275,7 +294,7 @@
     var resizeTimer = null;
     window.addEventListener('resize', function () {
       window.clearTimeout(resizeTimer);
-      resizeTimer = window.setTimeout(layout, 150);
+      resizeTimer = window.setTimeout(function () { layout(); applyRotation(); }, 150);
     });
 
     try {
@@ -284,7 +303,8 @@
       applyRotation();
       scheduleAutoplay();
     } catch (error) {
-      // Qualquer falha aqui e a faixa comum (rolagem por toque) continua funcionando.
+      // Qualquer falha aqui e a faixa comum (rolagem por toque, clique abre a
+      // ampliação) continua funcionando — nada quebra.
       track.classList.remove('is-enhanced');
       stopAutoplay();
     }
