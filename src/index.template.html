@@ -92,10 +92,51 @@
       <h1 id="titulo-inicio" class="reveal mt-6 font-display font-semibold text-4xl sm:text-5xl md:text-6xl leading-[1.08] text-stone-50 text-balance">Passeios e dog sitter com atenção ao <span class="italic text-brass-400">ritmo de cada cão.</span></h1>
       <p class="reveal mt-6 max-w-2xl mx-auto text-stone-50/80 text-lg leading-relaxed">Atendimento feito pela Pati, com detalhes, disponibilidade e valores combinados diretamente pelo WhatsApp.</p>
       <div class="reveal mt-9 flex flex-col sm:flex-row items-center justify-center gap-3.5">
-        <a href="#agendamento" class="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-brass-500 hover:bg-brass-400 text-ink-900 font-semibold px-7 py-3.5 transition-colors">Solicitar um passeio</a>
-        <a {{WHATSAPP_ATTRIBUTES}} target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto inline-flex items-center justify-center rounded-full border border-stone-50/30 text-stone-50 font-semibold px-7 py-3.5 hover:bg-stone-50/10 transition-colors">Conversar com a Pati</a>
+        <a href="#agendamento" class="hero-cta-passeio w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-brass-500 hover:bg-brass-400 text-ink-900 font-semibold px-7 py-3.5 transition-colors">Solicitar um passeio</a>
+        <a {{WHATSAPP_ATTRIBUTES}} target="_blank" rel="noopener noreferrer" class="hero-cta-whatsapp w-full sm:w-auto inline-flex items-center justify-center rounded-full border border-stone-50/30 text-stone-50 font-semibold px-7 py-3.5 hover:bg-stone-50/10 transition-colors">Conversar com a Pati</a>
       </div>
     </div>
+
+    <!-- ===== INÍCIO: cachorrinhos animados no hover (BEGIN hero-pet-hover) =====
+         Só aparecem com mouse de verdade (não em toque) e respeitam "reduzir
+         movimento". Bloco isolado e fácil de tirar — ver aviso no styles.css. -->
+    <div class="hero-pet hero-pet-leash" aria-hidden="true">
+      <svg viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="50" cy="90" rx="34" ry="20" fill="#c7a565"/>
+        <ellipse cx="26" cy="43" rx="9" ry="17" fill="#ad8a4e" transform="rotate(-18 26 43)"/>
+        <ellipse cx="74" cy="43" rx="9" ry="17" fill="#ad8a4e" transform="rotate(18 74 43)"/>
+        <circle cx="50" cy="46" r="27" fill="#dcc48f"/>
+        <ellipse cx="50" cy="59" rx="14" ry="11" fill="#f8f4ea"/>
+        <circle cx="40" cy="40" r="2.8" fill="#1d1912"/>
+        <circle cx="60" cy="40" r="2.8" fill="#1d1912"/>
+        <ellipse cx="50" cy="55" rx="3.6" ry="2.8" fill="#1d1912"/>
+        <path d="M50 58 Q50 63 44 65 M50 58 Q50 63 56 65" stroke="#1d1912" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M46 63 C 41 74, 39 84, 42 98" stroke="#6b5530" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+        <circle cx="41" cy="100" r="7" fill="none" stroke="#6b5530" stroke-width="4.5"/>
+      </svg>
+    </div>
+    <div class="hero-pet hero-pet-phone" aria-hidden="true">
+      <svg viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="50" cy="90" rx="34" ry="20" fill="#c7a565"/>
+        <ellipse cx="26" cy="43" rx="9" ry="17" fill="#ad8a4e" transform="rotate(-18 26 43)"/>
+        <ellipse cx="74" cy="43" rx="9" ry="17" fill="#ad8a4e" transform="rotate(18 74 43)"/>
+        <circle cx="50" cy="46" r="27" fill="#dcc48f"/>
+        <ellipse cx="50" cy="59" rx="14" ry="11" fill="#f8f4ea"/>
+        <circle cx="40" cy="40" r="2.8" fill="#1d1912"/>
+        <circle cx="60" cy="40" r="2.8" fill="#1d1912"/>
+        <ellipse cx="50" cy="55" rx="3.6" ry="2.8" fill="#1d1912"/>
+        <path d="M50 58 Q50 63 44 65 M50 58 Q50 63 56 65" stroke="#1d1912" stroke-width="1.6" stroke-linecap="round"/>
+        <g transform="rotate(18 76 30)">
+          <rect x="68" y="18" width="16" height="26" rx="4.5" fill="#2a3d31"/>
+          <rect x="70.5" y="21" width="11" height="15" rx="2" fill="#eef1ec"/>
+        </g>
+        <g class="hero-pet-phone-wave">
+          <path d="M88 24 Q95 30 88 36" stroke="#dcc48f" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+          <path d="M93 20 Q103 30 93 40" stroke="#dcc48f" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".7"/>
+        </g>
+      </svg>
+    </div>
+    <!-- ===== FIM: hero-pet-hover ===== -->
   </section>
 
   <section id="quem-e-a-pati" class="bg-stone-50 py-24 sm:py-28" aria-labelledby="titulo-quem-e-a-pati">
@@ -224,11 +265,6 @@
               <li class="gallery-carousel-slide shrink-0 w-[200px] sm:w-[260px] lg:w-[320px]">
                 <button type="button" class="gallery-carousel-face gallery-item group block w-full overflow-hidden rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/golden-dupla-bolinha-full.jpg">
                   <img src="assets/img/galeria/golden-dupla-bolinha-thumb.jpg" srcset="assets/img/galeria/golden-dupla-bolinha-thumb.jpg 480w, assets/img/galeria/golden-dupla-bolinha-full.jpg 960w" sizes="(min-width: 1024px) 340px, (min-width: 640px) 270px, 210px" alt="Dois golden retrievers, um deles segurando uma bolinha na boca" width="480" height="640" loading="lazy" decoding="async" class="w-full h-auto object-cover">
-                </button>
-              </li>
-              <li class="gallery-carousel-slide shrink-0 w-[200px] sm:w-[260px] lg:w-[320px]">
-                <button type="button" class="gallery-carousel-face gallery-item group block w-full overflow-hidden rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/pati-banho-full.jpg">
-                  <img src="assets/img/galeria/pati-banho-thumb.jpg" alt="Pati sorrindo enquanto dá banho em um cão da raça dachshund" width="366" height="314" loading="lazy" decoding="async" class="w-full h-auto object-cover">
                 </button>
               </li>
             </ul>

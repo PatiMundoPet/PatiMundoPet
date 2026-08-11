@@ -21,8 +21,6 @@ const allowedFiles = [
   'assets/img/galeria/passeio-coleiras-thumb.jpg',
   'assets/img/galeria/passeio-trio-sentado-full.jpg',
   'assets/img/galeria/passeio-trio-sentado-thumb.jpg',
-  'assets/img/galeria/pati-banho-full.jpg',
-  'assets/img/galeria/pati-banho-thumb.jpg',
   'assets/img/galeria/pati-cachorro-jardim-full.jpg',
   'assets/img/galeria/pati-cachorro-jardim-thumb.jpg',
   'assets/img/galeria/pati-dupla-preta-full.jpg',
