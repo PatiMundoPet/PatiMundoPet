@@ -52,6 +52,7 @@ const expectedSectionOrder = [
   'quem-e-a-pati',
   'servicos',
   'caminho-passeio',
+  'galeria',
   'projetos-colaboradores',
   'agendamento',
 ];
@@ -110,7 +111,6 @@ const forbiddenPublicContent = [
   /\bequipe\b/i,
   /\bavalia(?:ção|ções)\b/i,
   /\bdepoimentos?\b/i,
-  /\bgaleria\b/i,
   /\bcheckout\b/i,
   /\bcartão\b/i,
   /\bboleto\b/i,

@@ -50,6 +50,7 @@
         <a href="#quem-e-a-pati" class="hover:text-moss-700 transition-colors">Quem é a Pati</a>
         <a href="#servicos" class="hover:text-moss-700 transition-colors">Serviços</a>
         <a href="#caminho-passeio" class="hover:text-moss-700 transition-colors">O caminho do passeio</a>
+        <a href="#galeria" class="hover:text-moss-700 transition-colors">Galeria</a>
         <a href="#projetos-colaboradores" class="hover:text-moss-700 transition-colors">Projetos e colaborações</a>
         <a href="#agendamento" class="hover:text-moss-700 transition-colors">Agendar</a>
       </nav>
@@ -72,6 +73,7 @@
       <a href="#quem-e-a-pati" class="py-2.5 border-b border-stone-200/70">Quem é a Pati</a>
       <a href="#servicos" class="py-2.5 border-b border-stone-200/70">Serviços</a>
       <a href="#caminho-passeio" class="py-2.5 border-b border-stone-200/70">O caminho do passeio</a>
+      <a href="#galeria" class="py-2.5 border-b border-stone-200/70">Galeria</a>
       <a href="#projetos-colaboradores" class="py-2.5 border-b border-stone-200/70">Projetos e colaborações</a>
       <a href="#agendamento" class="py-2.5 border-b border-stone-200/70">Agendar</a>
       <a href="https://wa.me/5511999365433" target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex items-center justify-center rounded-full bg-brass-500 text-ink-900 font-semibold text-sm px-5 py-3">Falar no WhatsApp</a>
@@ -96,8 +98,8 @@
 
   <section id="quem-e-a-pati" class="bg-stone-50 py-24 sm:py-28" aria-labelledby="titulo-quem-e-a-pati">
     <div class="max-w-6xl mx-auto px-5 sm:px-8 grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16 items-center">
-      <div class="reveal rounded-[2rem] bg-moss-800 min-h-72 flex items-center justify-center text-brass-400 shadow-soft" aria-hidden="true">
-        <svg viewBox="0 0 24 24" class="w-24 h-24" fill="currentColor"><ellipse cx="12" cy="16.2" rx="5" ry="4.2"/><ellipse cx="5.3" cy="9" rx="2.1" ry="2.6" transform="rotate(-20 5.3 9)"/><ellipse cx="9.6" cy="5.3" rx="2.05" ry="2.7" transform="rotate(-8 9.6 5.3)"/><ellipse cx="14.4" cy="5.3" rx="2.05" ry="2.7" transform="rotate(8 14.4 5.3)"/><ellipse cx="18.7" cy="9" rx="2.1" ry="2.6" transform="rotate(20 18.7 9)"/></svg>
+      <div class="reveal rounded-[2rem] overflow-hidden shadow-soft">
+        <img src="assets/img/galeria/pati-retrato-thumb.jpg" srcset="assets/img/galeria/pati-retrato-thumb.jpg 640w, assets/img/galeria/pati-retrato-full.jpg 1440w" sizes="(min-width: 1024px) 480px, 90vw" alt="Pati sorrindo, agachada ao lado de dois cães pretos" width="640" height="640" loading="lazy" decoding="async" class="w-full h-full object-cover">
       </div>
       <div class="reveal">
         <span class="tag-chip inline-block bg-stone-200 text-brass-700 text-xs font-semibold uppercase tracking-wider pl-6 pr-4 py-1.5 rounded-full">Quem é a Pati</span>
@@ -147,6 +149,63 @@
         <div class="leash-line reveal relative"><div class="step-tag w-14 h-14 rounded-2xl bg-brass-500 text-ink-900 flex items-center justify-center font-display font-semibold text-lg">04</div><h3 class="mt-6 font-display font-semibold text-stone-50 text-lg mb-2">Confirme</h3><p class="text-stone-50/70 text-[15px] leading-relaxed pr-4">O atendimento só fica confirmado depois da resposta da Pati.</p></div>
       </div>
     </div>
+  </section>
+
+  <section id="galeria" class="bg-stone-100 py-24 sm:py-28" aria-labelledby="titulo-galeria">
+    <div class="max-w-6xl mx-auto px-5 sm:px-8">
+      <div class="reveal max-w-2xl">
+        <span class="tag-chip inline-block bg-stone-200 text-brass-700 text-xs font-semibold uppercase tracking-wider pl-6 pr-4 py-1.5 rounded-full">Galeria</span>
+        <h2 id="titulo-galeria" class="mt-5 font-display font-semibold text-3xl sm:text-4xl leading-tight">Momentos reais de passeio.</h2>
+        <p class="mt-5 text-ink-700 leading-relaxed max-w-2xl">Fotos da Pati e dos cães durante os atendimentos. Toque em qualquer foto para ampliar.</p>
+      </div>
+      <div class="reveal mt-14 columns-2 sm:columns-3 lg:columns-4 gap-3">
+        <button type="button" class="gallery-item group mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/passeio-coleiras-full.jpg">
+          <img src="assets/img/galeria/passeio-coleiras-thumb.jpg" alt="Três cães sendo conduzidos lado a lado durante um passeio" width="640" height="640" loading="lazy" decoding="async" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105 group-focus-visible:scale-105">
+        </button>
+        <button type="button" class="gallery-item group mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/pati-filhote-golden-full.jpg">
+          <img src="assets/img/galeria/pati-filhote-golden-thumb.jpg" alt="Pati de pé segurando a guia de um filhote de golden retriever" width="640" height="640" loading="lazy" decoding="async" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105 group-focus-visible:scale-105">
+        </button>
+        <button type="button" class="gallery-item group mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/grupo-caes-parque-full.jpg">
+          <img src="assets/img/galeria/grupo-caes-parque-thumb.jpg" alt="Grupo de cinco cães de portes e raças variadas reunidos em um parque" width="640" height="640" loading="lazy" decoding="async" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105 group-focus-visible:scale-105">
+        </button>
+        <button type="button" class="gallery-item group mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/pati-sao-bernardo-full.jpg">
+          <img src="assets/img/galeria/pati-sao-bernardo-thumb.jpg" alt="Pati abraçando um cão São Bernardo durante o passeio" width="480" height="640" loading="lazy" decoding="async" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105 group-focus-visible:scale-105">
+        </button>
+        <button type="button" class="gallery-item group mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/golden-husky-banco-full.jpg">
+          <img src="assets/img/galeria/golden-husky-banco-thumb.jpg" alt="Golden retriever deitado em um banco de praça ao lado de um husky" width="640" height="640" loading="lazy" decoding="async" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105 group-focus-visible:scale-105">
+        </button>
+        <button type="button" class="gallery-item group mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/passeio-trio-sentado-full.jpg">
+          <img src="assets/img/galeria/passeio-trio-sentado-thumb.jpg" alt="Três cães sentados lado a lado, atentos, durante uma pausa do passeio" width="640" height="640" loading="lazy" decoding="async" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105 group-focus-visible:scale-105">
+        </button>
+        <button type="button" class="gallery-item group mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/pati-golden-husky-full.jpg">
+          <img src="assets/img/galeria/pati-golden-husky-thumb.jpg" alt="Pati agachada entre um golden retriever e um husky em uma área de recreação" width="640" height="640" loading="lazy" decoding="async" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105 group-focus-visible:scale-105">
+        </button>
+        <button type="button" class="gallery-item group mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/rottweiler-retrato-full.jpg">
+          <img src="assets/img/galeria/rottweiler-retrato-thumb.jpg" alt="Filhote de rottweiler sentado, atento, durante o passeio" width="640" height="640" loading="lazy" decoding="async" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105 group-focus-visible:scale-105">
+        </button>
+        <button type="button" class="gallery-item group mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/pati-cachorro-jardim-full.jpg">
+          <img src="assets/img/galeria/pati-cachorro-jardim-thumb.jpg" alt="Pati sorrindo, agachada ao lado de um cão, em um jardim" width="640" height="640" loading="lazy" decoding="async" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105 group-focus-visible:scale-105">
+        </button>
+        <button type="button" class="gallery-item group mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/golden-husky-grama-full.jpg">
+          <img src="assets/img/galeria/golden-husky-grama-thumb.jpg" alt="Golden retriever e husky deitados juntos na grama" width="640" height="640" loading="lazy" decoding="async" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105 group-focus-visible:scale-105">
+        </button>
+        <button type="button" class="gallery-item group mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/pati-dupla-preta-full.jpg">
+          <img src="assets/img/galeria/pati-dupla-preta-thumb.jpg" alt="Pati agachada entre dois cães pretos, encostada em uma parede branca" width="640" height="640" loading="lazy" decoding="async" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105 group-focus-visible:scale-105">
+        </button>
+        <button type="button" class="gallery-item group mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/golden-dupla-bolinha-full.jpg">
+          <img src="assets/img/galeria/golden-dupla-bolinha-thumb.jpg" alt="Dois golden retrievers, um deles segurando uma bolinha na boca" width="480" height="640" loading="lazy" decoding="async" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105 group-focus-visible:scale-105">
+        </button>
+        <button type="button" class="gallery-item group mb-3 block w-full break-inside-avoid overflow-hidden rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700" data-full="assets/img/galeria/pati-banho-full.jpg">
+          <img src="assets/img/galeria/pati-banho-thumb.jpg" alt="Pati sorrindo enquanto dá banho em um cão da raça dachshund" width="366" height="314" loading="lazy" decoding="async" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105 group-focus-visible:scale-105">
+        </button>
+      </div>
+    </div>
+    <dialog id="gallery-lightbox" class="gallery-lightbox" aria-label="Foto ampliada">
+      <button type="button" id="gallery-close" class="gallery-close" aria-label="Fechar foto ampliada">✕</button>
+      <button type="button" id="gallery-prev" class="gallery-nav gallery-prev" aria-label="Foto anterior">‹</button>
+      <img id="gallery-lightbox-image" src="" alt="" class="aspect-auto">
+      <button type="button" id="gallery-next" class="gallery-nav gallery-next" aria-label="Próxima foto">›</button>
+    </dialog>
   </section>
 
   <section id="projetos-colaboradores" class="bg-stone-50 py-24 sm:py-28" aria-labelledby="projetos-colaboradores-titulo">
@@ -241,6 +300,7 @@
           <li><a href="#quem-e-a-pati" class="hover:text-stone-50 transition-colors">Quem é a Pati</a></li>
           <li><a href="#servicos" class="hover:text-stone-50 transition-colors">Serviços</a></li>
           <li><a href="#caminho-passeio" class="hover:text-stone-50 transition-colors">O caminho do passeio</a></li>
+          <li><a href="#galeria" class="hover:text-stone-50 transition-colors">Galeria</a></li>
           <li><a href="#projetos-colaboradores" class="hover:text-stone-50 transition-colors">Projetos e colaborações</a></li>
           <li><a href="#agendamento" class="hover:text-stone-50 transition-colors">Agendar</a></li>
         </ul>

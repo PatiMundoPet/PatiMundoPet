@@ -93,6 +93,51 @@
   .reveal.is-reveal-pending { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease; }
   .reveal.is-reveal-pending.is-visible { opacity: 1; transform: translateY(0); }
 
+  /* ---------- Galeria: visualizador de fotos (<dialog> nativo) ---------- */
+  .gallery-lightbox {
+    max-width: min(92vw, 1100px);
+    max-height: 90vh;
+    border: none;
+    border-radius: 1rem;
+    padding: 0;
+    background: transparent;
+    overscroll-behavior: contain;
+  }
+  .gallery-lightbox::backdrop { background: rgba(20, 24, 20, .86); }
+  .gallery-lightbox:not([open]) { display: none; }
+  .gallery-lightbox img {
+    display: block;
+    max-width: 92vw;
+    max-height: 90vh;
+    width: auto;
+    height: auto;
+    margin: 0 auto;
+    border-radius: .75rem;
+  }
+  .gallery-close, .gallery-nav {
+    position: fixed;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    border: none;
+    background: rgba(20, 24, 20, .55);
+    color: #fdfaf4;
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .gallery-close:hover, .gallery-nav:hover { background: rgba(20, 24, 20, .8); }
+  .gallery-close { top: 1rem; right: 1rem; }
+  .gallery-prev { left: 1rem; top: 50%; transform: translateY(-50%); }
+  .gallery-next { right: 1rem; top: 50%; transform: translateY(-50%); }
+  @media (max-width: 640px) {
+    .gallery-prev { left: .5rem; }
+    .gallery-next { right: .5rem; }
+  }
+
   /* ---------- Botão flutuante do WhatsApp ---------- */
   @keyframes ping-slow {
     0%   { transform: scale(1);   opacity: .55; }
