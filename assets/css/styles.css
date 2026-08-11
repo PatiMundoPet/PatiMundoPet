@@ -63,6 +63,25 @@
     }
   }
 
+  /* A coleira se estica e o número do passo assenta ao ser revelado — só quando
+     o JS ativou a revelação progressiva (.reveal.is-reveal-pending); sem JS, ou
+     antes da observação começar, tudo já aparece completo, como o resto do site. */
+  .leash-line.reveal.is-reveal-pending .step-tag { transform: scale(0); transition: transform .45s cubic-bezier(.34,1.56,.64,1); }
+  .leash-line.reveal.is-reveal-pending.is-visible .step-tag { transform: scale(1); }
+  @media (min-width: 1024px) {
+    .leash-line.reveal.is-reveal-pending:not(:last-child)::after { transform: scaleX(0); transform-origin: left; transition: transform .5s ease; }
+    .leash-line.reveal.is-reveal-pending.is-visible:not(:last-child)::after { transform: scaleX(1); }
+    /* Cada passo aparece um pouco depois do anterior — caminho sendo percorrido,
+       não os quatro surgindo de uma vez (só faz sentido lado a lado, no desktop). */
+    #caminho-passeio .leash-line:nth-child(2), #caminho-passeio .leash-line:nth-child(2)::after, #caminho-passeio .leash-line:nth-child(2) .step-tag { transition-delay: .12s; }
+    #caminho-passeio .leash-line:nth-child(3), #caminho-passeio .leash-line:nth-child(3)::after, #caminho-passeio .leash-line:nth-child(3) .step-tag { transition-delay: .24s; }
+    #caminho-passeio .leash-line:nth-child(4), #caminho-passeio .leash-line:nth-child(4)::after, #caminho-passeio .leash-line:nth-child(4) .step-tag { transition-delay: .36s; }
+  }
+  @media (max-width: 1023px) {
+    .leash-line.reveal.is-reveal-pending:not(:last-child)::after { transform: scaleY(0); transform-origin: top; transition: transform .5s ease; }
+    .leash-line.reveal.is-reveal-pending.is-visible:not(:last-child)::after { transform: scaleY(1); }
+  }
+
   /* ---------- FAQ nativo: utilizável sem JavaScript ---------- */
   .faq-item summary { list-style: none; cursor: pointer; }
   .faq-item summary::-webkit-details-marker { display: none; }
@@ -84,6 +103,8 @@
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     .reveal.is-reveal-pending { opacity: 1; transform: none; transition: none; }
+    .leash-line.reveal.is-reveal-pending:not(:last-child)::after { transform: none; transition: none; }
+    .leash-line.reveal.is-reveal-pending .step-tag { transform: none; transition: none; }
     .animate-ping-slow { animation: none; }
     .faq-chevron { transition: none; }
   }
