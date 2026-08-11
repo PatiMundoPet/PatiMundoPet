@@ -92,51 +92,83 @@
       <h1 id="titulo-inicio" class="reveal mt-6 font-display font-semibold text-4xl sm:text-5xl md:text-6xl leading-[1.08] text-stone-50 text-balance">Passeios e dog sitter com atenção ao <span class="italic text-brass-400">ritmo de cada cão.</span></h1>
       <p class="reveal mt-6 max-w-2xl mx-auto text-stone-50/80 text-lg leading-relaxed">Atendimento feito pela Pati, com detalhes, disponibilidade e valores combinados diretamente pelo WhatsApp.</p>
       <div class="reveal mt-9 flex flex-col sm:flex-row items-center justify-center gap-3.5">
-        <a href="#agendamento" class="hero-cta-passeio w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-brass-500 hover:bg-brass-400 text-ink-900 font-semibold px-7 py-3.5 transition-colors">Solicitar um passeio</a>
-        <a href="https://wa.me/5511999365433" target="_blank" rel="noopener noreferrer" class="hero-cta-whatsapp w-full sm:w-auto inline-flex items-center justify-center rounded-full border border-stone-50/30 text-stone-50 font-semibold px-7 py-3.5 hover:bg-stone-50/10 transition-colors">Conversar com a Pati</a>
+        <!-- ===== INÍCIO: cachorrinhos animados no hover (BEGIN hero-pet-hover) =====
+             Só aparecem com mouse de verdade (não em toque) e respeitam "reduzir
+             movimento". Bloco isolado e fácil de tirar — ver aviso no styles.css.
+             Cada cachorrinho fica dentro do wrapper do próprio botão, centralizado
+             nele, pra aparecer exatamente embaixo daquela opção (não uma posição
+             aproximada em relação à seção inteira). -->
+        <div class="hero-cta-wrap w-full sm:w-auto">
+          <a href="#agendamento" class="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-brass-500 hover:bg-brass-400 text-ink-900 font-semibold px-7 py-3.5 transition-colors">Solicitar um passeio</a>
+          <div class="hero-pet hero-pet-leash" aria-hidden="true">
+            <svg viewBox="0 0 140 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs><clipPath id="heroPetLeashClip"><path d="M70 26C94 26 110 44 110 66C110 84 100 100 84 108C77 111 63 111 56 108C40 100 30 84 30 66C30 44 46 26 70 26Z"/></clipPath></defs>
+              <path d="M40 40C20 44 10 64 16 82C20 94 32 96 38 88C44 80 42 62 44 46Z" fill="#ad8a4e" stroke="#1d1912" stroke-width="3" stroke-linejoin="round"/>
+              <path d="M100 40C120 44 130 64 124 82C120 94 108 96 102 88C96 80 98 62 96 46Z" fill="#ad8a4e" stroke="#1d1912" stroke-width="3" stroke-linejoin="round"/>
+              <path d="M40 46C34 58 34 72 40 82C43 87 36 90 32 84C26 72 27 54 36 44Z" fill="#8f7040"/>
+              <path d="M100 46C106 58 106 72 100 82C97 87 104 90 108 84C114 72 113 54 104 44Z" fill="#8f7040"/>
+              <path d="M70 26C94 26 110 44 110 66C110 84 100 100 84 108C77 111 63 111 56 108C40 100 30 84 30 66C30 44 46 26 70 26Z" fill="#dcc48f" stroke="#1d1912" stroke-width="3" stroke-linejoin="round"/>
+              <g clip-path="url(#heroPetLeashClip)"><ellipse cx="96" cy="70" rx="30" ry="46" fill="#000" opacity=".08"/></g>
+              <ellipse cx="46" cy="82" rx="8" ry="5.5" fill="#c98b6b" opacity=".35"/>
+              <ellipse cx="94" cy="82" rx="8" ry="5.5" fill="#c98b6b" opacity=".35"/>
+              <ellipse cx="70" cy="90" rx="20" ry="15" fill="#f8f4ea" stroke="#1d1912" stroke-width="2.5"/>
+              <path d="M62 78C64 76 76 76 78 78" stroke="#1d1912" stroke-width="2" fill="none" stroke-linecap="round" opacity=".5"/>
+              <path d="M70 78C63 78 60 83 61 86C62 90 66 92 70 90C74 92 78 90 79 86C80 83 77 78 70 78Z" fill="#1d1912"/>
+              <ellipse cx="66" cy="82" rx="1.6" ry="1" fill="#fff" opacity=".8"/>
+              <path d="M70 90Q70 96 63 99M70 90Q70 96 77 99" stroke="#1d1912" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+              <path d="M50 62C54 56 64 56 65 63C64 69 54 69 50 62Z" fill="#1d1912"/>
+              <circle cx="55" cy="60" r="1.8" fill="#fff"/>
+              <path d="M90 62C86 56 76 56 75 63C76 69 86 69 90 62Z" fill="#1d1912"/>
+              <circle cx="85" cy="60" r="1.8" fill="#fff"/>
+              <path d="M48 54C52 50 60 50 63 53" stroke="#1d1912" stroke-width="2" fill="none" stroke-linecap="round" opacity=".55"/>
+              <path d="M92 54C88 50 80 50 77 53" stroke="#1d1912" stroke-width="2" fill="none" stroke-linecap="round" opacity=".55"/>
+              <g class="hero-pet-leash-strap">
+                <path d="M63 92C56 104 52 116 55 134" stroke="#6b5530" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="55" cy="136" r="9" fill="none" stroke="#6b5530" stroke-width="6"/>
+              </g>
+              <rect x="59" y="87" width="7" height="9" rx="2" fill="#ad8a4e" stroke="#1d1912" stroke-width="2"/>
+            </svg>
+          </div>
+        </div>
+        <div class="hero-cta-wrap w-full sm:w-auto">
+          <a href="https://wa.me/5511999365433" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto inline-flex items-center justify-center rounded-full border border-stone-50/30 text-stone-50 font-semibold px-7 py-3.5 hover:bg-stone-50/10 transition-colors">Conversar com a Pati</a>
+          <div class="hero-pet hero-pet-phone" aria-hidden="true">
+            <svg viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs><clipPath id="heroPetPhoneClip"><path d="M70 26C94 26 110 44 110 66C110 84 100 100 84 108C77 111 63 111 56 108C40 100 30 84 30 66C30 44 46 26 70 26Z"/></clipPath></defs>
+              <path d="M40 40C20 44 10 64 16 82C20 94 32 96 38 88C44 80 42 62 44 46Z" fill="#ad8a4e" stroke="#1d1912" stroke-width="3" stroke-linejoin="round"/>
+              <path d="M100 40C120 44 130 64 124 82C120 94 108 96 102 88C96 80 98 62 96 46Z" fill="#ad8a4e" stroke="#1d1912" stroke-width="3" stroke-linejoin="round"/>
+              <path d="M40 46C34 58 34 72 40 82C43 87 36 90 32 84C26 72 27 54 36 44Z" fill="#8f7040"/>
+              <path d="M100 46C106 58 106 72 100 82C97 87 104 90 108 84C114 72 113 54 104 44Z" fill="#8f7040"/>
+              <path d="M70 26C94 26 110 44 110 66C110 84 100 100 84 108C77 111 63 111 56 108C40 100 30 84 30 66C30 44 46 26 70 26Z" fill="#dcc48f" stroke="#1d1912" stroke-width="3" stroke-linejoin="round"/>
+              <g clip-path="url(#heroPetPhoneClip)"><ellipse cx="96" cy="70" rx="30" ry="46" fill="#000" opacity=".08"/></g>
+              <ellipse cx="46" cy="82" rx="8" ry="5.5" fill="#c98b6b" opacity=".35"/>
+              <ellipse cx="94" cy="82" rx="8" ry="5.5" fill="#c98b6b" opacity=".35"/>
+              <ellipse cx="70" cy="90" rx="20" ry="15" fill="#f8f4ea" stroke="#1d1912" stroke-width="2.5"/>
+              <path d="M70 78C63 78 60 83 61 86C62 90 66 92 70 90C74 92 78 90 79 86C80 83 77 78 70 78Z" fill="#1d1912"/>
+              <ellipse cx="66" cy="82" rx="1.6" ry="1" fill="#fff" opacity=".8"/>
+              <path d="M70 90Q70 96 63 99M70 90Q70 96 77 99" stroke="#1d1912" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+              <path d="M50 62C54 56 64 56 65 63C64 69 54 69 50 62Z" fill="#1d1912"/>
+              <circle cx="55" cy="60" r="1.8" fill="#fff"/>
+              <path d="M90 62C86 56 76 56 75 63C76 69 86 69 90 62Z" fill="#1d1912"/>
+              <circle cx="85" cy="60" r="1.8" fill="#fff"/>
+              <path d="M48 54C52 50 60 50 63 53" stroke="#1d1912" stroke-width="2" fill="none" stroke-linecap="round" opacity=".55"/>
+              <g class="hero-pet-phone-body" transform="rotate(16 118 78)">
+                <rect x="104" y="56" width="27" height="44" rx="7" fill="#2a3d31" stroke="#1d1912" stroke-width="2.5"/>
+                <rect x="108.4" y="61.5" width="18.2" height="27" rx="2.4" fill="#eef1ec"/>
+                <circle cx="117.5" cy="93" r="1.7" fill="#eef1ec"/>
+              </g>
+              <path d="M92 90C90 84 94 78 101 77C108 76 113 80 113 86C113 91 108 95 101 96C97 96.5 93 94 92 90Z" fill="#dcc48f" stroke="#1d1912" stroke-width="2.5" stroke-linejoin="round"/>
+              <path d="M96 82C95 80 96 78 98 78M101 80C100 78 101 76 103 76M106 81C106 79 107 77 109 77" stroke="#1d1912" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".55"/>
+              <g class="hero-pet-phone-wave">
+                <path d="M134 54Q142 66 132 78" stroke="#dcc48f" stroke-width="3" fill="none" stroke-linecap="round"/>
+                <path d="M140 48Q153 66 138 86" stroke="#dcc48f" stroke-width="3" fill="none" stroke-linecap="round" opacity=".65"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <!-- ===== FIM: hero-pet-hover ===== -->
       </div>
     </div>
-
-    <!-- ===== INÍCIO: cachorrinhos animados no hover (BEGIN hero-pet-hover) =====
-         Só aparecem com mouse de verdade (não em toque) e respeitam "reduzir
-         movimento". Bloco isolado e fácil de tirar — ver aviso no styles.css. -->
-    <div class="hero-pet hero-pet-leash" aria-hidden="true">
-      <svg viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="50" cy="90" rx="34" ry="20" fill="#c7a565"/>
-        <ellipse cx="26" cy="43" rx="9" ry="17" fill="#ad8a4e" transform="rotate(-18 26 43)"/>
-        <ellipse cx="74" cy="43" rx="9" ry="17" fill="#ad8a4e" transform="rotate(18 74 43)"/>
-        <circle cx="50" cy="46" r="27" fill="#dcc48f"/>
-        <ellipse cx="50" cy="59" rx="14" ry="11" fill="#f8f4ea"/>
-        <circle cx="40" cy="40" r="2.8" fill="#1d1912"/>
-        <circle cx="60" cy="40" r="2.8" fill="#1d1912"/>
-        <ellipse cx="50" cy="55" rx="3.6" ry="2.8" fill="#1d1912"/>
-        <path d="M50 58 Q50 63 44 65 M50 58 Q50 63 56 65" stroke="#1d1912" stroke-width="1.6" stroke-linecap="round"/>
-        <path d="M46 63 C 41 74, 39 84, 42 98" stroke="#6b5530" stroke-width="4.5" fill="none" stroke-linecap="round"/>
-        <circle cx="41" cy="100" r="7" fill="none" stroke="#6b5530" stroke-width="4.5"/>
-      </svg>
-    </div>
-    <div class="hero-pet hero-pet-phone" aria-hidden="true">
-      <svg viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="50" cy="90" rx="34" ry="20" fill="#c7a565"/>
-        <ellipse cx="26" cy="43" rx="9" ry="17" fill="#ad8a4e" transform="rotate(-18 26 43)"/>
-        <ellipse cx="74" cy="43" rx="9" ry="17" fill="#ad8a4e" transform="rotate(18 74 43)"/>
-        <circle cx="50" cy="46" r="27" fill="#dcc48f"/>
-        <ellipse cx="50" cy="59" rx="14" ry="11" fill="#f8f4ea"/>
-        <circle cx="40" cy="40" r="2.8" fill="#1d1912"/>
-        <circle cx="60" cy="40" r="2.8" fill="#1d1912"/>
-        <ellipse cx="50" cy="55" rx="3.6" ry="2.8" fill="#1d1912"/>
-        <path d="M50 58 Q50 63 44 65 M50 58 Q50 63 56 65" stroke="#1d1912" stroke-width="1.6" stroke-linecap="round"/>
-        <g transform="rotate(18 76 30)">
-          <rect x="68" y="18" width="16" height="26" rx="4.5" fill="#2a3d31"/>
-          <rect x="70.5" y="21" width="11" height="15" rx="2" fill="#eef1ec"/>
-        </g>
-        <g class="hero-pet-phone-wave">
-          <path d="M88 24 Q95 30 88 36" stroke="#dcc48f" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-          <path d="M93 20 Q103 30 93 40" stroke="#dcc48f" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".7"/>
-        </g>
-      </svg>
-    </div>
-    <!-- ===== FIM: hero-pet-hover ===== -->
   </section>
 
   <section id="quem-e-a-pati" class="bg-stone-50 py-24 sm:py-28" aria-labelledby="titulo-quem-e-a-pati">
