@@ -126,6 +126,170 @@
     });
   })();
 
+  // ---------- Galeria: carrossel giratório de destaques (melhoria progressiva) ----------
+  // Sem JS a faixa já rola normalmente por toque/scroll (ver CSS). Aqui só
+  // acrescentamos o giro 3D por cima; qualquer falha cai de volta pra faixa comum.
+  (function () {
+    var carousel = document.getElementById('gallery-carousel');
+    var track = document.getElementById('gallery-carousel-track');
+    var viewport = track ? track.closest('.gallery-carousel-viewport') : null;
+    var prevButton = document.getElementById('gallery-carousel-prev');
+    var nextButton = document.getElementById('gallery-carousel-next');
+    if (!carousel || !track || !viewport || !prevButton || !nextButton) return;
+
+    var slides = Array.prototype.slice.call(track.querySelectorAll('.gallery-carousel-slide'));
+    if (slides.length < 3) return; // giro só faz sentido com um mínimo de fotos
+
+    var reduceMotion = false;
+    try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (error) { reduceMotion = false; }
+
+    var count = slides.length;
+    var step = 360 / count;
+    var angle = 0; // rotação atual do cilindro, em graus
+    var dragging = false;
+    var pointerId = null;
+    var startX = 0, startY = 0, startAngle = 0, moved = false;
+    var lastPointerX = 0, lastPointerTime = 0, velocity = 0;
+    var autoplayTimer = null;
+    var pressedFace = null; // guardado no pointerdown, antes do setPointerCapture redirecionar o click pra track
+
+    function faceWidthFor(viewportWidth) {
+      if (viewportWidth < 480) return 130;
+      if (viewportWidth < 768) return 160;
+      return 210;
+    }
+
+    function layout() {
+      var viewportWidth = viewport.clientWidth || carousel.clientWidth || 320;
+      var faceWidth = Math.min(faceWidthFor(viewportWidth), Math.round(viewportWidth * 0.62));
+      var radius = Math.round((faceWidth / 2) / Math.tan(Math.PI / count));
+      track.style.setProperty('--face-width', faceWidth + 'px');
+      track.style.setProperty('--face-radius', radius + 'px');
+      viewport.style.height = faceWidth + 'px';
+      slides.forEach(function (slide, index) {
+        slide.style.setProperty('--face-angle', (index * step) + 'deg');
+      });
+    }
+
+    function applyRotation() {
+      track.style.transform = 'rotateY(' + angle + 'deg)';
+    }
+
+    function stopAutoplay() {
+      if (autoplayTimer) { window.clearTimeout(autoplayTimer); autoplayTimer = null; }
+    }
+
+    function scheduleAutoplay() {
+      stopAutoplay();
+      if (reduceMotion) return;
+      autoplayTimer = window.setTimeout(function () {
+        angle -= step;
+        track.style.transition = 'transform 1.1s cubic-bezier(.45,0,.2,1)';
+        applyRotation();
+        scheduleAutoplay();
+      }, 3600);
+    }
+
+    function goToStep(delta) {
+      stopAutoplay();
+      angle += delta * step;
+      track.style.transition = reduceMotion ? 'none' : 'transform .5s cubic-bezier(.22,1,.36,1)';
+      applyRotation();
+      scheduleAutoplay();
+    }
+
+    prevButton.addEventListener('click', function () { goToStep(1); });
+    nextButton.addEventListener('click', function () { goToStep(-1); });
+
+    // Arrastar (mouse/toque) para girar
+    track.addEventListener('pointerdown', function (event) {
+      if (event.button !== undefined && event.button !== 0) return;
+      dragging = true;
+      moved = false;
+      pressedFace = event.target.closest('.gallery-carousel-face');
+      pointerId = event.pointerId;
+      startX = event.clientX; startY = event.clientY; startAngle = angle;
+      lastPointerX = event.clientX; lastPointerTime = event.timeStamp; velocity = 0;
+      track.style.transition = 'none';
+      stopAutoplay();
+      try { track.setPointerCapture(pointerId); } catch (error) { /* navegador sem suporte: arrasto simples continua funcionando */ }
+    });
+
+    track.addEventListener('pointermove', function (event) {
+      if (!dragging || event.pointerId !== pointerId) return;
+      var dx = event.clientX - startX, dy = event.clientY - startY;
+      if (!moved && Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      if (!moved && Math.abs(dy) > Math.abs(dx)) { dragging = false; return; } // gesto vertical: deixa a página rolar
+      moved = true;
+      var now = event.timeStamp;
+      var dt = now - lastPointerTime || 16;
+      velocity = ((event.clientX - lastPointerX) / dt) * 16;
+      lastPointerX = event.clientX; lastPointerTime = now;
+      angle = startAngle + dx * 0.28;
+      applyRotation();
+      event.preventDefault();
+    });
+
+    function endDrag(event) {
+      if (!dragging || (pointerId !== null && event.pointerId !== pointerId)) return;
+      dragging = false;
+      if (moved) {
+        var settled = angle + velocity * 4;
+        angle = Math.round(settled / step) * step;
+        track.style.transition = reduceMotion ? 'none' : 'transform .6s cubic-bezier(.22,1,.36,1)';
+        applyRotation();
+      }
+      scheduleAutoplay();
+      window.setTimeout(function () { moved = false; }, 0);
+    }
+
+    track.addEventListener('pointerup', endDrag);
+    track.addEventListener('pointercancel', endDrag);
+
+    // Clique numa foto do carrossel: reaproveita a mesma lightbox da grade abaixo,
+    // sem duplicar a lógica de ampliação (main.js já cuida disso para ".gallery-item").
+    // Delegado no track (e não em cada botão): o setPointerCapture do arrasto
+    // redireciona o "click" pro elemento capturado, então guardamos em pressedFace,
+    // no pointerdown, qual foto foi realmente pressionada, antes disso acontecer.
+    track.addEventListener('click', function (event) {
+      var face = pressedFace;
+      pressedFace = null;
+      if (moved) { event.preventDefault(); return; } // era um arraste, não um clique
+      if (!face) return; // clique fora de uma foto (ex.: espaço entre elas)
+      var full = face.getAttribute('data-full');
+      var match = full && document.querySelector('.gallery-item[data-full="' + full + '"]');
+      if (match) match.click();
+    });
+
+    // Girar com as setas do teclado quando o foco está dentro do carrossel
+    carousel.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowLeft') { event.preventDefault(); goToStep(1); }
+      else if (event.key === 'ArrowRight') { event.preventDefault(); goToStep(-1); }
+    });
+
+    carousel.addEventListener('mouseenter', stopAutoplay);
+    carousel.addEventListener('mouseleave', scheduleAutoplay);
+    carousel.addEventListener('focusin', stopAutoplay);
+    carousel.addEventListener('focusout', scheduleAutoplay);
+
+    var resizeTimer = null;
+    window.addEventListener('resize', function () {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(layout, 150);
+    });
+
+    try {
+      track.classList.add('is-enhanced');
+      layout();
+      applyRotation();
+      scheduleAutoplay();
+    } catch (error) {
+      // Qualquer falha aqui e a faixa comum (rolagem por toque) continua funcionando.
+      track.classList.remove('is-enhanced');
+      stopAutoplay();
+    }
+  })();
+
   // ---------- Loader (tela de abertura) ----------
   (function () {
     var loader = document.getElementById('site-loader');

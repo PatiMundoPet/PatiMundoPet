@@ -138,6 +138,50 @@
     .gallery-next { right: .5rem; }
   }
 
+  /* ---------- Galeria: carrossel giratório de destaques (melhoria progressiva) ----------
+     Base (sem JS, ou antes do boot.js rodar): faixa horizontal comum, com rolagem
+     por toque/scroll e snap — 100% utilizável sozinha.
+     Com JS: assets/js/main.js calcula as posições e adiciona "is-enhanced" ao
+     track; os slides passam a orbitar em 3D a partir de variáveis CSS
+     (--face-width/--face-radius no track, --face-angle em cada slide). */
+  .gallery-carousel-control { display: none; }
+  .js .gallery-carousel-control { display: inline-flex; }
+
+  .js .gallery-carousel-viewport { perspective: 1400px; }
+
+  .gallery-carousel-track { scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+
+  .gallery-carousel-track.is-enhanced {
+    position: relative;
+    flex-wrap: nowrap;
+    overflow: visible;
+    justify-content: center;
+    scroll-snap-type: none;
+    transform-style: preserve-3d;
+    touch-action: pan-y;
+    cursor: grab;
+    will-change: transform;
+  }
+  .gallery-carousel-track.is-enhanced:active { cursor: grabbing; }
+  .gallery-carousel-track.is-enhanced .gallery-carousel-slide {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: var(--face-width, 190px);
+    margin-left: calc(var(--face-width, 190px) / -2);
+    /* Some voltada pra trás (>90°) some de vista e do clique — sem isso, a foto do
+       lado oposto do cilindro fica exatamente atrás da foto da frente e "rouba"
+       o clique dela. */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: rotateY(var(--face-angle, 0deg)) translateZ(var(--face-radius, 260px));
+  }
+  .gallery-carousel-track.is-enhanced .gallery-carousel-face img { transition: transform .3s ease; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gallery-carousel-track { transition: none !important; }
+  }
+
   /* ---------- Botão flutuante do WhatsApp ---------- */
   @keyframes ping-slow {
     0%   { transform: scale(1);   opacity: .55; }
