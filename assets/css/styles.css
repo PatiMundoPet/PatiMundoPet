@@ -38,7 +38,7 @@
     }
     .hero-cta-wrap:hover .hero-pet-leash-strap,
     .hero-cta-wrap:focus-within .hero-pet-leash-strap {
-      transform-origin: 70px 90px;
+      transform-origin: 69px 86px;
       animation: hero-pet-leash-swing 1.6s ease-in-out .3s infinite;
     }
     .hero-cta-wrap:hover .hero-pet-phone-wave,
