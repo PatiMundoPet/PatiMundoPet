@@ -187,3 +187,27 @@ Solicitações **confirmadas** agora podem ter data e horário alterados diretam
 A nova função `reagendarSolicitacao` segue exatamente o mesmo padrão já usado em `editarBloqueio`: sob lock, relê a solicitação, confirma que o evento na agenda corresponde ao marcador do `requestId`, verifica que o novo período (08:30–18:00, término após o início, sem passado) não conflita com nenhum outro evento em nenhum dos dois calendários — ignorando apenas o próprio evento que está sendo movido — move o evento (`setTime`, mesmo `eventId`, sem criar um novo) e só então atualiza `data`, `horário` e `horárioTérmino` na planilha. Qualquer falha depois de mover o evento restaura o horário original antes de reportar erro; uma restauração que não pode ser comprovada exige revisão administrativa, nunca é ocultada como bem-sucedida.
 
 Para que o cliente veja essa opção também na própria ficha, `listarProximosAgendamentosCliente` passou a expor `requestId` no retorno (antes só devolvia data, horários, serviço e pet) — os demais identificadores internos (`eventId`, `clienteId`) continuam fora da resposta.
+
+## Correção — confirmação em grupo (exceção deliberada de sobreposição de horário)
+
+Por padrão, o painel continua recusando qualquer confirmação cujo período conflite com um
+atendimento já confirmado ou com um bloqueio de disponibilidade — exatamente como antes. A
+única mudança é uma exceção estritamente manual: para o serviço **Passeios**, quando a
+confirmação normal é recusada por já existir outro atendimento confirmado no mesmo horário, o
+painel oferece uma segunda ação, distinta e claramente rotulada ("Confirmar em grupo"), que
+confirma a solicitação mesmo assim — para quando a Pati decide, conscientemente, atender mais
+de um cliente/pet no mesmo horário.
+
+Essa exceção nunca se aplica a Dog Day Care (validado a partir do `serviço` da própria linha da
+planilha, não da interface) e nunca ignora um bloqueio de disponibilidade. Reaproveita
+integralmente `confirmRequest_` (mesmo lock, snapshot, compensação e verificação por releitura
+em cada etapa); a única diferença é que o conflito contra `APPOINTMENTS_CALENDAR_ID` deixa de
+bloquear, e a observação administrativa passa a ser obrigatória, garantindo rastreabilidade.
+
+Também desde esta correção, o **site público** deixou de recusar o envio de uma pré-solicitação
+só porque o horário já tem um atendimento confirmado — passa a recusar apenas quando o horário
+tem um bloqueio de disponibilidade. A exclusividade de horário deixou de ser decidida no
+envio; passou a ser decidida inteiramente na confirmação, pela Pati.
+
+`reagendarSolicitacao` não foi alterada: mover uma solicitação já confirmada continua exigindo
+um período totalmente livre, mesmo que a confirmação original tenha usado a exceção de grupo.
