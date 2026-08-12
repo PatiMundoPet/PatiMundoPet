@@ -913,3 +913,40 @@ function validateBlock_(payload, config) {
 }
 function findBlock_(calendar, input) { var events = calendar.getEvents(input.start, input.end); for (var i = 0; i < events.length; i++) { var event = events[i], identity = blockIdentity_(event.getDescription()); if (identity.managed && identity.blockId === input.blockId) { if (event.getStartTime().getTime() === input.start.getTime() && event.getEndTime().getTime() === input.end.getTime() && event.isAllDayEvent() === input.allDay && String(event.getTitle()) === input.title && String(event.getDescription()) === blockDescription_(input.blockId, input.reason)) return event; throw safeError_('RECONCILIATION_REQUIRED', 'Não repita a ação. Revise o bloqueio no Google Agenda.'); } } return null; }
 function blockResult_(event, input, idempotent, timezone) { return { blockId: input.blockId, eventId: text_(event.getId()), tipo: input.type, inicio: Utilities.formatDate(event.getStartTime(), timezone, "yyyy-MM-dd'T'HH:mm:ss"), termino: Utilities.formatDate(event.getEndTime(), timezone, "yyyy-MM-dd'T'HH:mm:ss"), allDay: input.allDay, titulo: input.title, motivo: input.reason, idempotent: Boolean(idempotent) }; }
+
+/**
+ * Utilitário de migração de colunas — execute manualmente UMA VEZ pelo editor do Apps Script
+ * (selecione esta função no seletor ao lado de "Executar"). Não é chamada pela interface nem
+ * por nenhuma outra função do painel. Garante "endereço" em Solicitações e "endereço" +
+ * "horáriosHabituais" em Clientes, sempre adicionando ao final das colunas existentes e nunca
+ * sobrescrevendo uma célula que já tenha conteúdo. Repetir a execução depois de já migrado não
+ * altera nada; um contrato inesperado (colunas fora do esperado) é reportado no log em vez de
+ * alterado às cegas.
+ */
+function migrarColunasEnderecoEHorarios() {
+  var config;
+  try { config = getConfig_(); } catch (error) { console.error('Configuração do painel incompleta ou inválida — corrija as Propriedades do Script antes de migrar.'); return; }
+  var spreadsheet = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+
+  var requests = spreadsheet.getSheetByName('Solicitações');
+  if (!requests) { console.error('Aba "Solicitações" não encontrada.'); }
+  else {
+    var reqColumns = requests.getLastColumn();
+    var reqHeaders = requests.getRange(1, 1, 1, reqColumns).getValues()[0].map(function (v) { return String(v).trim(); });
+    if (reqHeaders.indexOf('endereço') >= 0) console.log('Solicitações: coluna "endereço" já existe, nada a fazer.');
+    else if (reqColumns === 19) { requests.getRange(1, 20, 1, 1).setValues([['endereço']]); console.log('Solicitações: coluna T ("endereço") criada com sucesso.'); }
+    else console.error('Solicitações tem ' + reqColumns + ' colunas (esperado 19 antes da migração) e não encontrei "endereço". Nada foi alterado — confira manualmente.');
+  }
+
+  var clients = spreadsheet.getSheetByName('Clientes');
+  if (!clients) { console.error('Aba "Clientes" não encontrada.'); }
+  else {
+    var cliColumns = clients.getLastColumn();
+    var cliHeaders = clients.getRange(1, 1, 1, cliColumns).getValues()[0].map(function (v) { return String(v).trim(); });
+    var toAdd = ['endereço', 'horáriosHabituais'].filter(function (h) { return cliHeaders.indexOf(h) < 0; });
+    if (!toAdd.length) console.log('Clientes: colunas "endereço" e "horáriosHabituais" já existem, nada a fazer.');
+    else { clients.getRange(1, cliColumns + 1, 1, toAdd.length).setValues([toAdd]); console.log('Clientes: coluna(s) criada(s) com sucesso: ' + toAdd.join(', ')); }
+  }
+
+  console.log('Migração concluída — confira as mensagens acima (Registro de execução) para o resultado de cada aba.');
+}
