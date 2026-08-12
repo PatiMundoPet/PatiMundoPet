@@ -71,6 +71,7 @@ function listarProximosAgendamentosCliente(clientId) {
     if (matches.idCount !== 1) throw safeError_('RECONCILIATION_REQUIRED', 'O cadastro precisa de revisão antes de continuar.');
     return { ok: true, data: futureClientAppointments_(config, matches.byId, source.headers).map(function (link) {
       return {
+        requestId: link.requestId,
         date: Utilities.formatDate(link.interval.start, config.TIMEZONE, 'yyyy-MM-dd'),
         startTime: Utilities.formatDate(link.interval.start, config.TIMEZONE, 'HH:mm'),
         endTime: Utilities.formatDate(link.interval.end, config.TIMEZONE, 'HH:mm'),
@@ -595,6 +596,73 @@ function excluirSolicitacao(requestId) {
     if (error && error.safeCode) throw error;
     console.error('ADMIN_REQUEST_DELETE_FAILED requestId=%s', requestId);
     throw safeError_('WRITE_ERROR', 'Não foi possível excluir a solicitação. Os dados foram preservados.');
+  } finally { lock.releaseLock(); }
+}
+
+// Reagendamento: move a data/horário de uma solicitação já CONFIRMADA, movendo também o evento
+// real no calendário de Atendimentos (o mesmo evento, sem excluir e recriar). Usa exatamente o
+// mesmo padrão já comprovado em editarBloqueio — checar conflito ignorando o próprio evento,
+// mover, verificar por releitura e restaurar tudo se qualquer etapa falhar.
+function validateReschedule_(payload, config) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw safeError_('INVALID_REQUEST', 'Revise os dados do reagendamento.');
+  var requestId = String(payload.requestId || '').trim(); validateUuid_(requestId);
+  var date = validateIsoDate_(payload.date);
+  var startTime = strictBlockTime_(payload.startTime), endTime = strictBlockTime_(payload.endTime);
+  if (startTime < '08:30' || startTime >= endTime || endTime > '18:00') throw safeError_('INVALID_INTERVAL', 'O horário deve ficar entre 08:30 e 18:00, com término posterior ao início.');
+  strictBlockDate_(date, config.TIMEZONE);
+  var start, end;
+  try {
+    start = Utilities.parseDate(date + ' ' + startTime, config.TIMEZONE, 'yyyy-MM-dd HH:mm');
+    end = Utilities.parseDate(date + ' ' + endTime, config.TIMEZONE, 'yyyy-MM-dd HH:mm');
+    if (Utilities.formatDate(start, config.TIMEZONE, 'yyyy-MM-dd HH:mm') !== date + ' ' + startTime || Utilities.formatDate(end, config.TIMEZONE, 'yyyy-MM-dd HH:mm') !== date + ' ' + endTime) throw new Error('round trip');
+  } catch (error) { throw safeError_('INVALID_DATE', 'A data informada é inválida.'); }
+  if (start.getTime() < new Date().getTime()) throw safeError_('INVALID_INTERVAL', 'O novo horário não pode estar no passado.');
+  return { requestId: requestId, date: date, startTime: startTime, endTime: endTime, start: start, end: end };
+}
+function reagendarSolicitacao(payload) {
+  var config, input;
+  try { config = getConfig_(); authorize_(config); input = validateReschedule_(payload, config); }
+  catch (error) { if (error && error.safeCode) throw error; throw safeError_('INVALID_REQUEST', 'Revise os dados do reagendamento.'); }
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) throw safeError_('LOCK_TIMEOUT', 'O painel está ocupado. Tente novamente.');
+  try {
+    if (!writesConfigured_(config)) throw safeError_('CONFIG_ERROR', 'As ações aguardam a configuração administrativa.');
+    var context = requestContext_(config, input.requestId, true);
+    if (status_(context) !== 'CONFIRMADO') throw safeError_('INVALID_TRANSITION', 'Somente solicitações confirmadas podem ser reagendadas.');
+    var eventId = String(context.record.eventIdAtendimento || '').trim();
+    var event = eventId && context.appointments.getEventById(eventId);
+    if (!eventMatches_(event, input.requestId)) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.');
+    if (hasConflictExcept_(context.appointments, input, eventId) || hasConflictExcept_(context.availability, input, eventId)) throw safeError_('INTERVAL_UNAVAILABLE', 'O novo período não está disponível.');
+    var eventSnapshot = { start: new Date(event.getStartTime().getTime()), end: new Date(event.getEndTime().getTime()) };
+    var rowSnapshot = context.values.slice();
+    try {
+      event.setTime(input.start, input.end);
+      if (event.getStartTime().getTime() !== input.start.getTime() || event.getEndTime().getTime() !== input.end.getTime()) throw new Error('event move not verified');
+    } catch (eventError) {
+      try { event.setTime(eventSnapshot.start, eventSnapshot.end); } catch (ignored) {}
+      throw safeError_('WRITE_ERROR', 'Não foi possível mover o atendimento na agenda. Nenhuma alteração foi realizada.');
+    }
+    var updated = rowSnapshot.slice();
+    updated[column_(context, 'data')] = input.date;
+    updated[column_(context, 'horário')] = input.startTime;
+    updated[column_(context, 'horárioTérmino')] = input.endTime;
+    updated[column_(context, 'dataÚltimaAtualização')] = new Date();
+    try {
+      context.sheet.getRange(context.rowNumber, 1, 1, context.headers.length).setValues([updated]);
+      SpreadsheetApp.flush();
+      var reread = context.sheet.getRange(context.rowNumber, 1, 1, context.headers.length).getValues()[0];
+      if (!confirmationRowsEqual_(reread, updated, config.TIMEZONE)) throw new Error('reschedule not verified');
+    } catch (writeError) {
+      var restored = false;
+      try { event.setTime(eventSnapshot.start, eventSnapshot.end); restored = event.getStartTime().getTime() === eventSnapshot.start.getTime() && event.getEndTime().getTime() === eventSnapshot.end.getTime(); } catch (ignored) {}
+      if (!restored) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.');
+      throw safeError_('WRITE_ERROR', 'Não foi possível salvar o novo horário. A agenda foi restaurada ao horário anterior.');
+    }
+    return { ok: true, data: { requestId: input.requestId, date: input.date, startTime: input.startTime, endTime: input.endTime } };
+  } catch (error) {
+    if (error && error.safeCode) throw error;
+    console.error('ADMIN_RESCHEDULE_FAILED requestId=%s', input && input.requestId);
+    throw safeError_('WRITE_ERROR', 'Não foi possível reagendar. Os dados anteriores foram preservados.');
   } finally { lock.releaseLock(); }
 }
 
