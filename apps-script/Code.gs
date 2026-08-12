@@ -26,15 +26,19 @@ function availabilityResponse_(dateText,startTime,endTime){
   var loaded=loadConfig_();if(!loaded.ok)return response_(false,'CONFIGURATION_REQUIRED','A integração ainda não foi configurada.');var c=loaded.config;
   if(!validateDate_(dateText,c.timezone,true).ok)return invalidRequest_();var calendars=getCalendars_(c);if(!calendars.ok)return response_(false,'CONFIGURATION_REQUIRED','As agendas configuradas não estão disponíveis.');
   if(startTime||endTime){if(!isValidExactInterval_(startTime,endTime,c))return invalidRequest_();var available=exactIntervalIsAvailable_(dateText,startTime,endTime,c,calendars);return response_(true,'AVAILABILITY_OK','Disponibilidade consultada.',null,{date:dateText,startTime:startTime,endTime:endTime,available:available,unavailable:!available});}
-  var slots=calculateAvailableSlots_(dateText,c,calendars.availability,calendars.appointments);
+  var slots=calculateAvailableSlots_(dateText,c,calendars.availability);
   return response_(true,'AVAILABILITY_OK','Disponibilidade consultada.',null,{date:dateText,available:slots,unavailable:[]});
 }
-function calculateAvailableSlots_(dateText,c,availabilityCalendar,appointmentsCalendar){
-  var day=createDayRange_(dateText,c.timezone),busy=appointmentsCalendar.getEvents(day.start,day.end).concat(availabilityCalendar.getEvents(day.start,day.end)),slots=[];
+// Exclusividade de horário deixou de ser decidida no envio da pré-solicitação: um atendimento já
+// confirmado não torna mais um horário "ocupado" aqui (a Pati decide caso a caso, na confirmação
+// — inclusive aceitando sobreposição deliberada, ex.: passeio em grupo). Só um bloqueio de
+// disponibilidade (AVAILABILITY_CALENDAR_ID) continua sendo parada absoluta neste cálculo público.
+function calculateAvailableSlots_(dateText,c,availabilityCalendar){
+  var day=createDayRange_(dateText,c.timezone),busy=availabilityCalendar.getEvents(day.start,day.end),slots=[];
   for(var minute=c.workdayStartMinutes;minute+c.slotIntervalMinutes<=c.workdayEndMinutes;minute+=c.slotIntervalMinutes){var time=minutesToTime_(minute),end=minutesToTime_(minute+c.slotIntervalMinutes),interval=createExactInterval_(dateText,time,end,c);if(!intervalHasStarted_(interval)&&!eventsOverlap_(busy,interval))slots.push(time);}return slots;
 }
 function isValidExactInterval_(startTime,endTime,c){var start=timeToMinutes_(startTime),end=timeToMinutes_(endTime);return start>=c.workdayStartMinutes&&start<c.workdayEndMinutes&&end>start&&end<=c.workdayEndMinutes;}
-function exactIntervalIsAvailable_(date,startTime,endTime,c,calendars){if(!isValidExactInterval_(startTime,endTime,c))return false;var interval=createExactInterval_(date,startTime,endTime,c);if(intervalHasStarted_(interval))return false;return !eventsOverlap_(calendars.availability.getEvents(interval.start,interval.end),interval)&&!eventsOverlap_(calendars.appointments.getEvents(interval.start,interval.end),interval);}
+function exactIntervalIsAvailable_(date,startTime,endTime,c,calendars){if(!isValidExactInterval_(startTime,endTime,c))return false;var interval=createExactInterval_(date,startTime,endTime,c);if(intervalHasStarted_(interval))return false;return !eventsOverlap_(calendars.availability.getEvents(interval.start,interval.end),interval);}
 function slotIsAvailable_(date,time,c,calendars){var minute=timeToMinutes_(time);return isValidSlotTime_(time,c)&&exactIntervalIsAvailable_(date,time,minutesToTime_(minute+c.slotIntervalMinutes),c,calendars);}
 function eventsOverlap_(events,interval){return events.some(function(event){return !isCancelledEvent_(event)&&event.getStartTime().getTime()<interval.end.getTime()&&event.getEndTime().getTime()>interval.start.getTime();});}
 function isCancelledEvent_(event){return typeof event.getEventStatus==='function'&&String(event.getEventStatus()).toLowerCase()==='canceled';}
