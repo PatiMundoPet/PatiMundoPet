@@ -651,7 +651,14 @@ function reagendarSolicitacao(payload) {
       context.sheet.getRange(context.rowNumber, 1, 1, context.headers.length).setValues([updated]);
       SpreadsheetApp.flush();
       var reread = context.sheet.getRange(context.rowNumber, 1, 1, context.headers.length).getValues()[0];
-      if (!confirmationRowsEqual_(reread, updated, config.TIMEZONE)) throw new Error('reschedule not verified');
+      // A Planilha pode reler "horário"/"horárioTérmino" como um valor de hora (Date ancorada em
+      // 1899-12-30), não como o texto HH:mm gravado — mesmo princípio já usado para "vencimento"
+      // em Pagamentos, mas aqui aplicado com os leitores robustos que interval_() já usa para ler
+      // data/horário de uma solicitação confirmada.
+      var rereadDate = strictSheetDate_(reread[column_(context, 'data')], config.TIMEZONE);
+      var rereadStart = strictSheetTime_(reread[column_(context, 'horário')], config.TIMEZONE);
+      var rereadEnd = strictSheetTime_(reread[column_(context, 'horárioTérmino')], config.TIMEZONE);
+      if (rereadDate !== input.date || rereadStart !== input.startTime || rereadEnd !== input.endTime) throw new Error('reschedule not verified');
     } catch (writeError) {
       var restored = false;
       try { event.setTime(eventSnapshot.start, eventSnapshot.end); restored = event.getStartTime().getTime() === eventSnapshot.start.getTime() && event.getEndTime().getTime() === eventSnapshot.end.getTime(); } catch (ignored) {}
