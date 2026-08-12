@@ -167,13 +167,23 @@ A confirmação também cria, sob o mesmo lock e com releitura, um único pagame
 
 ## Correção — endereço completo, exclusão de recusadas e pagamento avulso
 
-Antes de copiar esta versão para o projeto privado, faça duas migrações manuais na planilha (mesmo procedimento de sempre: adicionar o cabeçalho de texto antes de colar o código novo, sem reordenar ou remover colunas existentes):
+Antes de copiar esta versão para o projeto privado, migre a planilha (mesmo procedimento de sempre: colunas primeiro, código depois, sem reordenar ou remover colunas existentes):
 
 1. Em `Solicitações`, adicione `endereço` na coluna **T** (imediatamente depois de `clienteId`, em S). A aba passa a ter 20 colunas (A:T). O backend público (`apps-script/Code.gs`) passa a aceitar e gravar esse campo automaticamente quando a coluna existir; enquanto ela não existir, o valor enviado pelo formulário é apenas descartado com segurança, sem quebrar o registro da pré-solicitação.
 2. Em `Clientes`, adicione `endereço` na coluna **J** e `horáriosHabituais` na coluna **K** (depois de `observaçõesAdministrativas`, em I). A aba passa a ter 11 colunas (A:K). Ambos os campos são opcionais e editáveis a qualquer momento pelo formulário de cliente; não há sincronização automática entre o endereço da pré-ficha e o endereço do cadastro de cliente — a Pati decide se e quando quer levar um endereço recebido numa solicitação para a ficha do cliente.
+
+Em vez de digitar esses cabeçalhos manualmente (risco de erro de acento/maiúscula que bloqueia a leitura do painel inteiro com `CONFIG_ERROR`), execute uma vez, pelo editor do Apps Script, a função `migrarColunasEnderecoEHorarios()` (selecione-a no seletor ao lado de "Executar" e clique em Executar). Ela cria as duas colunas automaticamente, sem nunca sobrescrever conteúdo existente, e reporta o resultado no Registro de execução.
 
 Três correções de comportamento administrativo, sem mudança nos demais contratos:
 
 - **Solicitações recusadas voltam a ser excluíveis.** `excluirSolicitacao` aceita `RECUSADO` junto de `PENDENTE` e `CANCELADO`; um pagamento vinculado (se existir) é removido junto, do mesmo jeito que já acontecia para os outros dois status.
 - **Exclusão de cliente, de recusada e de qualquer solicitação continua sem depender de pagamento.** Isso já era verdade desde a Fase 12A (a exclusão de solicitação remove o pagamento vinculado em vez de bloquear) e desde a Fase 10D-2 (a exclusão de cliente nunca consultou pagamentos); nenhuma mudança adicional foi necessária além do item anterior.
 - **Pagamento avulso.** A nova função `criarPagamento` lança um pagamento para qualquer cliente já cadastrado, sem depender de uma solicitação confirmada. Ela reutiliza o contrato de 9 colunas de `Pagamentos` sem alterá-lo: gera um identificador único no lugar de `requestId` (nunca reaproveitado pelas ações de confirmar, cancelar ou excluir solicitação, que só agem quando esse identificador corresponde a uma linha real de `Solicitações`) e copia o nome do responsável do cadastro selecionado para a coluna `cliente`, do mesmo jeito que a confirmação automática já faz hoje. Forma de pagamento é opcional e assume `PIX` quando não informada; valor, vencimento, status e observações seguem as mesmas regras de `editarPagamento`.
+
+## Correção — reagendamento com atualização automática do calendário
+
+Solicitações **confirmadas** agora podem ter data e horário alterados diretamente pelo painel, com o evento real do calendário de Atendimentos sendo movido junto — sem excluir e recriar o compromisso. O botão "Reagendar" aparece em dois lugares equivalentes: nos detalhes da própria solicitação (quando `CONFIRMADO`) e na lista de "Próximos agendamentos confirmados" dentro da ficha do cliente.
+
+A nova função `reagendarSolicitacao` segue exatamente o mesmo padrão já usado em `editarBloqueio`: sob lock, relê a solicitação, confirma que o evento na agenda corresponde ao marcador do `requestId`, verifica que o novo período (08:30–18:00, término após o início, sem passado) não conflita com nenhum outro evento em nenhum dos dois calendários — ignorando apenas o próprio evento que está sendo movido — move o evento (`setTime`, mesmo `eventId`, sem criar um novo) e só então atualiza `data`, `horário` e `horárioTérmino` na planilha. Qualquer falha depois de mover o evento restaura o horário original antes de reportar erro; uma restauração que não pode ser comprovada exige revisão administrativa, nunca é ocultada como bem-sucedida.
+
+Para que o cliente veja essa opção também na própria ficha, `listarProximosAgendamentosCliente` passou a expor `requestId` no retorno (antes só devolvia data, horários, serviço e pet) — os demais identificadores internos (`eventId`, `clienteId`) continuam fora da resposta.
