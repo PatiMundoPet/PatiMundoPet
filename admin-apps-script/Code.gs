@@ -6,7 +6,7 @@ var ADMIN = Object.freeze({
   sheets: {
     requests: { name: 'Solicitações', headers: ['requestId', 'dataRecebimento', 'submissionChannel', 'serviço', 'data', 'horário', 'responsável', 'WhatsApp', 'e-mail', 'pet', 'região', 'observações', 'status', 'notificationStatus', 'dataÚltimaAtualização', 'horárioTérmino', 'eventIdAtendimento', 'observaçãoAdministrativa', 'clienteId', 'endereço'] },
     clients: { name: 'Clientes', headers: ['clienteId', 'responsável', 'WhatsApp', 'e-mail', 'pets', 'observações', 'dataCadastro', 'últimoAtendimento', 'observaçõesAdministrativas', 'endereço', 'horáriosHabituais'] },
-    payments: { name: 'Pagamentos', headers: ['requestId', 'cliente', 'serviço', 'valor', 'formaPagamento', 'vencimento', 'statusPagamento', 'dataPagamento', 'observações'] }
+    payments: { name: 'Pagamentos', headers: ['requestId', 'cliente', 'serviço', 'valor', 'formaPagamento', 'vencimento', 'statusPagamento', 'dataPagamento', 'observações', 'pet'] }
   },
   requestStatuses: ['PENDENTE', 'CONFIRMADO', 'RECUSADO', 'CANCELADO', 'MAIS_INFORMACOES'],
   paymentStatuses: ['PENDENTE', 'PAGO', 'ISENTO', 'CANCELADO']
@@ -100,7 +100,7 @@ function excluirCliente(clientId) {
     if (!matches.byId) throw safeError_('CLIENT_NOT_FOUND', 'O cliente não foi encontrado. Atualize os dados e tente novamente.');
     if (matches.idCount !== 1) throw safeError_('RECONCILIATION_REQUIRED', 'O cadastro precisa de revisão antes de continuar.');
     var target = matches.byId, links = futureClientAppointments_(config, target, source.headers);
-    cancelClientAppointments_(links);
+    cancelClientAppointments_(config, links);
     try { source.sheet.deleteRow(target.rowNumber); SpreadsheetApp.flush(); }
     catch (deleteError) {
       if (!restoreClientAppointments_(links)) throw safeError_('RECONCILIATION_REQUIRED', 'A operação precisa de revisão administrativa.');
@@ -150,22 +150,37 @@ function futureClientAppointments_(config, client, clientHeaders) {
   });
   return links;
 }
-function cancelClientAppointments_(links) {
+function cancelClientAppointments_(config, links) {
   var completed = [];
   try {
     links.forEach(function (link) {
       link.event.deleteEvent(); completed.push(link);
       var canceled = link.values.slice(); canceled[link.headers.indexOf('status')] = 'CANCELADO'; canceled[link.headers.indexOf('eventIdAtendimento')] = ''; canceled[link.headers.indexOf('dataÚltimaAtualização')] = new Date();
       link.sheet.getRange(link.rowNumber, 1, 1, link.headers.length).setValues([canceled]); SpreadsheetApp.flush();
+      // O agendamento cancelado não deve deixar um pagamento PENDENTE órfão pra trás — mas só
+      // mexe no caso inequívoco (exatamente um pagamento vinculado, ainda pendente); pagamento
+      // já pago/isento/duplicado fica intocado, para revisão manual em vez de decisão arriscada.
+      link.paymentUndo = cancelLinkedPendingPayment_(config, link.requestId);
     });
   } catch (error) {
     if (!completed.length || restoreClientAppointments_(completed)) throw safeError_('WRITE_ERROR', 'Não foi possível excluir o cliente. Os dados foram preservados.');
     throw safeError_('RECONCILIATION_REQUIRED', 'A operação precisa de revisão administrativa.');
   }
 }
+function cancelLinkedPendingPayment_(config, requestId) {
+  var source = paymentSheet_(config), matches = paymentMatches_(source, requestId);
+  if (matches.length !== 1) { if (matches.length > 1) console.error('ADMIN_CLIENT_DELETE_PAYMENT_AMBIGUOUS requestId=%s', requestId); return null; }
+  var match = matches[0], h = source.headers;
+  if (String(match.values[h.indexOf('statusPagamento')] || '').trim().toUpperCase() !== 'PENDENTE') return null;
+  var snapshot = match.values.slice(), updated = snapshot.slice();
+  updated[h.indexOf('statusPagamento')] = 'CANCELADO';
+  writeAndVerifyPayment_(source, match.rowNumber, updated);
+  return { source: source, rowNumber: match.rowNumber, snapshot: snapshot };
+}
 function restoreClientAppointments_(links) {
   try {
     links.slice().reverse().forEach(function (link) {
+      if (link.paymentUndo && !restorePayment_(link.paymentUndo.source, link.paymentUndo.rowNumber, link.paymentUndo.snapshot)) throw new Error('payment restore not verified');
       var restored = link.calendar.createEvent(link.title, link.interval.start, link.interval.end, { description: link.description });
       if (!eventMatches_(restored, link.requestId)) { try { restored.deleteEvent(); } catch (ignored) {} throw new Error('invalid restored marker'); }
       var values = link.values.slice(); values[link.headers.indexOf('eventIdAtendimento')] = restored.getId();
@@ -266,6 +281,7 @@ function editarPagamento(payload) {
     updated[h.indexOf('vencimento')] = input.dueDate;
     updated[h.indexOf('observações')] = input.notes;
     updated[h.indexOf('statusPagamento')] = input.status;
+    updated[h.indexOf('pet')] = input.pet;
     if (input.status === 'PAGO' && String(snapshot[h.indexOf('statusPagamento')] || '').trim().toUpperCase() !== 'PAGO') updated[h.indexOf('dataPagamento')] = new Date();
     if (input.status !== 'PAGO') updated[h.indexOf('dataPagamento')] = '';
     try { writeAndVerifyPayment_(source, target.rowNumber, updated); }
@@ -278,10 +294,13 @@ function editarPagamento(payload) {
 }
 
 // Pagamento avulso: lançado diretamente para um cliente já cadastrado, sem vínculo com uma
-// solicitação real. A aba Pagamentos continua com exatamente 9 colunas (contrato inalterado);
-// o "requestId" passa a ser apenas um identificador único gerado aqui, nunca reaproveitado
-// por confirmarSolicitacao/cancelarSolicitacao/excluirSolicitacao, que só agem sobre pagamentos
-// cujo requestId corresponda a uma linha real de Solicitações.
+// solicitação real. O "requestId" passa a ser apenas um identificador único gerado aqui, nunca
+// reaproveitado por confirmarSolicitacao/cancelarSolicitacao/excluirSolicitacao, que só agem
+// sobre pagamentos cujo requestId corresponda a uma linha real de Solicitações.
+// A coluna "pet" (10ª, criada por migrarColunasEnderecoEHorarios) identifica a qual pet do
+// cliente aquele pagamento se refere — necessário porque um cliente pode ter vários pets com
+// formas/periodicidades de cobrança diferentes (ex.: um mensal, outro semanal), sem precisar de
+// um segundo cadastro de cliente para o mesmo contato.
 function criarPagamento(payload) {
   var config, input;
   try { config = getConfig_(); authorize_(config); input = validateStandalonePaymentInput_(payload); }
@@ -320,6 +339,7 @@ function prepareStandalonePayment_(config, input, clientName) {
   row[h.indexOf('vencimento')] = input.dueDate;
   row[h.indexOf('statusPagamento')] = input.status;
   row[h.indexOf('observações')] = input.notes;
+  row[h.indexOf('pet')] = input.pet;
   if (input.status === 'PAGO') row[h.indexOf('dataPagamento')] = new Date();
   return { source: source, rowNumber: source.rows.length + 2, expected: row, requestId: requestId };
 }
@@ -336,7 +356,10 @@ function validateStandalonePaymentInput_(payload) {
   var notes = cleanClientText_(payload.notes, 1000, false, 'observações');
   var service = cleanClientText_(payload.service, 80, false, 'serviço');
   var paymentMethod = cleanClientText_(payload.paymentMethod, 40, false, 'forma de pagamento') || 'PIX';
-  return { clientId: clientId, status: status, amount: amount, dueDate: dueDate, notes: notes, service: service, paymentMethod: paymentMethod };
+  var pet = String(payload.pet || '').trim();
+  if (!pet) throw safeError_('INVALID_PAYMENT', 'Selecione o pet deste pagamento.');
+  pet = cleanClientText_(pet, 80, false, 'pet');
+  return { clientId: clientId, status: status, amount: amount, dueDate: dueDate, notes: notes, service: service, paymentMethod: paymentMethod, pet: pet };
 }
 
 function validatePaymentInput_(payload) {
@@ -348,7 +371,8 @@ function validatePaymentInput_(payload) {
   if (payload.amount !== '' && payload.amount !== null && payload.amount !== undefined) { amount = Number(String(payload.amount).replace(',', '.')); if (!isFinite(amount) || amount < 0 || amount > 9999999.99) throw safeError_('INVALID_PAYMENT', 'Informe um valor válido.'); amount = Math.round(amount * 100) / 100; }
   var dueDate = validateIsoDate_(payload.dueDate);
   var notes = cleanClientText_(payload.notes, 1000, false, 'observações');
-  return { requestId: requestId, amount: amount, dueDate: dueDate, status: status, notes: notes };
+  var pet = cleanClientText_(payload.pet, 80, false, 'pet');
+  return { requestId: requestId, amount: amount, dueDate: dueDate, status: status, notes: notes, pet: pet };
 }
 
 function consultarAgendaDia(dateIso) {
@@ -443,7 +467,7 @@ function mapClient_(row, timezone) {
 }
 
 function mapPayment_(row, timezone) {
-  return { requestId: text_(row.requestId), client: text_(row.cliente), service: serviceLabel_(row['serviço']), amount: number_(row.valor), paymentMethod: text_(row.formaPagamento), dueDate: date_(row.vencimento, timezone), status: officialStatus_(row.statusPagamento, ADMIN.paymentStatuses), paidAt: dateTime_(row.dataPagamento, timezone), notes: text_(row['observações']) };
+  return { requestId: text_(row.requestId), client: text_(row.cliente), service: serviceLabel_(row['serviço']), amount: number_(row.valor), paymentMethod: text_(row.formaPagamento), dueDate: date_(row.vencimento, timezone), status: officialStatus_(row.statusPagamento, ADMIN.paymentStatuses), paidAt: dateTime_(row.dataPagamento, timezone), notes: text_(row['observações']), pet: text_(row.pet) };
 }
 function mapPaymentRecord_(headers, values, timezone) { var row = {}; headers.forEach(function (header, index) { row[header] = values[index]; }); return mapPayment_(row, timezone); }
 
@@ -722,7 +746,7 @@ function paymentMatches_(source, requestId) { var id = source.headers.indexOf('r
 function paymentRowsEqual_(left, right, timezone) { return confirmationRowsEqual_(left, right, timezone); }
 function writeAndVerifyPayment_(source, rowNumber, values) { source.sheet.getRange(rowNumber, 1, 1, source.headers.length).setValues([values]); SpreadsheetApp.flush(); var reread = source.sheet.getRange(rowNumber, 1, 1, source.headers.length).getValues()[0]; if (!paymentRowsEqual_(reread, values, source.config.TIMEZONE)) throw new Error('payment write not verified'); }
 function restorePayment_(source, rowNumber, snapshot) { try { if (snapshot === null) source.sheet.deleteRow(rowNumber); else source.sheet.getRange(rowNumber, 1, 1, source.headers.length).setValues([snapshot]); SpreadsheetApp.flush(); var refreshed = paymentSheet_(source.config), matches = paymentMatches_(refreshed, snapshot === null ? source.pendingRequestId : String(snapshot[source.headers.indexOf('requestId')] || '').trim()); return snapshot === null ? matches.length === 0 : matches.length === 1 && paymentRowsEqual_(matches[0].values, snapshot, source.config.TIMEZONE); } catch (error) { return false; } }
-function prepareConfirmationPayment_(context) { var source = paymentSheet_(context.config), matches = paymentMatches_(source, context.requestId); if (matches.length > 1) throw safeError_('RECONCILIATION_REQUIRED', 'Há pagamentos duplicados para esta solicitação. Nenhuma alteração foi realizada.'); if (matches.length === 1) return { source: source, rowNumber: matches[0].rowNumber, original: matches[0].values, expected: matches[0].values, created: false }; var row = new Array(source.headers.length).fill(''); row[source.headers.indexOf('requestId')] = context.requestId; row[source.headers.indexOf('cliente')] = cleanClientText_(context.record['responsável'], 120, true, 'responsável'); row[source.headers.indexOf('serviço')] = text_(context.record['serviço']); row[source.headers.indexOf('formaPagamento')] = 'PIX'; row[source.headers.indexOf('vencimento')] = strictSheetDate_(context.record.data, context.config.TIMEZONE); row[source.headers.indexOf('statusPagamento')] = 'PENDENTE'; return { source: source, rowNumber: source.rows.length + 2, original: null, expected: row, created: true }; }
+function prepareConfirmationPayment_(context) { var source = paymentSheet_(context.config), matches = paymentMatches_(source, context.requestId); if (matches.length > 1) throw safeError_('RECONCILIATION_REQUIRED', 'Há pagamentos duplicados para esta solicitação. Nenhuma alteração foi realizada.'); if (matches.length === 1) return { source: source, rowNumber: matches[0].rowNumber, original: matches[0].values, expected: matches[0].values, created: false }; var row = new Array(source.headers.length).fill(''); row[source.headers.indexOf('requestId')] = context.requestId; row[source.headers.indexOf('cliente')] = cleanClientText_(context.record['responsável'], 120, true, 'responsável'); row[source.headers.indexOf('serviço')] = text_(context.record['serviço']); row[source.headers.indexOf('formaPagamento')] = 'PIX'; row[source.headers.indexOf('vencimento')] = strictSheetDate_(context.record.data, context.config.TIMEZONE); row[source.headers.indexOf('statusPagamento')] = 'PENDENTE'; row[source.headers.indexOf('pet')] = text_(context.record.pet); return { source: source, rowNumber: source.rows.length + 2, original: null, expected: row, created: true }; }
 function writeConfirmationPayment_(plan) { if (plan.created) { plan.source.pendingRequestId = String(plan.expected[plan.source.headers.indexOf('requestId')]); writeAndVerifyPayment_(plan.source, plan.rowNumber, plan.expected); } }
 function compensateConfirmationPayment_(plan) { if (!plan) return true; if (!plan.created) return true; plan.source.pendingRequestId = String(plan.expected[plan.source.headers.indexOf('requestId')]); return restorePayment_(plan.source, plan.rowNumber, null); }
 function confirmationPaymentMatches_(plan) { var source = paymentSheet_(plan.source.config), matches = paymentMatches_(source, String(plan.expected[plan.source.headers.indexOf('requestId')])); return matches.length === 1 && paymentRowsEqual_(matches[0].values, plan.expected, plan.source.config.TIMEZONE); }
@@ -832,7 +856,7 @@ function confirmRequest_(context) {
   try { var result = persist_(context, 'CONFIRMADO', event.getId(), plan.clientId); if (!confirmationRequestMatches_(context, plan.clientId, event.getId()) || !eventMatches_(context.appointments.getEventById(event.getId()), context.requestId) || !clientPlanMatches_(resolution, plan, plan.expected) || !confirmationPaymentMatches_(paymentPlan)) throw new Error('confirmation not verified'); return result; }
   catch (error) { var persistFailure = compensateConfirmation_(context, snapshot, resolution, plan, event, paymentPlan); if (!persistFailure.ok) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); throw safeError_('PERSISTENCE_FAILED', 'REQUEST_SAVE_FAILED: Não foi possível salvar ou validar a confirmação. Cliente, pagamento e agendamento foram revertidos.'); }
 }
-function cancellationPaymentPlan_(context) { var source = paymentSheet_(context.config), matches = paymentMatches_(source, context.requestId), h = source.headers; if (matches.length > 1) throw safeError_('RECONCILIATION_REQUIRED', 'O pagamento vinculado precisa de revisão antes do cancelamento.'); if (!matches.length) { var legacy = new Array(h.length).fill(''); legacy[h.indexOf('requestId')] = context.requestId; legacy[h.indexOf('cliente')] = cleanClientText_(context.record['responsável'], 120, true, 'responsável'); legacy[h.indexOf('serviço')] = text_(context.record['serviço']); legacy[h.indexOf('formaPagamento')] = 'PIX'; legacy[h.indexOf('vencimento')] = strictSheetDate_(context.record.data, context.config.TIMEZONE); legacy[h.indexOf('statusPagamento')] = 'CANCELADO'; source.pendingRequestId = context.requestId; return { source: source, rowNumber: source.rows.length + 2, original: null, expected: legacy, created: true }; } var target = matches[0], updated = target.values.slice(), status = String(updated[h.indexOf('statusPagamento')] || '').trim().toUpperCase(); if (status === 'PENDENTE') updated[h.indexOf('statusPagamento')] = 'CANCELADO'; else if (status === 'PAGO') { var marker = '[REVISAR: solicitação cancelada com pagamento pago]', notes = String(updated[h.indexOf('observações')] || '').trim(); if (notes.indexOf(marker) < 0) updated[h.indexOf('observações')] = notes ? notes + '\n' + marker : marker; } else if (status !== 'ISENTO' && status !== 'CANCELADO') throw safeError_('RECONCILIATION_REQUIRED', 'O status do pagamento precisa de revisão.'); return { source: source, rowNumber: target.rowNumber, original: target.values.slice(), expected: updated, created: false }; }
+function cancellationPaymentPlan_(context) { var source = paymentSheet_(context.config), matches = paymentMatches_(source, context.requestId), h = source.headers; if (matches.length > 1) throw safeError_('RECONCILIATION_REQUIRED', 'O pagamento vinculado precisa de revisão antes do cancelamento.'); if (!matches.length) { var legacy = new Array(h.length).fill(''); legacy[h.indexOf('requestId')] = context.requestId; legacy[h.indexOf('cliente')] = cleanClientText_(context.record['responsável'], 120, true, 'responsável'); legacy[h.indexOf('serviço')] = text_(context.record['serviço']); legacy[h.indexOf('formaPagamento')] = 'PIX'; legacy[h.indexOf('vencimento')] = strictSheetDate_(context.record.data, context.config.TIMEZONE); legacy[h.indexOf('statusPagamento')] = 'CANCELADO'; legacy[h.indexOf('pet')] = text_(context.record.pet); source.pendingRequestId = context.requestId; return { source: source, rowNumber: source.rows.length + 2, original: null, expected: legacy, created: true }; } var target = matches[0], updated = target.values.slice(), status = String(updated[h.indexOf('statusPagamento')] || '').trim().toUpperCase(); if (status === 'PENDENTE') updated[h.indexOf('statusPagamento')] = 'CANCELADO'; else if (status === 'PAGO') { var marker = '[REVISAR: solicitação cancelada com pagamento pago]', notes = String(updated[h.indexOf('observações')] || '').trim(); if (notes.indexOf(marker) < 0) updated[h.indexOf('observações')] = notes ? notes + '\n' + marker : marker; } else if (status !== 'ISENTO' && status !== 'CANCELADO') throw safeError_('RECONCILIATION_REQUIRED', 'O status do pagamento precisa de revisão.'); return { source: source, rowNumber: target.rowNumber, original: target.values.slice(), expected: updated, created: false }; }
 function cancelRequest_(context) { var current = status_(context); assertNoUnexpectedEvent_(context, current); if (current === 'CANCELADO') return { requestId: context.requestId, status: current, idempotent: true }; if (current === 'RECUSADO') throw safeError_('INVALID_TRANSITION', 'Esta ação não é permitida para o status atual.'); if (current !== 'CONFIRMADO') return changeStatus_(context, ['PENDENTE', 'MAIS_INFORMACOES'], 'CANCELADO'); var eventId = String(context.record.eventIdAtendimento || '').trim(), event = eventId && context.appointments.getEventById(eventId); if (!eventMatches_(event, context.requestId)) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); var payment = cancellationPaymentPlan_(context); try { writeAndVerifyPayment_(payment.source, payment.rowNumber, payment.expected); } catch (paymentError) { if (!restorePayment_(payment.source, payment.rowNumber, payment.original)) throw safeError_('RECONCILIATION_REQUIRED', 'O pagamento precisa de revisão administrativa.'); throw safeError_('WRITE_ERROR', 'Não foi possível cancelar a solicitação. O pagamento foi preservado.'); } try { event.deleteEvent(); } catch (eventError) { if (!restorePayment_(payment.source, payment.rowNumber, payment.original)) throw safeError_('RECONCILIATION_REQUIRED', 'O cancelamento precisa de revisão administrativa.'); throw safeError_('WRITE_ERROR', 'Não foi possível cancelar o agendamento. O pagamento foi preservado.'); } try { return persist_(context, 'CANCELADO', ''); } catch (error) { var paymentRestored = restorePayment_(payment.source, payment.rowNumber, payment.original), restoredEvent = null, requestRestored = false; try { var interval = interval_(context); restoredEvent = context.appointments.createEvent(event.getTitle(), interval.start, interval.end, { description: event.getDescription() }); if (!eventMatches_(restoredEvent, context.requestId)) throw new Error('invalid restored event'); persist_(context, 'CONFIRMADO', restoredEvent.getId(), String(context.record.clienteId || '').trim()); requestRestored = confirmationRequestMatches_(context, String(context.record.clienteId || '').trim(), restoredEvent.getId()); } catch (restoreError) { if (restoredEvent) try { restoredEvent.deleteEvent(); } catch (ignored) {} } if (paymentRestored && requestRestored) throw safeError_('WRITE_ERROR', 'Não foi possível cancelar a solicitação. Os dados anteriores foram restaurados.'); throw safeError_('RECONCILIATION_REQUIRED', 'O cancelamento precisa de revisão administrativa.'); } }
 
 function notificationTimestamp_(config) { return Utilities.formatDate(new Date(), config.TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss"); }
@@ -1002,11 +1026,11 @@ function blockResult_(event, input, idempotent, timezone) { return { blockId: in
 /**
  * Utilitário de migração de colunas — execute manualmente UMA VEZ pelo editor do Apps Script
  * (selecione esta função no seletor ao lado de "Executar"). Não é chamada pela interface nem
- * por nenhuma outra função do painel. Garante "endereço" em Solicitações e "endereço" +
- * "horáriosHabituais" em Clientes, sempre adicionando ao final das colunas existentes e nunca
- * sobrescrevendo uma célula que já tenha conteúdo. Repetir a execução depois de já migrado não
- * altera nada; um contrato inesperado (colunas fora do esperado) é reportado no log em vez de
- * alterado às cegas.
+ * por nenhuma outra função do painel. Garante "endereço" em Solicitações, "endereço" +
+ * "horáriosHabituais" em Clientes e "pet" em Pagamentos, sempre adicionando ao final das
+ * colunas existentes e nunca sobrescrevendo uma célula que já tenha conteúdo. Repetir a
+ * execução depois de já migrado não altera nada; um contrato inesperado (colunas fora do
+ * esperado) é reportado no log em vez de alterado às cegas.
  */
 function migrarColunasEnderecoEHorarios() {
   var config;
@@ -1031,6 +1055,15 @@ function migrarColunasEnderecoEHorarios() {
     var toAdd = ['endereço', 'horáriosHabituais'].filter(function (h) { return cliHeaders.indexOf(h) < 0; });
     if (!toAdd.length) console.log('Clientes: colunas "endereço" e "horáriosHabituais" já existem, nada a fazer.');
     else { clients.getRange(1, cliColumns + 1, 1, toAdd.length).setValues([toAdd]); console.log('Clientes: coluna(s) criada(s) com sucesso: ' + toAdd.join(', ')); }
+  }
+
+  var payments = spreadsheet.getSheetByName('Pagamentos');
+  if (!payments) { console.error('Aba "Pagamentos" não encontrada.'); }
+  else {
+    var payColumns = payments.getLastColumn();
+    var payHeaders = payments.getRange(1, 1, 1, payColumns).getValues()[0].map(function (v) { return String(v).trim(); });
+    if (payHeaders.indexOf('pet') >= 0) console.log('Pagamentos: coluna "pet" já existe, nada a fazer.');
+    else { payments.getRange(1, payColumns + 1, 1, 1).setValues([['pet']]); console.log('Pagamentos: coluna "pet" criada com sucesso.'); }
   }
 
   console.log('Migração concluída — confira as mensagens acima (Registro de execução) para o resultado de cada aba.');
