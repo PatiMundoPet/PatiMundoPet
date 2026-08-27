@@ -211,3 +211,33 @@ envio; passou a ser decidida inteiramente na confirmação, pela Pati.
 
 `reagendarSolicitacao` não foi alterada: mover uma solicitação já confirmada continua exigindo
 um período totalmente livre, mesmo que a confirmação original tenha usado a exceção de grupo.
+
+## Correções — testes reais da Pati: pagamento órfão, ordenação e pet por pagamento
+
+Três ajustes feitos a partir de problemas encontrados pela própria Pati usando o painel:
+
+**Excluir cliente não deixa mais pagamento pendente órfão.** `excluirCliente` já cancelava os
+agendamentos futuros do cliente (evento excluído, solicitação levada a `CANCELADO`), mas o
+pagamento vinculado a cada um permanecia `PENDENTE` para sempre — mesmo o atendimento nunca mais
+acontecendo. Agora, ao cancelar cada agendamento, o painel também cancela o pagamento vinculado
+exatamente quando o caso é inequívoco (um único pagamento vinculado a esse `requestId`, ainda
+`PENDENTE`); pagamento já `PAGO`/`ISENTO`, ou duplicado, fica intocado para revisão manual em vez
+de uma decisão arriscada. Segue o mesmo padrão de snapshot/compensação já usado no resto de
+`excluirCliente`: se qualquer etapa posterior falhar, o pagamento cancelado volta a `PENDENTE`
+junto com o resto da reversão.
+
+**Lista de clientes em ordem alfabética.** A aba Clientes exibia os cadastros na ordem bruta da
+planilha; agora aparecem ordenados pelo nome do responsável (`localeCompare` em pt-BR, mesmo
+critério já usado no seletor de cliente do pagamento avulso).
+
+**Pagamentos agora identificam a qual pet se referem.** Uma cliente pode ter mais de um pet com
+formas de cobrança diferentes (ex.: um mensal, outro semanal) — sem precisar de um segundo
+cadastro para o mesmo contato (que o painel recusa de propósito, para não duplicar WhatsApp/e-mail
+e quebrar a exclusão e os "próximos agendamentos" do cliente). A aba Pagamentos ganhou uma 10ª
+coluna, `pet` (criada por `migrarColunasEnderecoEHorarios`, que agora cuida das três abas):
+- Ao confirmar uma solicitação (inclusive pelo caminho de confirmação em grupo) ou ao cancelar um
+  atendimento sem pagamento prévio, o pet vem automaticamente da própria solicitação.
+- Ao lançar um pagamento avulso (`criarPagamento`), a Pati escolhe o pet num seletor preenchido a
+  partir dos pets já cadastrados do cliente selecionado — campo obrigatório.
+- Ao editar qualquer pagamento (`editarPagamento`), o pet pode ser corrigido livremente.
+- O card de pagamento passa a mostrar o pet ao lado do serviço quando informado.
