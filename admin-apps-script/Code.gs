@@ -6,7 +6,7 @@ var ADMIN = Object.freeze({
   sheets: {
     requests: { name: 'Solicitações', headers: ['requestId', 'dataRecebimento', 'submissionChannel', 'serviço', 'data', 'horário', 'responsável', 'WhatsApp', 'e-mail', 'pet', 'região', 'observações', 'status', 'notificationStatus', 'dataÚltimaAtualização', 'horárioTérmino', 'eventIdAtendimento', 'observaçãoAdministrativa', 'clienteId', 'endereço'] },
     clients: { name: 'Clientes', headers: ['clienteId', 'responsável', 'WhatsApp', 'e-mail', 'pets', 'observações', 'dataCadastro', 'últimoAtendimento', 'observaçõesAdministrativas', 'endereço', 'horáriosHabituais'] },
-    payments: { name: 'Pagamentos', headers: ['requestId', 'cliente', 'serviço', 'valor', 'formaPagamento', 'vencimento', 'statusPagamento', 'dataPagamento', 'observações', 'pet'] }
+    payments: { name: 'Pagamentos', headers: ['requestId', 'cliente', 'serviço', 'valor', 'formaPagamento', 'vencimento', 'statusPagamento', 'dataPagamento', 'observações', 'pet', 'periodicidade'] }
   },
   requestStatuses: ['PENDENTE', 'CONFIRMADO', 'RECUSADO', 'CANCELADO', 'MAIS_INFORMACOES'],
   paymentStatuses: ['PENDENTE', 'PAGO', 'ISENTO', 'CANCELADO']
@@ -282,6 +282,7 @@ function editarPagamento(payload) {
     updated[h.indexOf('observações')] = input.notes;
     updated[h.indexOf('statusPagamento')] = input.status;
     updated[h.indexOf('pet')] = input.pet;
+    updated[h.indexOf('periodicidade')] = input.monthly ? 'Mensal' : '';
     if (input.status === 'PAGO' && String(snapshot[h.indexOf('statusPagamento')] || '').trim().toUpperCase() !== 'PAGO') updated[h.indexOf('dataPagamento')] = new Date();
     if (input.status !== 'PAGO') updated[h.indexOf('dataPagamento')] = '';
     try { writeAndVerifyPayment_(source, target.rowNumber, updated); }
@@ -301,6 +302,9 @@ function editarPagamento(payload) {
 // cliente aquele pagamento se refere — necessário porque um cliente pode ter vários pets com
 // formas/periodicidades de cobrança diferentes (ex.: um mensal, outro semanal), sem precisar de
 // um segundo cadastro de cliente para o mesmo contato.
+// A coluna "periodicidade" (11ª, também criada por migrarColunasEnderecoEHorarios) é só uma
+// etiqueta manual: quando marcada como "Mensal", identifica visualmente um pagamento recorrente
+// — não gera nada automaticamente, ela mesma continua lançando o pagamento novo a cada mês.
 function criarPagamento(payload) {
   var config, input;
   try { config = getConfig_(); authorize_(config); input = validateStandalonePaymentInput_(payload); }
@@ -340,6 +344,7 @@ function prepareStandalonePayment_(config, input, clientName) {
   row[h.indexOf('statusPagamento')] = input.status;
   row[h.indexOf('observações')] = input.notes;
   row[h.indexOf('pet')] = input.pet;
+  row[h.indexOf('periodicidade')] = input.monthly ? 'Mensal' : '';
   if (input.status === 'PAGO') row[h.indexOf('dataPagamento')] = new Date();
   return { source: source, rowNumber: source.rows.length + 2, expected: row, requestId: requestId };
 }
@@ -359,7 +364,8 @@ function validateStandalonePaymentInput_(payload) {
   var pet = String(payload.pet || '').trim();
   if (!pet) throw safeError_('INVALID_PAYMENT', 'Selecione o pet deste pagamento.');
   pet = cleanClientText_(pet, 80, false, 'pet');
-  return { clientId: clientId, status: status, amount: amount, dueDate: dueDate, notes: notes, service: service, paymentMethod: paymentMethod, pet: pet };
+  var monthly = Boolean(payload.monthly);
+  return { clientId: clientId, status: status, amount: amount, dueDate: dueDate, notes: notes, service: service, paymentMethod: paymentMethod, pet: pet, monthly: monthly };
 }
 
 function validatePaymentInput_(payload) {
@@ -372,7 +378,8 @@ function validatePaymentInput_(payload) {
   var dueDate = validateIsoDate_(payload.dueDate);
   var notes = cleanClientText_(payload.notes, 1000, false, 'observações');
   var pet = cleanClientText_(payload.pet, 80, false, 'pet');
-  return { requestId: requestId, amount: amount, dueDate: dueDate, status: status, notes: notes, pet: pet };
+  var monthly = Boolean(payload.monthly);
+  return { requestId: requestId, amount: amount, dueDate: dueDate, status: status, notes: notes, pet: pet, monthly: monthly };
 }
 
 function consultarAgendaDia(dateIso) {
@@ -467,7 +474,7 @@ function mapClient_(row, timezone) {
 }
 
 function mapPayment_(row, timezone) {
-  return { requestId: text_(row.requestId), client: text_(row.cliente), service: serviceLabel_(row['serviço']), amount: number_(row.valor), paymentMethod: text_(row.formaPagamento), dueDate: date_(row.vencimento, timezone), status: officialStatus_(row.statusPagamento, ADMIN.paymentStatuses), paidAt: dateTime_(row.dataPagamento, timezone), notes: text_(row['observações']), pet: text_(row.pet) };
+  return { requestId: text_(row.requestId), client: text_(row.cliente), service: serviceLabel_(row['serviço']), amount: number_(row.valor), paymentMethod: text_(row.formaPagamento), dueDate: date_(row.vencimento, timezone), status: officialStatus_(row.statusPagamento, ADMIN.paymentStatuses), paidAt: dateTime_(row.dataPagamento, timezone), notes: text_(row['observações']), pet: text_(row.pet), monthly: text_(row.periodicidade).toUpperCase() === 'MENSAL' };
 }
 function mapPaymentRecord_(headers, values, timezone) { var row = {}; headers.forEach(function (header, index) { row[header] = values[index]; }); return mapPayment_(row, timezone); }
 
@@ -530,6 +537,10 @@ function readCalendar_(calendarId, start, end, timezone, type) {
       end: Utilities.formatDate(eventEnd, timezone, "yyyy-MM-dd'T'HH:mm:ss")
     };
     if (type === 'bloqueio') { var identity = blockIdentity_(event.getDescription()); result.eventId = text_(event.getId()); result.blockId = identity.blockId; result.managed = identity.managed; result.reason = identity.managed ? blockReasonFromDescription_(event.getDescription()) : ''; result.motivo = result.reason; }
+    // O requestId permite que a interface abra os detalhes completos da solicitação (e todas as
+    // ações já existentes: reagendar, cancelar, etc.) direto a partir do card na Agenda, em vez
+    // de exigir que a Pati procure a mesma solicitação de novo na aba Solicitações ou Clientes.
+    if (type === 'atendimento') result.requestId = requestIdFromDescription_(event.getDescription());
     return result;
   }).sort(function (a, b) { return a.start.localeCompare(b.start); });
 }
@@ -740,6 +751,7 @@ function persist_(context, status, eventId, clientId) { var row = context.values
 function changeStatus_(context, allowed, target) { var current = status_(context); assertNoUnexpectedEvent_(context, current); if (current === target) return { requestId: context.requestId, status: target, idempotent: true }; if (allowed.indexOf(current) < 0) throw safeError_('INVALID_TRANSITION', 'Esta ação não é permitida para o status atual.'); return persist_(context, target); }
 function marker_(requestId) { return 'PATI_MUNDOPET_REQUEST\nrequestId: ' + requestId; }
 function eventMatches_(event, requestId) { return Boolean(event) && String(event.getDescription() || '').indexOf(marker_(requestId)) >= 0; }
+function requestIdFromDescription_(description) { var match = /^PATI_MUNDOPET_REQUEST\nrequestId: ([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})(?:\n|$)/i.exec(String(description || '')); return match ? match[1] : ''; }
 function hasRequestCalendarLink_(context) { var date; try { date = strictSheetDate_(context.record.data, context.config.TIMEZONE); } catch (error) { throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.'); } var range = dayRange_(date, context.config.TIMEZONE); return context.appointments.getEvents(range.start, range.end).some(function (event) { return eventMatches_(event, context.requestId); }); }
 function paymentSheet_(config) { var sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(ADMIN.sheets.payments.name); if (!sheet) throw safeError_('CONFIG_ERROR', 'A aba Pagamentos não foi encontrada.'); var columns = sheet.getLastColumn(); if (columns < 1) throw safeError_('CONFIG_ERROR', 'A aba Pagamentos precisa ser revisada.'); var headers = sheet.getRange(1, 1, 1, columns).getValues()[0].map(function (value) { return String(value).trim(); }); if (ADMIN.sheets.payments.headers.some(function (header) { return headers.indexOf(header) < 0; })) throw safeError_('CONFIG_ERROR', 'Os cabeçalhos da aba Pagamentos precisam ser revisados.'); var count = sheet.getLastRow() - 1, rows = count > 0 ? sheet.getRange(2, 1, count, columns).getValues() : []; return { sheet: sheet, headers: headers, rows: rows, config: config }; }
 function paymentMatches_(source, requestId) { var id = source.headers.indexOf('requestId'), result = []; source.rows.forEach(function (row, index) { if (String(row[id] || '').trim() === requestId) result.push({ rowNumber: index + 2, values: row.slice() }); }); return result; }
@@ -1062,8 +1074,9 @@ function migrarColunasEnderecoEHorarios() {
   else {
     var payColumns = payments.getLastColumn();
     var payHeaders = payments.getRange(1, 1, 1, payColumns).getValues()[0].map(function (v) { return String(v).trim(); });
-    if (payHeaders.indexOf('pet') >= 0) console.log('Pagamentos: coluna "pet" já existe, nada a fazer.');
-    else { payments.getRange(1, payColumns + 1, 1, 1).setValues([['pet']]); console.log('Pagamentos: coluna "pet" criada com sucesso.'); }
+    var payToAdd = ['pet', 'periodicidade'].filter(function (h) { return payHeaders.indexOf(h) < 0; });
+    if (!payToAdd.length) console.log('Pagamentos: colunas "pet" e "periodicidade" já existem, nada a fazer.');
+    else { payments.getRange(1, payColumns + 1, 1, payToAdd.length).setValues([payToAdd]); console.log('Pagamentos: coluna(s) criada(s) com sucesso: ' + payToAdd.join(', ')); }
   }
 
   console.log('Migração concluída — confira as mensagens acima (Registro de execução) para o resultado de cada aba.');
