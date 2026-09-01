@@ -241,3 +241,40 @@ coluna, `pet` (criada por `migrarColunasEnderecoEHorarios`, que agora cuida das 
   partir dos pets já cadastrados do cliente selecionado — campo obrigatório.
 - Ao editar qualquer pagamento (`editarPagamento`), o pet pode ser corrigido livremente.
 - O card de pagamento passa a mostrar o pet ao lado do serviço quando informado.
+
+## Correção — pagamento mensal (etiqueta de periodicidade)
+
+A Pati pediu uma forma de marcar um pagamento como recorrente mensal. A aba Pagamentos ganhou
+uma 11ª coluna opcional, `periodicidade` (também criada por `migrarColunasEnderecoEHorarios`),
+com um único valor possível hoje: `Mensal` (ou vazio, o padrão). É só uma etiqueta manual — não
+gera nada sozinha; a Pati continua lançando o pagamento avulso novo a cada mês, só que agora
+pode marcar visualmente quais clientes/pets são recorrentes.
+
+O checkbox "Pagamento mensal (recorrente)" aparece tanto ao lançar um pagamento avulso
+(`criarPagamento`) quanto ao editar qualquer pagamento existente (`editarPagamento`), e o card de
+pagamento mostra "Mensal" ao lado do pet quando marcado. Pagamentos criados automaticamente (pela
+confirmação de uma solicitação, inclusive em grupo, ou pelo cancelamento legado) nascem sempre
+sem essa marcação — só é ativada manualmente.
+
+## Correção — editar horário direto da Agenda, e reagendar também nos detalhes da solicitação
+
+Antes, mudar o horário de um atendimento só era possível a partir da ficha do cliente
+("Próximos agendamentos confirmados") — a Pati pediu para conseguir alterar o horário de
+qualquer lugar que mostre o atendimento, incluindo a própria aba Agenda.
+
+`consultarAgendaDia`/`consultarAgendaSemana` (e o resumo da aba Início, que usa a mesma leitura)
+passam a expor o `requestId` de cada atendimento, extraído do marcador já gravado na descrição do
+evento (`requestIdFromDescription_`, mesmo padrão de `blockIdentity_` já usado para bloqueios).
+Bloqueios nunca expõem `requestId` — a extração só acontece para eventos do calendário de
+Atendimentos.
+
+Com isso, qualquer card de atendimento na Agenda (visão Dia, Semana, ou no resumo da tela
+Início) fica clicável e abre exatamente os mesmos detalhes e as mesmas ações já disponíveis na
+aba Solicitações (reagendar, cancelar, etc.) — a mesma solicitação carregada em memória, casada
+pelo `requestId`, sem nenhuma consulta nova ao servidor. Se por algum motivo a solicitação
+correspondente não for encontrada na lista carregada, o painel avisa e pede para atualizar os
+dados, em vez de falhar silenciosamente.
+
+Além disso, o botão **Reagendar** passou a aparecer também nos detalhes de uma solicitação
+`CONFIRMADO` (antes só existia na ficha do cliente) — reaproveita integralmente `showReschedule`
+e `reagendarSolicitacao`, sem nenhuma lógica nova de escrita.
