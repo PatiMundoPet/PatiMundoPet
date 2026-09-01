@@ -278,3 +278,22 @@ dados, em vez de falhar silenciosamente.
 Além disso, o botão **Reagendar** passou a aparecer também nos detalhes de uma solicitação
 `CONFIRMADO` (antes só existia na ficha do cliente) — reaproveita integralmente `showReschedule`
 e `reagendarSolicitacao`, sem nenhuma lógica nova de escrita.
+
+## Correção — reagendar em grupo (mesma exceção do confirmar em grupo)
+
+`reagendarSolicitacao` exigia um período totalmente livre mesmo quando a confirmação original
+tinha usado a exceção de grupo — a Pati apontou que também precisa conseguir mover um atendimento
+de Passeio para um horário que já tem outro atendimento confirmado, pela mesma razão (juntar mais
+de um cliente/pet no mesmo passeio).
+
+Nova função `reagendarSolicitacaoEmGrupo(payload, observacao)`, mesmo padrão de
+`confirmarSolicitacaoEmGrupo`: o conflito contra `APPOINTMENTS_CALENDAR_ID` deixa de bloquear
+exclusivamente quando o serviço da própria linha da planilha é Passeios, a observação
+administrativa passa a ser obrigatória (fica registrada na solicitação reagendada), e um
+bloqueio de disponibilidade continua sendo parada absoluta, sem exceção nenhuma —
+`reagendarSolicitacao` (caminho normal) não é alterada.
+
+Na interface, o padrão é o mesmo já usado para confirmar em grupo: tenta reagendar normal
+primeiro; se falhar por `INTERVAL_UNAVAILABLE` numa solicitação de Passeios, oferece o botão
+"Reagendar em grupo (mesmo horário já ocupado)" com uma observação obrigatória, reaproveitando a
+data e os horários já preenchidos no formulário.

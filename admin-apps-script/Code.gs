@@ -659,9 +659,16 @@ function validateReschedule_(payload, config) {
   if (start.getTime() < new Date().getTime()) throw safeError_('INVALID_INTERVAL', 'O novo horário não pode estar no passado.');
   return { requestId: requestId, date: date, startTime: startTime, endTime: endTime, start: start, end: end };
 }
-function reagendarSolicitacao(payload) {
-  var config, input;
-  try { config = getConfig_(); authorize_(config); input = validateReschedule_(payload, config); }
+function reagendarSolicitacao(payload) { return executeReschedule_(payload, false, null); }
+// Mesma exceção deliberada e auditável da confirmação em grupo (confirmarSolicitacaoEmGrupo),
+// agora também para reagendar: a Pati pode mover um atendimento de Passeio pra um horário que já
+// tem outro atendimento confirmado, quando a decisão é atender os dois em grupo. Nunca vale pra
+// Dog Day Care (validado a partir da própria linha da planilha) e nunca ignora um bloqueio de
+// disponibilidade. Observação obrigatória, pela mesma razão de rastreabilidade.
+function reagendarSolicitacaoEmGrupo(payload, observacao) { return executeReschedule_(payload, true, observacao); }
+function executeReschedule_(payload, allowGroupOverlap, observacao) {
+  var config, input, note;
+  try { config = getConfig_(); authorize_(config); input = validateReschedule_(payload, config); note = adminNote_(observacao, allowGroupOverlap); }
   catch (error) { if (error && error.safeCode) throw error; throw safeError_('INVALID_REQUEST', 'Revise os dados do reagendamento.'); }
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(5000)) throw safeError_('LOCK_TIMEOUT', 'O painel está ocupado. Tente novamente.');
@@ -672,7 +679,8 @@ function reagendarSolicitacao(payload) {
     var eventId = String(context.record.eventIdAtendimento || '').trim();
     var event = eventId && context.appointments.getEventById(eventId);
     if (!eventMatches_(event, input.requestId)) throw safeError_('RECONCILIATION_REQUIRED', 'A solicitação precisa de revisão antes de continuar.');
-    if (hasConflictExcept_(context.appointments, input, eventId) || hasConflictExcept_(context.availability, input, eventId)) throw safeError_('INTERVAL_UNAVAILABLE', 'O novo período não está disponível.');
+    var requestServiceId = text_(context.record['serviço']), allowGroup = allowGroupOverlap && requestServiceId === 'passeio-individual';
+    if (hasConflictExcept_(context.availability, input, eventId) || (!allowGroup && hasConflictExcept_(context.appointments, input, eventId))) throw safeError_('INTERVAL_UNAVAILABLE', 'O novo período não está disponível.');
     var eventSnapshot = { start: new Date(event.getStartTime().getTime()), end: new Date(event.getEndTime().getTime()) };
     var rowSnapshot = context.values.slice();
     try {
@@ -686,6 +694,7 @@ function reagendarSolicitacao(payload) {
     updated[column_(context, 'data')] = input.date;
     updated[column_(context, 'horário')] = input.startTime;
     updated[column_(context, 'horárioTérmino')] = input.endTime;
+    if (note) updated[column_(context, 'observaçãoAdministrativa')] = note;
     updated[column_(context, 'dataÚltimaAtualização')] = new Date();
     try {
       context.sheet.getRange(context.rowNumber, 1, 1, context.headers.length).setValues([updated]);
