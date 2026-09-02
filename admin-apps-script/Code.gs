@@ -1090,3 +1090,79 @@ function migrarColunasEnderecoEHorarios() {
 
   console.log('Migração concluída — confira as mensagens acima (Registro de execução) para o resultado de cada aba.');
 }
+
+/**
+ * Utilitário de migração de dados — execute manualmente UMA VEZ pelo editor do Apps Script,
+ * depois de já ter rodado migrarColunasEnderecoEHorarios (que cria a coluna "pet" em
+ * Pagamentos). Preenche o campo "pet" apenas nos pagamentos que ficaram em branco por terem
+ * sido criados antes dessa coluna existir — nunca sobrescreve um pet que já esteja preenchido.
+ *
+ * Para cada pagamento com "pet" vazio:
+ *  1. Se o requestId do pagamento corresponder a uma solicitação real, usa o pet daquela
+ *     solicitação — não há ambiguidade possível, é o mesmo pet que gerou aquele atendimento.
+ *  2. Senão (pagamento avulso antigo, sem solicitação vinculada), tenta casar o nome do
+ *     cliente do pagamento com um cliente cadastrado; se esse cliente tiver exatamente 1 pet
+ *     cadastrado, usa esse pet.
+ *  3. Se nada disso resolver (cliente com mais de um pet e nenhuma solicitação vinculada),
+ *     deixa em branco — precisa ser escolhido manualmente pelo botão "Editar pagamento".
+ *
+ * Repetir a execução depois de já migrado não altera nada (só toca linhas com "pet" vazio).
+ */
+function migrarPetPagamentosAntigos() {
+  var config;
+  try { config = getConfig_(); } catch (error) { console.error('Configuração do painel incompleta ou inválida — corrija as Propriedades do Script antes de migrar.'); return; }
+  var spreadsheet = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+
+  var payments = spreadsheet.getSheetByName('Pagamentos');
+  if (!payments) { console.error('Aba "Pagamentos" não encontrada.'); return; }
+  var payColumns = payments.getLastColumn();
+  var payHeaders = payments.getRange(1, 1, 1, payColumns).getValues()[0].map(function (v) { return String(v).trim(); });
+  var petIndex = payHeaders.indexOf('pet');
+  if (petIndex < 0) { console.error('Coluna "pet" não encontrada em Pagamentos — rode primeiro migrarColunasEnderecoEHorarios().'); return; }
+  var requestIdIndex = payHeaders.indexOf('requestId'), clienteIndex = payHeaders.indexOf('cliente');
+  var payRowCount = payments.getLastRow() - 1;
+  if (payRowCount <= 0) { console.log('Pagamentos: nenhuma linha para migrar.'); return; }
+  var payRange = payments.getRange(2, 1, payRowCount, payColumns), payValues = payRange.getValues();
+
+  var requests = spreadsheet.getSheetByName('Solicitações'), petByRequestId = {};
+  if (!requests) console.error('Aba "Solicitações" não encontrada — pagamentos vinculados a solicitações não poderão ser migrados por esse caminho.');
+  else {
+    var reqColumns = requests.getLastColumn();
+    var reqHeaders = requests.getRange(1, 1, 1, reqColumns).getValues()[0].map(function (v) { return String(v).trim(); });
+    var reqIdIndex = reqHeaders.indexOf('requestId'), reqPetIndex = reqHeaders.indexOf('pet'), reqRowCount = requests.getLastRow() - 1;
+    if (reqIdIndex >= 0 && reqPetIndex >= 0 && reqRowCount > 0) {
+      requests.getRange(2, 1, reqRowCount, reqColumns).getValues().forEach(function (row) {
+        var id = String(row[reqIdIndex] || '').trim(), pet = String(row[reqPetIndex] || '').trim();
+        if (id && pet) petByRequestId[id] = pet;
+      });
+    }
+  }
+
+  var clients = spreadsheet.getSheetByName('Clientes'), singlePetByClientName = {};
+  if (!clients) console.error('Aba "Clientes" não encontrada — pagamentos avulsos sem vínculo a solicitação não poderão ser migrados por esse caminho.');
+  else {
+    var cliColumns = clients.getLastColumn();
+    var cliHeaders = clients.getRange(1, 1, 1, cliColumns).getValues()[0].map(function (v) { return String(v).trim(); });
+    var cliNameIndex = cliHeaders.indexOf('responsável'), cliPetsIndex = cliHeaders.indexOf('pets'), cliRowCount = clients.getLastRow() - 1;
+    if (cliNameIndex >= 0 && cliPetsIndex >= 0 && cliRowCount > 0) {
+      clients.getRange(2, 1, cliRowCount, cliColumns).getValues().forEach(function (row) {
+        var name = comparisonText_(row[cliNameIndex]), pets = String(row[cliPetsIndex] || '').split(',').map(function (p) { return p.trim(); }).filter(Boolean);
+        if (name && pets.length === 1) singlePetByClientName[name] = pets[0];
+      });
+    }
+  }
+
+  var filledFromRequest = 0, filledFromClient = 0, alreadyFilled = 0, skipped = 0;
+  payValues.forEach(function (row) {
+    if (String(row[petIndex] || '').trim()) { alreadyFilled += 1; return; }
+    var requestId = requestIdIndex >= 0 ? String(row[requestIdIndex] || '').trim() : '';
+    if (requestId && petByRequestId[requestId]) { row[petIndex] = petByRequestId[requestId]; filledFromRequest += 1; return; }
+    var clientName = clienteIndex >= 0 ? comparisonText_(row[clienteIndex]) : '';
+    if (clientName && singlePetByClientName[clientName]) { row[petIndex] = singlePetByClientName[clientName]; filledFromClient += 1; return; }
+    skipped += 1;
+  });
+
+  payRange.setValues(payValues);
+  console.log('Pagamentos: ' + filledFromRequest + ' pet(s) preenchido(s) a partir da solicitação vinculada, ' + filledFromClient + ' a partir do único pet cadastrado do cliente, ' + alreadyFilled + ' já estavam preenchidos, ' + skipped + ' ficaram em branco (cliente com mais de um pet e sem solicitação vinculada — preencher manualmente em "Editar pagamento").');
+  console.log('Migração de pet em pagamentos concluída.');
+}
