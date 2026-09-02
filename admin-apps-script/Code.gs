@@ -294,6 +294,37 @@ function editarPagamento(payload) {
   } finally { lock.releaseLock(); }
 }
 
+// Exclusão direta de um pagamento, independente de qualquer solicitação vinculada — a Pati é a
+// única usuária do painel e a decisão de apagar um lançamento (avulso ou automático) é dela.
+// Diferente de mudar o status para "Cancelado" (que mantém o registro para histórico), aqui a
+// linha é removida de vez da planilha. Nunca afeta a solicitação, o cliente ou o evento na
+// agenda associados — se a solicitação continuar CONFIRMADO, um novo pagamento é recriado
+// automaticamente na próxima confirmação/cancelamento dela (mesmo caminho já usado para
+// pagamentos legados sem linha correspondente).
+function excluirPagamento(requestId) {
+  var config;
+  try { config = getConfig_(); authorize_(config); validateUuid_(requestId); requestId = requestId.trim(); }
+  catch (error) { if (error && error.safeCode) throw error; throw safeError_('INVALID_PAYMENT', 'O pagamento informado é inválido.'); }
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) throw safeError_('LOCK_TIMEOUT', 'O painel está ocupado. Tente novamente.');
+  try {
+    var source = paymentSheet_(config), matches = paymentMatches_(source, requestId);
+    if (!matches.length) throw safeError_('PAYMENT_NOT_FOUND', 'O pagamento não foi encontrado. Atualize os dados.');
+    if (matches.length !== 1) throw safeError_('RECONCILIATION_REQUIRED', 'O pagamento precisa de revisão antes de continuar.');
+    var target = matches[0];
+    try {
+      source.sheet.deleteRow(target.rowNumber);
+      SpreadsheetApp.flush();
+      if (paymentMatches_(paymentSheet_(config), requestId).length) throw new Error('payment delete not verified');
+    } catch (deleteError) { throw safeError_('WRITE_ERROR', 'Não foi possível excluir o pagamento. Os dados foram preservados.'); }
+    return { ok: true, data: { requestId: requestId, deleted: true } };
+  } catch (error) {
+    if (error && error.safeCode) throw error;
+    console.error('ADMIN_PAYMENT_DELETE_FAILED requestId=%s', requestId);
+    throw safeError_('WRITE_ERROR', 'Não foi possível excluir o pagamento. Os dados foram preservados.');
+  } finally { lock.releaseLock(); }
+}
+
 // Pagamento avulso: lançado diretamente para um cliente já cadastrado, sem vínculo com uma
 // solicitação real. O "requestId" passa a ser apenas um identificador único gerado aqui, nunca
 // reaproveitado por confirmarSolicitacao/cancelarSolicitacao/excluirSolicitacao, que só agem
