@@ -297,3 +297,28 @@ Na interface, o padrão é o mesmo já usado para confirmar em grupo: tenta reag
 primeiro; se falhar por `INTERVAL_UNAVAILABLE` numa solicitação de Passeios, oferece o botão
 "Reagendar em grupo (mesmo horário já ocupado)" com uma observação obrigatória, reaproveitando a
 data e os horários já preenchidos no formulário.
+
+## Correção — pet ausente em pagamentos antigos
+
+A Pati notou que, na aba Pagamentos, alguns pagamentos não mostravam o nome do pet abaixo do
+nome do tutor — o que impedia diferenciar, na lista, duas cobranças do mesmo tutor com pets
+diferentes. A separação por pet já funciona normalmente para pagamentos novos (tanto os criados
+automaticamente ao confirmar uma solicitação quanto os avulsos, onde escolher o pet é
+obrigatório); o problema era só com pagamentos criados **antes** da coluna `pet` existir — ela
+entrou em branco para essas linhas antigas, já que a migração de colunas nunca inventa ou
+adivinha um dado que não existia.
+
+Nova função utilitária `migrarPetPagamentosAntigos()` (rodar manualmente pelo editor do Apps
+Script, depois de já ter rodado `migrarColunasEnderecoEHorarios`, que cria a coluna `pet`).
+Para cada pagamento com `pet` em branco:
+
+1. Se o `requestId` do pagamento corresponder a uma solicitação real, usa o pet daquela
+   solicitação — sem ambiguidade, é o mesmo pet que gerou aquele atendimento.
+2. Senão (pagamento avulso antigo, sem solicitação vinculada), tenta casar o nome do cliente do
+   pagamento com um cliente cadastrado; se esse cliente tiver exatamente 1 pet, usa esse pet.
+3. Se nada disso resolver (cliente com mais de um pet e nenhuma solicitação vinculada), deixa em
+   branco — precisa ser escolhido manualmente pelo botão "Editar pagamento" (que já tem o campo
+   pet pronto para isso).
+
+Nunca sobrescreve um `pet` já preenchido, e repetir a execução depois de já migrado não altera
+nada — mesmo padrão de segurança das demais migrações manuais deste projeto.
