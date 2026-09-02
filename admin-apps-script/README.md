@@ -322,3 +322,22 @@ Para cada pagamento com `pet` em branco:
 
 Nunca sobrescreve um `pet` já preenchido, e repetir a execução depois de já migrado não altera
 nada — mesmo padrão de segurança das demais migrações manuais deste projeto.
+
+## Correção — excluir pagamento de vez
+
+Até aqui a única forma de "desfazer" um pagamento era mudar o status para "Cancelado" — o que é
+correto para manter histórico financeiro, mas a Pati precisava também de uma forma de apagar de
+vez um lançamento feito por engano (avulso ou automático), sem depender de excluir a solicitação
+inteira.
+
+Nova função `excluirPagamento(requestId)`, no mesmo padrão de `excluirCliente`/`excluirBloqueio`:
+remove a linha da planilha depois de confirmar que existe exatamente um pagamento com aquele
+`requestId` (duplicidade exige revisão manual, como em toda outra operação deste painel), e
+verifica por releitura que a exclusão realmente aconteceu. Nunca mexe na solicitação, no cliente
+ou no evento da agenda vinculados — se a solicitação correspondente continuar `CONFIRMADO`, o
+próximo cancelamento ou nova confirmação dela recria um pagamento automaticamente, o mesmo
+caminho já usado para pagamentos legados sem linha correspondente.
+
+Na interface, o botão "Excluir pagamento" aparece no formulário de "Editar pagamento" e abre uma
+confirmação explícita dentro do próprio modal (mesmo padrão de "Excluir cliente"), deixando claro
+que a ação não pode ser desfeita — diferente de marcar como "Cancelado".
