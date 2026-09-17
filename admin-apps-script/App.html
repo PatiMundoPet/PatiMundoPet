@@ -1,7 +1,7 @@
 <script>
 (function () {
   'use strict';
-  var state = { requests: [], clients: [], payments: [], summary: {}, settings: null, today: '', agendaMode: 'dia', modalOpener: null, writesConfigured: false, writing: false, refreshRequired: false };
+  var state = { requests: [], clients: [], payments: [], summary: {}, settings: null, today: '', agendaMode: 'dia', paymentSort: 'data', modalOpener: null, writesConfigured: false, writing: false, refreshRequired: false };
   var $ = function (id) { return document.getElementById(id); };
 
   function rpc(name, args) {
@@ -201,6 +201,7 @@
 
   function renderPayments() {
     var query = $('paymentSearch').value.trim(), status = $('paymentStatus').value, rows = state.payments.filter(function (row) { return (status === 'TODOS' || row.status === status) && (!query || searchable([row.client, row.requestId, row.service], query)); });
+    rows = rows.slice().sort(state.paymentSort === 'alfabetica' ? function (a, b) { return text(a.client).localeCompare(text(b.client), 'pt-BR') || (a.dueDate || '').localeCompare(b.dueDate || ''); } : function (a, b) { return (a.dueDate || '9999-99-99').localeCompare(b.dueDate || '9999-99-99') || text(a.client).localeCompare(text(b.client), 'pt-BR'); });
     var list = $('paymentList'); clear(list); if (!rows.length) return empty(list, state.payments.length ? 'Nenhum pagamento corresponde aos filtros.' : 'Nenhum pagamento encontrado.');
     rows.forEach(function (row) { var reminder = row.status === 'PENDENTE' && row.dueDate === state.today ? ' due-today' : row.status === 'PENDENTE' && row.dueDate && row.dueDate < state.today ? ' overdue' : ''; var card = el('article', 'item-card clickable payment-card' + reminder); card.tabIndex = 0; card.setAttribute('role', 'button'); var main = el('div', 'item-main'); var amount = row.amount === null ? 'Valor não informado' : Number(row.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); main.append(el('strong', '', text(row.client)), el('span', '', text(row.service) + (row.pet ? ' · ' + text(row.pet) : '') + (row.monthly ? ' · Mensal' : '') + ' · solicitação ' + text(row.requestId))); var meta = el('div', 'meta'); meta.append(el('span', '', amount), el('span', '', 'Vencimento: ' + formatDate(row.dueDate)), el('span', '', 'Pagamento: ' + formatDateTime(row.paidAt)), el('span', '', 'Observações: ' + text(row.notes))); card.append(main, meta, badge(row.status)); function open() { openPayment_(row, card); } card.onclick = open; card.onkeydown = function (event) { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } }; list.appendChild(card); });
   }
@@ -313,6 +314,7 @@
   function closeDrawer() { $('sidebar').classList.remove('open'); $('drawerOverlay').hidden = true; $('menuButton').setAttribute('aria-expanded', 'false'); }
   $('menuButton').onclick = function () { var open = !$('sidebar').classList.contains('open'); $('sidebar').classList.toggle('open', open); $('drawerOverlay').hidden = !open; $('menuButton').setAttribute('aria-expanded', String(open)); }; $('drawerOverlay').onclick = closeDrawer;
   $('reloadButton').onclick = loadInitial; $('requestSearch').oninput = renderRequests; $('requestStatus').onchange = renderRequests; $('clientSearch').oninput = renderClients; $('paymentSearch').oninput = renderPayments; $('paymentStatus').onchange = renderPayments;
+  document.querySelectorAll('[data-payment-sort]').forEach(function (button) { button.onclick = function () { state.paymentSort = button.dataset.paymentSort; document.querySelectorAll('[data-payment-sort]').forEach(function (item) { var active = item === button; item.classList.toggle('active', active); item.setAttribute('aria-pressed', String(active)); }); renderPayments(); }; });
   $('agendaDate').onchange = loadAgenda; $('agendaToday').onclick = function () { $('agendaDate').value = state.today; loadAgenda(); }; document.querySelectorAll('[data-agenda-mode]').forEach(function (button) { button.onclick = function () { state.agendaMode = button.dataset.agendaMode; document.querySelectorAll('[data-agenda-mode]').forEach(function (item) { var active = item === button; item.classList.toggle('active', active); item.setAttribute('aria-pressed', String(active)); }); $('agendaGrid').className = ''; loadAgenda(); }; }); $('loadBlocks').onclick = loadBlocks; $('createBlock').onclick = openCreateBlock; $('createClient').onclick = function () { openClientForm(null, $('createClient')); }; $('createPayment').onclick = openCreatePayment_;
   $('modalClose').onclick = closeModal; $('modalBackdrop').onclick = function (event) { if (event.target === $('modalBackdrop')) closeModal(); }; document.addEventListener('keydown', trapModal);
   loadInitial();

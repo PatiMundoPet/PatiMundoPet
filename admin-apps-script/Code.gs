@@ -24,6 +24,13 @@ function include(filename) {
 
 function carregarDadosIniciais() {
   return safelyRead_(function (config) {
+    // Recorrência mensal automática: mantém sempre pelo menos 1 mês à frente gerado como
+    // PENDENTE, sem travar o carregamento se algo der errado (é manutenção em segundo plano,
+    // nunca deve impedir o painel de abrir).
+    try {
+      var recurrenceLock = LockService.getScriptLock();
+      if (recurrenceLock.tryLock(3000)) { try { gerarPagamentosRecorrentesPendentes_(config); } finally { recurrenceLock.releaseLock(); } }
+    } catch (error) { console.error('ADMIN_RECURRING_PAYMENT_GENERATION_FAILED'); }
     var requests = readSheet_(config, ADMIN.sheets.requests, mapRequest_);
     var clients = readSheet_(config, ADMIN.sheets.clients, mapClient_);
     var payments = readSheet_(config, ADMIN.sheets.payments, mapPayment_);
@@ -325,6 +332,67 @@ function excluirPagamento(requestId) {
   } finally { lock.releaseLock(); }
 }
 
+// Recorrência mensal automática (chamada por carregarDadosIniciais, nunca diretamente pela
+// interface): agrupa TODOS os pagamentos por cliente + pet + serviço, e por grupo olha só o
+// pagamento com o vencimento mais recente — se ele estiver marcado como "Mensal", garante que
+// exista um pagamento PENDENTE no mês seguinte ao de hoje ou depois, gerando quantos meses forem
+// necessários de uma vez (por exemplo, se a Pati ficar semanas sem abrir o painel, o próximo
+// carregamento já recupera o atraso todo, mês a mês). Isso faz da própria etiqueta "Mensal" do
+// pagamento mais recente o controle de liga/desliga da recorrência: desmarcá-la (por "Editar
+// pagamento") impede a próxima geração, sem precisar excluir nada nem mexer nos meses passados.
+// O "dia do mês" usado como referência é sempre o do primeiro pagamento "Mensal" daquele grupo
+// (ex.: "todo dia 10"), nunca o do último gerado, pra não ir deslizando pro fim do mês depois de
+// um fevereiro.
+function nextMonthKey_(monthKey) { return addOneCalendarMonthIso_(monthKey + '-01', 1).slice(0, 7); }
+function gerarPagamentosRecorrentesPendentes_(config) {
+  var source = paymentSheet_(config), h = source.headers;
+  if (!source.rows.length) return;
+  var requestIdIndex = h.indexOf('requestId'), clientIndex = h.indexOf('cliente'), serviceIndex = h.indexOf('serviço'), amountIndex = h.indexOf('valor'), methodIndex = h.indexOf('formaPagamento'), dueIndex = h.indexOf('vencimento'), statusIndex = h.indexOf('statusPagamento'), petIndex = h.indexOf('pet'), periodicidadeIndex = h.indexOf('periodicidade');
+  var groups = {}, usedRequestIds = {};
+  source.rows.forEach(function (row) { usedRequestIds[text_(row[requestIdIndex])] = true; });
+  source.rows.forEach(function (row) {
+    var due = date_(row[dueIndex], config.TIMEZONE);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(due)) return;
+    var monthly = String(row[periodicidadeIndex] || '').trim().toUpperCase() === 'MENSAL';
+    var key = comparisonText_(row[clientIndex]) + '|' + comparisonText_(row[petIndex]) + '|' + comparisonText_(row[serviceIndex]);
+    (groups[key] = groups[key] || []).push({ row: row, due: due, monthly: monthly });
+  });
+  var keys = Object.keys(groups);
+  if (!keys.length) return;
+  var todayIso = Utilities.formatDate(new Date(), config.TIMEZONE, 'yyyy-MM-dd');
+  var targetMonthKey = nextMonthKey_(todayIso.slice(0, 7));
+  var nextRowNumber = source.sheet.getLastRow() + 1;
+  keys.forEach(function (key) {
+    var entries = groups[key].slice().sort(function (a, b) { return a.due.localeCompare(b.due); });
+    var latest = entries[entries.length - 1];
+    if (!latest.monthly) return;
+    var mensalEntries = entries.filter(function (entry) { return entry.monthly; });
+    var anchorDay = Number(mensalEntries[0].due.slice(8, 10)), guard = 0;
+    while (latest.due.slice(0, 7) < targetMonthKey && guard < 60) {
+      guard += 1;
+      var requestId = uniqueRequestId_(usedRequestIds);
+      if (!requestId) break;
+      var nextDue = addOneCalendarMonthIso_(latest.due, anchorDay);
+      var newRow = new Array(h.length).fill('');
+      newRow[requestIdIndex] = requestId;
+      newRow[clientIndex] = latest.row[clientIndex];
+      newRow[serviceIndex] = latest.row[serviceIndex];
+      newRow[amountIndex] = latest.row[amountIndex];
+      newRow[methodIndex] = text_(latest.row[methodIndex]) || 'PIX';
+      newRow[dueIndex] = nextDue;
+      newRow[statusIndex] = 'PENDENTE';
+      newRow[petIndex] = latest.row[petIndex];
+      newRow[periodicidadeIndex] = 'Mensal';
+      try { writeAndVerifyPayment_(source, nextRowNumber, newRow); }
+      catch (error) { console.error('ADMIN_RECURRING_PAYMENT_WRITE_FAILED requestId=%s', requestId); break; }
+      usedRequestIds[requestId] = true;
+      nextRowNumber += 1;
+      latest = { row: newRow, due: nextDue };
+    }
+  });
+}
+function uniqueRequestId_(usedRequestIds) { for (var attempt = 0; attempt < 5; attempt += 1) { var candidate = Utilities.getUuid(); if (!usedRequestIds[candidate]) return candidate; } return ''; }
+
 // Pagamento avulso: lançado diretamente para um cliente já cadastrado, sem vínculo com uma
 // solicitação real. O "requestId" passa a ser apenas um identificador único gerado aqui, nunca
 // reaproveitado por confirmarSolicitacao/cancelarSolicitacao/excluirSolicitacao, que só agem
@@ -534,6 +602,18 @@ function dateTime_(value, timezone) {
   if (!value) return '';
   if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value)) return Utilities.formatDate(value, timezone, "yyyy-MM-dd'T'HH:mm:ss");
   return text_(value);
+}
+
+// Soma 1 mês de calendário a uma data "yyyy-MM-dd", preservando o dia de referência (anchorDay)
+// sempre que possível — se o mês seguinte não tiver esse dia (ex.: dia 31 em abril), cai no
+// último dia válido daquele mês, sem nunca "vazar" para o mês depois.
+function isLeapYear_(year) { return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0; }
+function daysInMonth_(year, monthIndex0) { var normalized = ((monthIndex0 % 12) + 12) % 12; return [31, isLeapYear_(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][normalized]; }
+function pad2_(value) { return value < 10 ? '0' + value : String(value); }
+function addOneCalendarMonthIso_(dateIso, anchorDay) {
+  var parts = dateIso.split('-').map(Number), nextMonthIndex0 = parts[1], targetYear = parts[0] + Math.floor(nextMonthIndex0 / 12), targetMonthIndex0 = ((nextMonthIndex0 % 12) + 12) % 12;
+  var day = Math.min(anchorDay, daysInMonth_(targetYear, targetMonthIndex0));
+  return targetYear + '-' + pad2_(targetMonthIndex0 + 1) + '-' + pad2_(day);
 }
 
 function validateIsoDate_(value) {
