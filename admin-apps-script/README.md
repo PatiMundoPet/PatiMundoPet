@@ -341,3 +341,51 @@ caminho já usado para pagamentos legados sem linha correspondente.
 Na interface, o botão "Excluir pagamento" aparece no formulário de "Editar pagamento" e abre uma
 confirmação explícita dentro do próprio modal (mesmo padrão de "Excluir cliente"), deixando claro
 que a ação não pode ser desfeita — diferente de marcar como "Cancelado".
+
+## Correção — ordenar a lista de Pagamentos
+
+A lista de Pagamentos não tinha nenhuma ordenação: os lançamentos apareciam na ordem em que
+estavam na planilha. Novo controle "Ordenar" na aba Pagamentos (mesmo padrão visual do "Dia /
+Semana" da Agenda), com duas opções:
+
+- **Data** (padrão): mais perto do vencimento primeiro.
+- **Alfabética**: por nome do cliente.
+
+Puramente de exibição — não altera nada na planilha nem nos filtros de busca/status já
+existentes, que continuam funcionando normalmente em conjunto com a ordenação escolhida.
+
+## Correção — recorrência mensal automática
+
+Até aqui, marcar um pagamento como "Mensal" era só uma etiqueta visual: no mês seguinte a Pati
+precisava lançar manualmente um novo pagamento avulso pra aquele cliente/pet, mesmo estando
+marcado como mensal. A ideia de "mensal" já devia significar "o sistema mesmo mantém isso
+sempre 1 mês à frente, sem eu precisar lançar de novo todo mês".
+
+Toda vez que o painel carrega os dados (`carregarDadosIniciais` — ou seja, a cada abertura do
+painel e a cada atualização depois de qualquer ação), uma nova função interna,
+`gerarPagamentosRecorrentesPendentes_`, roda em segundo plano e garante isso sozinha, sem
+precisar de nenhum gatilho (trigger) configurado à parte:
+
+1. Agrupa todos os pagamentos por cliente + pet + serviço.
+2. Em cada grupo, olha só o pagamento com o vencimento mais recente. Se ele estiver marcado como
+   "Mensal", garante que já exista um pagamento `PENDENTE` para o mês seguinte ao de hoje (ou
+   depois) — gerando quantos meses forem necessários de uma vez só, se a Pati ficar um tempo sem
+   abrir o painel (recupera o atraso todo automaticamente, mês a mês).
+3. O "dia do mês" usado como referência é sempre o do primeiro pagamento "Mensal" daquele grupo
+   (ex.: "todo dia 10"), nunca o do último gerado — evita ir deslizando pro fim do mês depois de
+   um fevereiro. Quando o dia de referência não existe naquele mês (ex.: dia 31 em abril), cai no
+   último dia válido do mês.
+4. O pagamento gerado nasce sempre `PENDENTE` (mesmo que o anterior já estivesse `PAGO`), com o
+   mesmo valor, forma de pagamento e pet do anterior, e continua marcado como "Mensal" — mantendo
+   a corrente pra sempre, até alguém intervir.
+
+**Como desligar a recorrência de um cliente/pet específico:** é só desmarcar "Mensal" no
+pagamento mais recente daquele grupo, pelo "Editar pagamento" — a própria etiqueta "Mensal" do
+pagamento mais recente é o controle de liga/desliga, sem precisar excluir nada nem mexer nos
+meses passados. Excluir o cliente inteiro (que já cancela pagamentos pendentes normalmente) tem
+o mesmo efeito: sem pagamento pendente marcado como mensal, a geração para sozinha.
+
+Essa geração roda dentro da própria leitura (`carregarDadosIniciais`), protegida por
+`LockService` com timeout curto — se não conseguir o lock (outra escrita em andamento), ela
+simplesmente não gera nada nessa rodada e tenta de novo no próximo carregamento, sem nunca
+travar ou quebrar a abertura do painel.
